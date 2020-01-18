@@ -62,12 +62,12 @@
    * is used in the project. This prevents that different versions of 
    * installed commands leads to different results.
 
-   /*
-       global ado      "$dataWorkFolder/your_ado_folder"
+  
+       global ado      "${mastData}/ado"
            adopath ++  "$ado" 
            adopath ++  "$ado/m" 
            adopath ++  "$ado/b" 
-   */
+   
 
    * ******************************************************************** *
    * Anything else

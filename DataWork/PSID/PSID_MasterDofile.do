@@ -69,22 +69,27 @@
    * Users
    * -----------
 
-   *User Number:
-   * You                     1    // Replace "You" with your name
-   * Next User               2    // Assign a user number to each additional collaborator of this code
-
-   *Set this value to the user currently using this file
-   global user  1
-
    * Root folder globals
    * ---------------------
+   
+   * Add local folder name of each collaborator.
+   * `c(username)' is the system macro of STATA which has username
+   * To find collaborator's user name, type -di "`c(username)'"- in STATA
 
-   if $user == 1 {
-       global projectfolder "C:\Users\ftac2\Documents\Temp"
+   if "`c(username)'"== "Seungmin Lee" {	//	Min, office PC
+       global projectfolder "E:\GitHub\US_Food_Dynamics"
    }
 
-   if $user == 2 {
-       global projectfolder ""  // Enter the file path to the project folder for the next user here
+   if "`c(username)'"== "xxx" {	//	Min, personal LAPTOP
+       global projectfolder "..."
+   }
+   
+   if "`c(username)'"== "xxx" {	//	Liz
+       global projectfolder "..."
+   }
+   
+   if "`c(username)'"== "xxx" {	//	Lizzie
+       global projectfolder "..."
    }
 
 * These lines are used to test that the name is not already used (do not edit manually)
