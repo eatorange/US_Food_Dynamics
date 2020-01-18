@@ -8,7 +8,7 @@ Given the importance of food security, both globally and within the United State
 The study analyzes Panel Study of Income Dynamics (PSID) and Current Population Survey (CPS)
 
 ## Folder Structure
-The folder structure of the repository is based on the template suggested by Development Impact Evaluation (DIME) at World Bank. Please find [DIME Wiki page](https://dimewiki.worldbank.org/wiki/DataWork_Folder) for the details of the template, and (Readme file at Datawork Folder) for the detailed instruction of folder structure specific to this study.
+The folder structure of the repository is based on the template suggested by Development Impact Evaluation (DIME) at World Bank. Please find [DIME Wiki page](https://dimewiki.worldbank.org/wiki/DataWork_Folder) for the detailed instruction of the template.
 
 ## Point of Contact
 * [Liz Bageant](http://barrett.dyson.cornell.edu/research/group/liz-bageant.html)(erb32@cornell.edu) - Research Support Specialist at Cornell University
