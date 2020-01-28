@@ -1,7 +1,7 @@
    * ******************************************************************** *
    * ******************************************************************** *
    *                                                                      *
-   *               your_round_name                                        *
+   *               PSID                                        *
    *               MASTER DO_FILE                                         *
    *                                                                      *
    * ******************************************************************** *
@@ -18,9 +18,9 @@
 
        ** NOTES:
 
-       ** WRITTEN BY:   names_of_contributors
+       ** WRITTEN BY:   Seungmin Lee
 
-       ** Last date modified:  1 Jan 2020
+       ** Last date modified:  25 Jan 2020
        */
 
 *iefolder*0*StandardSettings****************************************************
@@ -41,7 +41,7 @@
 
    *Install all packages that this project requires:
    *(Note that this never updates outdated versions of already installed commands, to update commands use adoupdate)
-   local user_commands ietoolkit       //Fill this list will all user-written commands this project requires
+   local user_commands ietoolkit stgit       //Fill this list will all user-written commands this project requires
    foreach command of local user_commands {
        cap which `command'
        if _rc == 111 {
@@ -77,19 +77,23 @@
    * To find collaborator's user name, type -di "`c(username)'"- in STATA
 
    if "`c(username)'"== "Seungmin Lee" {	//	Min, office PC
-       global projectfolder "E:\GitHub\US_Food_Dynamics"
+       global	projectfolder	"E:\GitHub\US_Food_Dynamics"		//	Github location
+	   global	clouldfolder	"E:\Box\US Food Security Dynamics"	// Clouldfolder location (where rawdata is stored)
    }
 
    if "`c(username)'"== "xxx" {	//	Min, personal LAPTOP
-       global projectfolder "..."
+       global	projectfolder	"..."
+	   global	clouldfolder	"..."
    }
    
    if "`c(username)'"== "xxx" {	//	Liz
-       global projectfolder "..."
+       global	projectfolder	"..."
+	   global	clouldfolder	"..."
    }
    
    if "`c(username)'"== "xxx" {	//	Lizzie
-       global projectfolder "..."
+       global	projectfolder	"..."
+	   global	clouldfolder	"..."
    }
 
 * These lines are used to test that the name is not already used (do not edit manually)
@@ -102,12 +106,12 @@
 *iefolder*1*FolderGlobals*master************************************************
 *iefolder will not work properly if the line above is edited
 
-   global mastData               "$dataWorkFolder/MasterData" 
+  // global mastData               "$dataWorkFolder/MasterData" 
 
 *iefolder*1*FolderGlobals*encrypted*********************************************
 *iefolder will not work properly if the line above is edited
 
-   global encryptFolder          "$dataWorkFolder/EncryptedData" 
+  // global encryptFolder          "$dataWorkFolder/EncryptedData" 
 
 *iefolder*1*FolderGlobals*PSID**************************************************
 *iefolder will not work properly if the line above is edited
@@ -116,15 +120,9 @@
    *Encrypted round sub-folder globals
    global PSID                   "$dataWorkFolder/PSID" 
 
-   *Encrypted round sub-folder globals
-   global PSID_encrypt           "$encryptFolder/Round PSID Encrypted" 
-   global PSID_dtRaw             "$PSID_encrypt/Raw Identified Data" 
-   global PSID_doImp             "$PSID_encrypt/Dofiles Import" 
-   global PSID_HFC               "$PSID_encrypt/High Frequency Checks" 
-
    *DataSets sub-folder globals
-   global PSID_dt                "$PSID/DataSets" 
-   global PSID_dtDeID            "$PSID_dt/Deidentified" 
+   global PSID_dt                "$PSID/DataSets"
+   global PSID_dtRaw			 "$clouldfolder/DataWork/PSID/DataSets"
    global PSID_dtInt             "$PSID_dt/Intermediate" 
    global PSID_dtFin             "$PSID_dt/Final" 
 
