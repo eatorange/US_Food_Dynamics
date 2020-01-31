@@ -122,7 +122,7 @@
 
    *DataSets sub-folder globals
    global PSID_dt                "$PSID/DataSets"
-   global PSID_dtRaw			 "$clouldfolder/DataWork/PSID/DataSets"
+   global PSID_dtRaw			 "$clouldfolder/DataWork/PSID/DataSets/Raw"
    global PSID_dtInt             "$PSID_dt/Intermediate" 
    global PSID_dtFin             "$PSID_dt/Final" 
 
