@@ -76,6 +76,10 @@
 		graph twoway	(kdensity ER14331T) (kdensity ER18470T) (kdensity ER21735T) (kdensity ER60798) (kdensity ER66846) if !mi(ER66002),	///
 		title(Distribution of Food Security Score(scaled))	legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2015") lab(5 "2017"))
 		
-	
+	*	Distribution of food security (category)
+		graph twoway	(bar ER14331U) (bar ER18470U) (bar ER21735U) (bar ER60799) (bar ER66847) if !mi(ER66002),	///
+		title(Distribution of Food Security Score(scaled))	legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2015") lab(5 "2017"))
+		
+	    
 	
 	count if     
