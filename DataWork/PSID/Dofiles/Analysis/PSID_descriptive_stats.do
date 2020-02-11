@@ -2,7 +2,7 @@
 	/*****************************************************************
 	PROJECT: 		US Food Security Dynamics
 					
-	TITLE:			PSID_analysis
+	TITLE:			PSID_descriptive_stats
 				
 	AUTHOR: 		Seungmin Lee (sl3235@cornell.edu)
 
@@ -10,11 +10,11 @@
 	
 	IDS VAR:    	x11101ll         // Uniquely identifies households (update for your project)
 
-	DESCRIPTION: 	Aanlyzes PSID Data
+	DESCRIPTION: 	Generate descriptives stats(tables, plots)
 		
 	ORGANIZATION:	0 -	Preamble
 						0.1 - Environment setup
-					1 - Data cleaning
+					1 - Descriptive Stats
 						1.1	-	
 						1.2 -	
 						1.3 -	
@@ -52,7 +52,7 @@
 	set varabbrev	off
 	
 	* Filename and log
-	loc	name_do	PSID_analysis
+	loc	name_do	PSID_descriptive_stats
 	*log using	"${bl_do_cleaning}/logs/`name_do'", replace
 	
 	/* Git setup */
