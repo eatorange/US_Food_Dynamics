@@ -224,6 +224,25 @@
 						
 		drop	food_school_lunch*	food_school_breakfast*
 		
+		*	Generate per capita and quantiles
+		
+		forvalues	year=1999(2)2017	{
+			
+			*	Per capita
+			generate	fam_income_pc`year'	=	fam_income_tot`year'/num_in_FU`year'
+			generate	food_exp_pc`year'	=	food_exp_tot`year'/num_in_FU`year'
+			
+			*	Quantile
+			xtile	fam_income_pc_qt`year'	=	fam_income_pc`year', n(10)	//	per capita income
+			xtile	food_exp_pc_qt`year'	=	food_exp_pc`year',	n(10)	//	per capita food expenditure
+			
+			if	inrange(`year',1999,2003) | inrange(`year',2015,2017)	{
+				xtile	fs_hh_scale_qt`year'	=	fs_hh_scale`year',	n(10)	//	food security scale
+			}
+		}
+	
+		
+		
 	/****************************************************************
 		SECTION 2: Re-shape into long format
 	****************************************************************/
@@ -245,6 +264,7 @@
 
 		*	Generate per capita variables
 			
+			/*
 			*	Income
 			loc	var	fam_income_pc
 			generate	`var'	=	fam_income_tot/num_in_FU
@@ -254,7 +274,8 @@
 			loc	var	food_exp_pc
 			generate	`var'	=	food_exp_tot/num_in_FU
 			label	var	`var'	"Food expenditure per capita"
-
+			*/
+			
 		*	Recode variables for descriptive analyses
 			
 			*	Food security score (-9 is replaced with missing)
@@ -308,6 +329,9 @@
 			
 			label	define	fs_child_cat	1	"High FS"	2	"Low FS"	3	"Very Low FS"
 			label	val	fs_child_cat	fs_child_cat
+			
+			label	var	fam_income_pc	"Family income per capita"
+			label	var	food_exp_pc		"Family food expenditure per capita"
 	
 
 	
