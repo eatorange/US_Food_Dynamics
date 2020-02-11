@@ -82,7 +82,10 @@
 		xttrans fs_hh_cat if inrange(wave,1999,2003), freq	//	'99-'03
 		xttrans fs_hh_cat if inrange(wave,2015,2017), freq	//	'15-'17
 		
-		
+	*	Quantile plots
+	
+		quantile fs_hh_scale
+		qplot fs_hh_scale, over(wave)
 
 	*	Survey data analyses
 	** (This part is temporarily disabled, as STATA doesn't allow panel data setting and survey design setting at the same time)
