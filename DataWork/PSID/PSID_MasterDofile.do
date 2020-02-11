@@ -44,17 +44,20 @@
    local user_commands ietoolkit stgit psid sepscatter panelstat qplot     //Fill this list will all user-written commands this project requires
    foreach command of local user_commands {
        cap which `command'
-       if _rc == 111 {
-           ssc install `command'
-       }
-	   else	if	(_rc==111) & "`command'"=="psid"	{
+       if	(_rc==111) & "`command'"=="psid"	{
 			ssc	install	psidtools
 	   }
 	   else	if	(_rc==111) & "`command'"=="panelstat"	{
 			net install panelstat, from("https://github.com/pguimaraes99/panelstat/raw/master/")
 	   }
 	   else if	(_rc==111) * "`command'"=="qplot"	{
-			net install gr42_8.pkg
+			net install gr42_8.pkg, from("http://www.stata-journal.com/software/sj19-3")
+	   }
+	   else	if	(_rc!=111){
+			continue
+	   }
+	   else	{
+			ssc install `command'
 	   }
    }
 
@@ -90,9 +93,9 @@
 	   global	clouldfolder	"E:\Box\US Food Security Dynamics"	// Clouldfolder location (where rawdata is stored)
    }
 
-   if "`c(username)'"== "xxx" {	//	Min, personal LAPTOP
-       global	projectfolder	"..."
-	   global	clouldfolder	"..."
+   if "`c(username)'"== "ftac2" {	//	Min, personal LAPTOP
+       global	projectfolder	"E:\GitHub\US_Food_Dynamics"
+	   global	clouldfolder	"E:\Box\US Food Security Dynamics"
    }
    
    if "`c(username)'"== "xxx" {	//	Liz
@@ -190,8 +193,8 @@
    * run to 1. To not run a task, set the local to 0.
    local importDo       0
    local cleaningDo     0
-   local constructDo    0
-   local analysisDo     0
+   local constructDo    1
+   local analysisDo     1
 
    if (`importDo' == 1) { // Change the local above to run or not to run this file
        do "$PSID_doImp/PSID_import_MasterDofile.do" 
