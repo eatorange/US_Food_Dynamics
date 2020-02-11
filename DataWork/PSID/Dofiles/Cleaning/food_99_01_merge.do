@@ -1,13 +1,18 @@
+
 * This do-file is a temporary do-file which tries to understand & manually replicate automatic merging of families over the years in PSID data center.
 * This do-file may be deleted after test & replication is completed. If this file needs to remain in repository for record purpose, the structure of this do-file would be significantly modified, or would be integrated into another file as a separate section
 
-use "C:\Users\Seungmin Lee\Downloads\food_famliy_only\food_family_only.dta", clear
+use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Customized\food_famliy_only\food_family_only.dta", clear
 tempfile	foodvar_99_01_fam
 save		`foodvar_99_01_fam'
 
-use	"C:\Users\Seungmin Lee\Downloads\food_family_indiv\food_family_indiv.dta", clear
+use	"E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Customized\food_family_indiv\food_family_indiv.dta", clear
 tempfile	foodvar_99_01_indiv
 save		`foodvar_99_01_indiv'
+
+use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\Cross_year_individual\Cross_year_individual.dta", clear
+tempfile indiv_all
+save	`indiv_all'
 
 use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\fam1999\FAM1999.dta", clear
 tempfile	FAM1999
@@ -17,8 +22,6 @@ use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\fam2001\FA
 tempfile	FAM2001
 save		`FAM2001'
 
-use	
-
 *	Merge 1999 familes in 1999-2001 food variable data with 2001 using 1999 family ID (ER13002), to check iwhether ER13002 uniquely identifies
 use	`foodvar_99_01_fam', clear
 keep if !mi(ER13002)
@@ -27,7 +30,7 @@ merge 1:1 ER13002 using `FAM1999', nogen assert(3)
 
 
 *	The main concern is merging family-level variables over the years, as there is no ID in family data that uniquely identifies families over time. (1968 family ID can't be used, as splitted family share the same 1968 family ID)
-*	According to PSID data structure file, PSID uses head of the household (sequence number==1) to merge family variables over time. We will manually confirm whether it is true.
+*	According to PSID data structure file, PSID uses head of the household (sequence number==1 since 1983) to merge family variables over time. We will manually confirm whether it is true.
 
 *	First, find families whose members are splitted into other families (thus have same 1999 family ID but different food expenditures in 2001)
 
@@ -113,8 +116,17 @@ ER33501	ER33502	ER16515A1	ER16515A2	ER16515A3	ER33601	ER33602	ER20456A1	ER20456A
 br ER33501 ER33502 ER16515A1 ER16515A2 ER16515A3 ER33601 ER33602 ER20456A1 ER20456A2 ER20456A3 if inlist(ER33501,3,9,29,51,69,70,71,86,92,93)
 
 
-
+*/
 
 
 ** Test 
+
+
+*	How family-level costs are imputed
+use	`indiv_all', clear
+keep ER30001 ER30002 ER33501-ER33547
+drop	if	mi(ER33501) | ER33501==0
+
+rename	ER33501 ER13002
+merge	m:1	ER13002 using `FAM1999'
 
