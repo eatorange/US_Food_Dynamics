@@ -41,7 +41,7 @@
 
    *Install all packages that this project requires:
    *(Note that this never updates outdated versions of already installed commands, to update commands use adoupdate)
-   local user_commands ietoolkit stgit psid sepscatter panelstat      //Fill this list will all user-written commands this project requires
+   local user_commands ietoolkit stgit psid sepscatter panelstat qplot     //Fill this list will all user-written commands this project requires
    foreach command of local user_commands {
        cap which `command'
        if _rc == 111 {
@@ -52,6 +52,9 @@
 	   }
 	   else	if	(_rc==111) & "`command'"=="panelstat"	{
 			net install panelstat, from("https://github.com/pguimaraes99/panelstat/raw/master/")
+	   }
+	   else if	(_rc==111) * "`command'"=="qplot"	{
+			net install gr42_8.pkg
 	   }
    }
 
