@@ -28,7 +28,7 @@
    *
    * ***************************************************** *
 
-       *do "$PSID_doCon/dofile1.do" //Give your dofile a more informative name, this is just a placeholder name
+       do "$PSID_doCon/PSID_construct.do" // Create panel structured data
 
    * ***************************************************** *
    *

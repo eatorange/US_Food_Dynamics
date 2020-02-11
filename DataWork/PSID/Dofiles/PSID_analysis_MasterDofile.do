@@ -28,7 +28,7 @@
    *
    * ***************************************************** *
 
-       *do "$PSID_doAnl/dofile1.do" //Give your dofile a more informative name, this is just a placeholder name
+       do "$PSID_doAnl/PSID_descriptive_stats.do" // Generate descriptive stats
 
    * ***************************************************** *
    *
