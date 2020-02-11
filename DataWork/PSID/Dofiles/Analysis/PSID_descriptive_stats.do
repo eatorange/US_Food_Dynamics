@@ -72,24 +72,24 @@
 	
 		*	Quantile (income per capita)
 		loc	qtile_var	fam_income_pc
-		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(5)	//	'99 per capita income
-		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(5)	//	'15 per capita income
+		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(10)	//	'99 per capita income
+		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(10)	//	'15 per capita income
 		sort x11101ll wave
 		bys x11101ll: replace `qtile_var'_99_qt = L.`qtile_var'_99_qt if mi(`qtile_var'_99_qt)	//	'99
 		bys x11101ll: replace `qtile_var'_15_qt = L.`qtile_var'_15_qt if mi(`qtile_var'_15_qt)	//	'15
 		
 		*	Quantile (food security scale, household)
 		loc	qtile_var	fs_hh_scale
-		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(5)	//	'99 per capita income
-		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(5)	//	'15 per capita income
+		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(10)	//	'99 per capita income
+		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(10)	//	'15 per capita income
 		sort x11101ll wave
 		bys x11101ll: replace `qtile_var'_99_qt = L.`qtile_var'_99_qt if mi(`qtile_var'_99_qt)	//	'99
 		bys x11101ll: replace `qtile_var'_15_qt = L.`qtile_var'_15_qt if mi(`qtile_var'_15_qt)	//	'15
 		
 		*	Quantile (food expenditure per capita)
 		loc	qtile_var	food_exp_pc
-		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(5)	//	'99 per capita income
-		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(5)	//	'15 per capita income
+		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(10)	//	'99 per capita income
+		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(10)	//	'15 per capita income
 		sort x11101ll wave
 		bys x11101ll: replace `qtile_var'_99_qt = L.`qtile_var'_99_qt if mi(`qtile_var'_99_qt)	//	'99
 		bys x11101ll: replace `qtile_var'_15_qt = L.`qtile_var'_15_qt if mi(`qtile_var'_15_qt)	//	'15
@@ -106,10 +106,12 @@
 		
 	*	Transition probability (of food security)
 	
-		xttrans fs_hh_cat	if	inrange(wave,1999,2003), freq	//	'99-'03
-		xttrans fs_hh_cat	if	inrange(wave,2015,2017), freq	//	'15-'17
+		xttrans fs_hh_cat	if	inrange(wave,1999,2003)	//	'99-'03
+		xttrans fs_hh_cat	if	inrange(wave,2015,2017)	//	'15-'17
 		
-		xttrans	fs_hh_cat	if	inrange(wave,1999,2013)	&	
+		xttrans	fs_hh_cat	if	inrange(wave,1999,2003)	&	food_exp_pc_99_qt==1	//	'99-'03, income bottom 20% quantile
+		xttrans	fs_hh_cat	if	inrange(wave,2015,2017)	&	food_exp_pc_15_qt==1	//	'15-'17, income bottom 20% quantile
+		
 		
 	*	Quantile plots
 	
