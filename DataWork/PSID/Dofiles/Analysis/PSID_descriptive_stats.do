@@ -74,6 +74,7 @@
 		loc	qtile_var	fam_income_pc
 		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(10)	//	'99 per capita income
 		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(10)	//	'15 per capita income
+		xtile	`qtile_var'_17_qt	=	`qtile_var'	if	(wave==2017),	n(10)	//	'17 per capita income
 		sort x11101ll wave
 		bys x11101ll: replace `qtile_var'_99_qt = L.`qtile_var'_99_qt if mi(`qtile_var'_99_qt)	//	'99
 		bys x11101ll: replace `qtile_var'_15_qt = L.`qtile_var'_15_qt if mi(`qtile_var'_15_qt)	//	'15
@@ -82,6 +83,7 @@
 		loc	qtile_var	fs_hh_scale
 		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(10)	//	'99 per capita income
 		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(10)	//	'15 per capita income
+		xtile	`qtile_var'_17_qt	=	`qtile_var'	if	(wave==2017),	n(10)	//	'17 per capita income
 		sort x11101ll wave
 		bys x11101ll: replace `qtile_var'_99_qt = L.`qtile_var'_99_qt if mi(`qtile_var'_99_qt)	//	'99
 		bys x11101ll: replace `qtile_var'_15_qt = L.`qtile_var'_15_qt if mi(`qtile_var'_15_qt)	//	'15
@@ -90,6 +92,7 @@
 		loc	qtile_var	food_exp_pc
 		xtile	`qtile_var'_99_qt	=	`qtile_var'	if	(wave==1999),	n(10)	//	'99 per capita income
 		xtile	`qtile_var'_15_qt	=	`qtile_var'	if	(wave==2015),	n(10)	//	'15 per capita income
+		xtile	`qtile_var'_17_qt	=	`qtile_var'	if	(wave==2017),	n(10)	//	'17' per capita income
 		sort x11101ll wave
 		bys x11101ll: replace `qtile_var'_99_qt = L.`qtile_var'_99_qt if mi(`qtile_var'_99_qt)	//	'99
 		bys x11101ll: replace `qtile_var'_15_qt = L.`qtile_var'_15_qt if mi(`qtile_var'_15_qt)	//	'15
@@ -99,25 +102,50 @@
 	
 		*	Overview (variables that appear all the time between 1999 and 2017)
 		xtsum fam_income_pc food_exp_pc food_school_any food_stamp_1yr food_stamp_2yr food_elderly_meal food_WIC_received
+		xtsum fam_income_pc food_exp_pc food_school_any food_stamp_1yr food_stamp_2yr food_elderly_meal food_WIC_received	if	fam_income_pc_99_qt==1
 		
 		*	Food security (variables that don't appear in every period)
 		xtsum fs_hh_scale fs_child_scale fs_hh_cat fs_child_cat if inrange(wave,1999,2003)	//	1999-2003
 		xtsum fs_hh_scale fs_child_scale fs_hh_cat fs_child_cat if inrange(wave,2015,2017)	//	2015-2017
+		
+		xtsum fs_hh_scale fs_child_scale fs_hh_cat fs_child_cat if inrange(wave,1999,2003)	&	fam_income_pc_99_qt==1	//	1999-2003, '99 income per capita botoom 10%
+		xtsum fs_hh_scale fs_child_scale fs_hh_cat fs_child_cat if inrange(wave,2015,2017)	&	fam_income_pc_99_qt==1	//	2015-2017,	'99 income per capita botoom 10%
+		
+	*	Correlation
+		
+		*	Cross-sectional correlation
+		corr	fam_income_pc food_exp_pc food_school_any food_stamp_1yr food_stamp_2yr food_elderly_meal food_WIC_received
+		
+		*	Autocorrelation
+		foreach	var	in fam_income_pc food_exp_pc food_school_any food_stamp_1yr food_stamp_2yr food_elderly_meal food_WIC_received	{
+			di	"Autocorrelatoin of `var'"
+			corr	`var'	l.`var'	l2.`var'	l3.`var'	l4.`var'	l5.`var'	l6.`var'	l7.`var'	l8.`var'	l9.`var'
+		}
+
+		corr	fs_hh_scale	l.fs_hh_scale	l2.fs_hh_scale
+
+		*	Correlation between income per capita and lagged values of other variables
+		foreach	var	in food_exp_pc food_school_any food_stamp_1yr food_stamp_2yr food_elderly_meal food_WIC_received	{
+			di	"Correlation between income per capita and lagged values of `var'"
+			corr	fam_income_pc	l.`var'	l2.`var'	l3.`var'	l4.`var'	l5.`var'	l6.`var'	l7.`var'	l8.`var'	l9.`var'
+		}
+
+		corr	fam_income_pc	l.fs_hh_scale	l2.fs_hh_scale
 		
 	*	Transition probability (of food security)
 	
 		xttrans fs_hh_cat	if	inrange(wave,1999,2003)	//	'99-'03
 		xttrans fs_hh_cat	if	inrange(wave,2015,2017)	//	'15-'17
 		
-		xttrans	fs_hh_cat	if	inrange(wave,1999,2003)	&	food_exp_pc_99_qt==1	//	'99-'03, income bottom 20% quantile
-		xttrans	fs_hh_cat	if	inrange(wave,2015,2017)	&	food_exp_pc_15_qt==1	//	'15-'17, income bottom 20% quantile
-		
-		
+		xttrans	fs_hh_cat	if	inrange(wave,1999,2003)	&	food_exp_pc_99_qt==1	//	'99-'03, income bottom 10% quantile
+		xttrans	fs_hh_cat	if	inrange(wave,2015,2017)	&	food_exp_pc_15_qt==1	//	'15-'17, income bottom 10% quantile
+
 	*	Quantile plots
 	
 		quantile fs_hh_scale
+		
+		qplot fs_hh_scale if (wave==2017), over(fam_income_pc_99_qt) legend(rows(1))
 		graph	close
-		*qplot fs_hh_scale if (wave==2017), over(fs_hh_scale_2017_qt) legend(rows(1))
 		
 	*	Dynamics (change over time)
 	
@@ -128,11 +156,12 @@
 		*	Food Security (household)
 		graph twoway	(connected fs_hh_scale wave if fam_income_pc_99_qt==1)	///
 						(connected fs_hh_scale wave if fam_income_pc_99_qt==2)	///
-						(connected fs_hh_scale wave if fam_income_pc_99_qt==3)	///
-						(connected fs_hh_scale wave if fam_income_pc_99_qt==4)	///
-						(connected fs_hh_scale wave if fam_income_pc_99_qt==5),	///
-						ytitle(Food Security Scale) title(Average Food Security (Household))	///
-						note(note: Quantile is based on '99 income per capita & no data between '05-'13) legend(lab (1 "20%") lab(2 "40%") lab(3 "60%") lab(4 "80%") lab(5 "100%") rows(1))
+						(connected fs_hh_scale wave if fam_income_pc_99_qt==5)	///
+						(connected fs_hh_scale wave if fam_income_pc_99_qt==9)	///
+						(connected fs_hh_scale wave if fam_income_pc_99_qt==10),	///
+						ytitle(Food Security Scale) title(Food Security (Household))	///
+						note(note: Quantile is based on '99 income per capita & no data between '05-'13) legend(lab (1 "10%") lab(2 "20%") lab(3 "50%") lab(4 "90%") lab(5 "100%") rows(1))	///
+						name(fs_hh_scale, replace)
 		
 		graph	export	"${PSID_outRaw}/fs_hh_scale.png", replace
 		graph	close
@@ -140,23 +169,27 @@
 		*	Food Security (children)
 		graph twoway	(connected fs_child_scale wave if fam_income_pc_99_qt==1)	///
 						(connected fs_child_scale wave if fam_income_pc_99_qt==2)	///
-						(connected fs_child_scale wave if fam_income_pc_99_qt==3)	///
-						(connected fs_child_scale wave if fam_income_pc_99_qt==4)	///
-						(connected fs_child_scale wave if fam_income_pc_99_qt==5),	///
-						ytitle(Food Security Scale) title(Average Food Security (Children))	///
-						note(note: Quantile is based on '99 income per capita & no data between '05-'13) legend(lab (1 "20%") lab(2 "40%") lab(3 "60%") lab(4 "80%") lab(5 "100%") rows(1))	
+						(connected fs_child_scale wave if fam_income_pc_99_qt==5)	///
+						(connected fs_child_scale wave if fam_income_pc_99_qt==9)	///
+						(connected fs_child_scale wave if fam_income_pc_99_qt==10),	///
+						ytitle(Food Security Scale) title(Food Security (Children))	///
+						note(note: Quantile is based on '99 income per capita & no data between '05-'13) legend(lab (1 "10%") lab(2 "20%") lab(3 "50%") lab(4 "90%") lab(5 "100%") rows(1))	///
+						name(fs_child_scale, replace)
 		
 		graph	export	"${PSID_outRaw}/fs_hh_child.png", replace
 		graph	close
 		
+		graph	combine	fs_hh_scale	fs_child_scale
+		
 		*	Food Stamp (Last year)
 		graph twoway	(connected food_stamp_1yr wave if fam_income_pc_99_qt==1)	///
 						(connected food_stamp_1yr wave if fam_income_pc_99_qt==2)	///
-						(connected food_stamp_1yr wave if fam_income_pc_99_qt==3)	///
-						(connected food_stamp_1yr wave if fam_income_pc_99_qt==4)	///
-						(connected food_stamp_1yr wave if fam_income_pc_99_qt==5),	///
-						ytitle(=1 "Received") title(Food Stamp status of previous year)	///
-						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "20%") lab(2 "40%") lab(3 "60%") lab(4 "80%") lab(5 "100%") rows(1))
+						(connected food_stamp_1yr wave if fam_income_pc_99_qt==5)	///
+						(connected food_stamp_1yr wave if fam_income_pc_99_qt==9)	///
+						(connected food_stamp_1yr wave if fam_income_pc_99_qt==10),	///
+						ytitle(=1 "Received") title(Food Stamp last year)	///
+						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "10%") lab(2 "20%") lab(3 "50%") lab(4 "90%") lab(5 "100%") rows(1))	///
+						name(food_stamp_1yr, replace)
 		
 		graph	export	"${PSID_outRaw}/food_stamp_1yr.png", replace
 		graph	close
@@ -164,11 +197,12 @@
 		*	Food Stamp (2 years ago)
 		graph twoway	(connected food_stamp_2yr wave if fam_income_pc_99_qt==1)	///
 						(connected food_stamp_2yr wave if fam_income_pc_99_qt==2)	///
-						(connected food_stamp_2yr wave if fam_income_pc_99_qt==3)	///
-						(connected food_stamp_2yr wave if fam_income_pc_99_qt==4)	///
-						(connected food_stamp_2yr wave if fam_income_pc_99_qt==5),	///
-						ytitle(=1 "Received") title(Food Stamp status of 2 years ago)	///
-						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "20%") lab(2 "40%") lab(3 "60%") lab(4 "80%") lab(5 "100%") rows(1))
+						(connected food_stamp_2yr wave if fam_income_pc_99_qt==5)	///
+						(connected food_stamp_2yr wave if fam_income_pc_99_qt==9)	///
+						(connected food_stamp_2yr wave if fam_income_pc_99_qt==10),	///
+						ytitle(=1 "Received") title(Food Stamp 2 years ago)	///
+						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "10%") lab(2 "20%") lab(3 "50%") lab(4 "90%") lab(5 "100%") rows(1))	///
+						name(food_stamp_2yr, replace)
 						
 		graph	export	"${PSID_outRaw}/food_stamp_2yr.png", replace
 		graph	close
@@ -176,11 +210,12 @@
 		*	Child received free meal
 		graph twoway	(connected food_school_any wave if fam_income_pc_99_qt==1)	///
 						(connected food_school_any wave if fam_income_pc_99_qt==2)	///
-						(connected food_school_any wave if fam_income_pc_99_qt==3)	///
-						(connected food_school_any wave if fam_income_pc_99_qt==4)	///
-						(connected food_stamp_2yr wave if fam_income_pc_99_qt==5),	///
-						ytitle(=1 "Received") title(School meal status)	///
-						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "20%") lab(2 "40%") lab(3 "60%") lab(4 "80%") lab(5 "100%") rows(1))	
+						(connected food_school_any wave if fam_income_pc_99_qt==5)	///
+						(connected food_school_any wave if fam_income_pc_99_qt==9)	///
+						(connected food_stamp_2yr wave if fam_income_pc_99_qt==10),	///
+						ytitle(=1 "Received") title(School meal)	///
+						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "10%") lab(2 "20%") lab(3 "50%") lab(4 "90%") lab(5 "100%") rows(1))	///
+						name(school_meal, replace)
 		
 		graph	export	"${PSID_outRaw}/school_meal.png", replace
 		graph	close
@@ -188,11 +223,12 @@
 		*	WIC meal
 		graph twoway	(connected food_WIC_received wave if fam_income_pc_99_qt==1)	///
 						(connected food_WIC_received wave if fam_income_pc_99_qt==2)	///
-						(connected food_WIC_received wave if fam_income_pc_99_qt==3)	///
-						(connected food_WIC_received wave if fam_income_pc_99_qt==4)	///
-						(connected food_WIC_received wave if fam_income_pc_99_qt==5),	///
-						ytitle(=1 "Received") title(WIC meal status)	///
-						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "20%") lab(2 "40%") lab(3 "60%") lab(4 "80%") lab(5 "100%") rows(1))
+						(connected food_WIC_received wave if fam_income_pc_99_qt==5)	///
+						(connected food_WIC_received wave if fam_income_pc_99_qt==9)	///
+						(connected food_WIC_received wave if fam_income_pc_99_qt==10),	///
+						ytitle(=1 "Received") title(WIC meal)	///
+						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "10%") lab(2 "20%") lab(3 "50%") lab(4 "90%") lab(5 "100%") rows(1))	///
+						name(WIC_meal, replace)
 						
 		graph	export	"${PSID_outRaw}/WIC_meal.png", replace
 		graph	close
@@ -200,13 +236,21 @@
 		*	Elderly meal
 		graph twoway	(connected food_elderly_meal wave if fam_income_pc_99_qt==1)	///
 						(connected food_elderly_meal wave if fam_income_pc_99_qt==2)	///
-						(connected food_elderly_meal wave if fam_income_pc_99_qt==3)	///
-						(connected food_elderly_meal wave if fam_income_pc_99_qt==4)	///
-						(connected food_elderly_meal wave if fam_income_pc_99_qt==5),	///
+						(connected food_elderly_meal wave if fam_income_pc_99_qt==5)	///
+						(connected food_elderly_meal wave if fam_income_pc_99_qt==9)	///
+						(connected food_elderly_meal wave if fam_income_pc_99_qt==10),	///
 						ytitle(=1 "Received") title(Elderly meal status)	///
-						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "20%") lab(2 "40%") lab(3 "60%") lab(4 "80%") lab(5 "100%") rows(1))	
+						note(note: Quantile is based on '99 income per capita)	legend(lab (1 "10%") lab(2 "20%") lab(3 "50%") lab(4 "90%") lab(5 "100%") rows(1))	///
+						name(Elderly_meal, replace)
 		
 		graph	export	"${PSID_outRaw}/Elderly_meal.png", replace
+		graph	close
+		
+	*	Combine graphs
+		cd	"${PSID_outRaw}"
+		graph	combine		fs_hh_scale	food_stamp_1yr	school_meal	fs_child_scale	food_stamp_2yr	WIC_meal
+		
+		graph	export	"${PSID_outRaw}/Food_over_time.png", replace
 		graph	close
 		
 
