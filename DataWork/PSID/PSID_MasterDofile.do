@@ -193,8 +193,8 @@
    * run to 1. To not run a task, set the local to 0.
    local importDo       0
    local cleaningDo     0
-   local constructDo    1
-   local analysisDo     1
+   local constructDo    0
+   local analysisDo     0
 
    if (`importDo' == 1) { // Change the local above to run or not to run this file
        do "$PSID_doImp/PSID_import_MasterDofile.do" 
