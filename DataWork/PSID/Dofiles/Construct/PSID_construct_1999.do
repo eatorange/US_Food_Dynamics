@@ -68,10 +68,14 @@
 	use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
 	
 	clonevar	FUID	=	ER33501
-	keep	if	FUID!=0
+	keep	if	FUID!=0	&	inrange(ER33502,1,20) //	Keep only individuals surveyed (or living together) in 1999
 	tempfile	indiv_1999
 	save		`indiv_1999'
 	
+		*	Education attained
+		replace	ER33516=.n	if	inlist(ER33516,0,99)
+		replace	ER33516=.d	if	ER33516==98
+		
 		*	Individual variable to import
 		local	ID_vars			ER33502
 		local	age_vars		ER33504
@@ -94,6 +98,8 @@
 	
 		*	Demographics
 		
+			*	Family Size
+			
 			*	State of Residence
 			label define	statecode	0	"Inap.: U.S. territory or foreign country"	99	"D.K; N.A"	///
 										1	"Alabama"		2	"Arizona"			3	"Arkansas"	///
@@ -212,7 +218,8 @@
 			replace	ER13012	=.n	if	ER13012==0		//	Wife age, No wife
 			replace	ER13014	=.n	if	ER13014==0		//	No child
 			
-				
+		*	Save
+		save	`family_1999', replace
 									
 	
 	/****************************************************************
@@ -269,9 +276,17 @@
 		**	This section will be moved to another file later
 	****************************************************************/		
 	
+	*	Family_level
+	use	`family_1999', clear
+	merge	1:m	FUID	using	`indiv_1999', keepusing(ER31996 ER31997) keep(3)
+	duplicates drop
+	
+	svyset	ER31997 [pweight=ER16519], strata(ER31996)
+	
 	*	Age
+		
 		*	Household Head age
-		summarize	ER13010, pweight=
+		*summarize	ER13010, pweight=
 	
 	
 	
