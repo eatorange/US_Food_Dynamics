@@ -66,18 +66,37 @@
 	di "Git branch `r(branch)'; commit `r(sha)'."
 	
 	/****************************************************************
-		SECTION 3: Summary stats 
-		**	This section will be moved to another file later
+		SECTION 1: Summary stats 
 	****************************************************************/		
 	
 	*	Individual-level summary stats
 	use	"${PSID_dtInt}/PSID_const_1999_ind.dta",	clear
 	
+		*	Import variables from family data to be analyzed for comparison with census
+		loc	import_vars	ER15928	interview_region_census
+		merge m:1 FUID using "${PSID_dtInt}/PSID_const_1999_fam.dta", keepusing(`import_vars') nogen assert(3)
+		
 		*	Define a matrix where descriptive stats will be stored
 		mat	define		desc_stats	=	nullmat(desc_stats)
 	
 		*	Sample Composition
 		svy: tab sample_source, count cellwidth(12) format(%12.2g)
+		
+		*	Population (to be compared with Census)
+			qui	svy: mean FUID
+			mat list e(_N_subp), format(%12.2g)
+			
+			graph pie FUID [pw = ER33547], over(sample_source) ///
+			plabel(1 "SRC")	plabel(2 "SEO")	plabel(3 "Refresher") ///
+			title(Sample Source(population)_individual)
+			graph	export	"${PSID_outRaw}/pop_sample_99_ind.png", replace
+			graph	close
+			
+		*	Race
+			svy: tab ER15928, count cellwidth(12) format(%12.2g)
+			
+		*	Region
+			svy: tab interview_region_census, count cellwidth(12) format(%12.2g)
 		
 		*	Age
 			
@@ -87,6 +106,9 @@
 			estat sd	//	Standard deviation
 			epctile ER33504, p(25 50 75 90 95)	//	Percentile
 			*mat	desc_stats	=	nullmat(desc_stats)	\	e(_N)[1,1], e(b)[1,1]
+			histogram ER33504 [fw = ER33547_int], bin(20) title(Distribution of Age)
+			graph	export	"${PSID_outRaw}/age_99_dist.png", replace
+			graph	close
 			
 			*	By Source (SRC, SEO, Immgrant Refresher)
 			svy: mean ER33504, over(sample_source)	//	Mean, standard error, confidence interval
@@ -111,13 +133,30 @@
 			mat	define	result=r(table)
 			estat sd	//	Standard deviation
 			epctile ER33516, p(25 50 75 90 95)	//	Percentile
+			histogram ER33516 [fw = ER33547_int], discrete title(Years of Education)
+			graph	export	"${PSID_outRaw}/edu_99_dist.png", replace
+			graph	close
 			
 			*	By sample
 			svy: mean ER33516, over(sample_source)	//	Mean, standard error, confidence interval
 			mat	define	result=r(table)
 			estat sd	//	Standard deviation
 			epctile ER33516, p(25 50 75 90 95) over(sample_source)	//	Percentile
-		
+			
+			*	Comparison with Census
+			
+				*	% of HS graduates, age 25-29
+				svy, subpop(if inrange(ER33504,25,29)): mean hs_graduate
+				
+				*	% of Bachelor's, age 25-29
+				svy, subpop(if inrange(ER33504,25,29)): mean bachelor_degree	
+				
+				*	% of HS graduates by gender, age 25>=
+				svy, subpop(if ER33504>=25 & !mi(ER33504)): mean hs_graduate, over(ER32000)
+				
+				*	% of Bachelor's by gender, age 25>=
+				svy, subpop(if ER33504>=25 & !mi(ER33504)): mean bachelor_degree, over(ER32000)
+						
 	
 	*	Family_level
 	use	"${PSID_dtInt}/PSID_const_1999_fam.dta", clear
@@ -132,6 +171,9 @@
 			mat	define	result=r(table)
 			estat sd	//	Standard deviation
 			epctile ER13010, p(25 50 75 90 95)	//	Percentile
+			histogram ER13010 [fw = ER16519_int], bin(20) title(Age(Head))
+			graph	export	"${PSID_outRaw}/agehead_99_dist.png", replace
+			graph	close
 			
 			*	By sample
 			svy: mean	ER13010, over(sample_source)
@@ -156,6 +198,9 @@
 			mat	define	result=r(table)
 			estat sd	//	Standard deviation
 			epctile ER13009, p(25 50 75 90 95)	//	Percentile
+			histogram ER13009 [fw = ER16519_int], discrete title(Family Size)
+			graph	export	"${PSID_outRaw}/famsize_99_dist.png", replace
+			graph	close
 			
 			*	By sample
 			svy: mean	ER13009, over(sample_source)
@@ -169,6 +214,11 @@
 			
 			*	Overall
 			svy: proportion	ER16430
+			graph pie FUID [fw = ER16519_int], over(ER16430) ///
+			plabel(2 "NE")	plabel(3 "N.Cntrl")	plabel(4 "South")	plabel(5 "West")	///
+			title(Region)
+			graph	export	"${PSID_outRaw}/location_99_dist.png", replace
+			graph	close
 			
 			*	By sample
 			svy: proportion	ER16430, over(sample_source)
@@ -179,6 +229,11 @@
 
 			*	Overall
 			svy: proportion	ER15932
+			graph pie FUID [fw = ER16519_int], over(ER15932) ///
+			plabel(3 "National origin")	plabel(5 "Racial")	///
+			title(Ethnicity(Head))
+			graph	export	"${PSID_outRaw}/ethnicity_99_dist.png", replace
+			graph	close
 			
 			*	By sample
 			svy: proportion	ER15932, over(sample_source)
@@ -189,8 +244,21 @@
 	
 			*	Overall
 			svy: proportion	ER15928
+			mat list e(_N_subp), format(%12.2g)
+			graph pie FUID [pw = ER16519], over(ER15928) ///
+			plabel(1 "White")	plabel(2 "Black")	///
+			title(Race(Head))
+			graph	export	"${PSID_outRaw}/race_99_dist.png", replace
+			graph	close
 			
 			*	By sample
 			svy: proportion	ER15928, over(sample_source)
 			mat list e(_N)
 			mat list e(_N_subp)
+			
+			graph pie FUID [pw = ER16519], over(sample_source) ///
+			plabel(1 "SRC")	plabel(2 "SEO")	plabel(3 "Refresher") ///
+			title(Sample Source(population)_family)
+			graph	export	"${PSID_outRaw}/pop_sample_99_fam.png", replace
+			graph	close
+		

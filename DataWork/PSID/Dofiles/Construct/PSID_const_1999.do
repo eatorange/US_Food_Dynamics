@@ -77,7 +77,15 @@
 	*	Individual file
 	use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
 	svyset	ER31997 [pweight=ER33547], strata(ER31996)	//	Define as a survey data. Individual cross-sectional weight
+		
+		*	Integer part of survey weight
+		*	This integer weight can be used as a frequency weight. For more information, please find the following sources
+			*	Heeringa, West and Berglund (2010, pages 121-122)
+			*	Applied Survey Data Analysis (https://stats.idre.ucla.edu/stata/seminars/applied-svy-stata13/)
 			
+		gen	ER33547_int	=	int(ER33547)
+		gen	ER33546_int	=	int(ER33546)
+		
 		*	ID
 		clonevar	FUID	=	ER33501
 		order	FUID
@@ -95,16 +103,26 @@
 		replace	ER33516=.n	if	inlist(ER33516,0,99)
 		replace	ER33516=.d	if	ER33516==98
 		
+			*	High School Graduate
+			gen		hs_graduate	=.
+			replace	hs_graduate	=0	if	inrange(ER33516,0,11)
+			replace	hs_graduate	=1	if	ER33516>=12	&	!mi(ER33516)
+			
+			*	Bachelor's degree
+			gen		bachelor_degree	=.
+			replace	bachelor_degree	=0	if	inrange(ER33516,0,15)
+			replace	bachelor_degree	=1	if	ER33516>=16	&	!mi(ER33516)
+		
 		*	Individual variable to import
 		local	ID_vars			FUID	ER33502
 		local	age_vars		ER33504
 		local	gender_var		ER32000
-		local	educ_vars		ER33516
+		local	educ_vars		ER33516	hs_graduate	bachelor_degree
 		*local	martial_vars
 		*local	emp_vars		ER33512
 		local	splitoff_vars	ER33539	ER33540	ER33541
 		local	follow_vars		ER33542
-		local	weight_vars		ER33546	ER33547
+		local	weight_vars		ER33546	ER33547	ER33546_int	ER33547_int
 		local	survey_vars		ER31996 ER31997
 		
 		keep	`ID_vars'	`age_vars'	`gender_var'	`weight_vars'	`educ_vars'	`splitoff_vars'	`follow_vars'	`survey_vars'
@@ -200,6 +218,19 @@
 													6	"Foreign Country"	///
 													0	"NA"
 				label	values	ER16430	interview_region
+				
+				*	Region (for comparison with 1999 census)
+				gen	interview_region_census=.
+				replace	interview_region_census=1	if	inlist(ER13004,46,36,4,25,11,49,27,43,5,2,30,50,51)
+				replace	interview_region_census=2	if	inlist(ER13004,33,40,26,15,24,14,22,48,12,13,34,21)
+				replace	interview_region_census=3	if	ER16430==3
+				replace	interview_region_census=4	if	ER16430==1
+				replace	interview_region_census=0	if	mi(interview_region_census)
+				
+				label	define	region_census	1	"West"	2	"Midwest"	3	"South"	4	"Northeast"	0	"N/A"
+				label	values	interview_region_census	region_census
+				
+				
 		
 		*	Ethnicity
 			
@@ -250,18 +281,23 @@
 								0 	"Inap.: no wife in FU"
 		label	val	ER15928	ER15836	race	
 		
+		/*
 		replace	ER15836=.d	if	ER15836==8
 		replace	ER15836=.r	if	ER15836==9
 		replace	ER15836=.n	if	ER15836==0
 		
 		replace	ER15928=.d	if	ER15928==8
 		replace	ER15928=.r	if	ER15928==9
+		*/
 		
 		*	Import survey variables from individual data
 		merge	1:m	FUID	using	`indiv_1999', keepusing(ER31996 ER31997) keep(3) nogen assert(3)
 		duplicates drop
 	
 		svyset	ER31997 [pweight=ER16519], strata(ER31996)	//	Define as a survey data, using cross-sectional family weight
+			
+			*	Construct integer part of suvey weight to be used as a frequency weight
+			gen	ER16519_int	=	int(ER16519)
 		
 		*	Save
 		tempfile	family_1999
