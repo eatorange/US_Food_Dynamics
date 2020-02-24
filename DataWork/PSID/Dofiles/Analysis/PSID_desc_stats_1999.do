@@ -72,6 +72,21 @@
 	*	Individual-level summary stats
 	use	"${PSID_dtInt}/PSID_const_1999_ind.dta",	clear
 	
+		*	Keep relevant variables only
+		local	ID_vars			FUID	ER33502
+		local	age_vars		ER33504
+		local	gender_var		ER32000
+		local	educ_vars		ER33516	hs_graduate	bachelor_degree
+		*local	martial_vars
+		*local	emp_vars		ER33512
+		local	splitoff_vars	ER33539	ER33540	ER33541
+		local	follow_vars		ER33542
+		local	sample_vars		sample_source
+		local	weight_vars		ER33546	ER33547	ER33546_int	ER33547_int
+		local	survey_vars		ER31996 ER31997
+		
+		keep	`ID_vars'	`age_vars'	`gender_var'	`weight_vars'	`educ_vars'	`splitoff_vars'	`follow_vars'	`sample_vars'	`survey_vars'
+		
 		*	Import variables from family data to be analyzed for comparison with census
 		loc	import_vars	ER15928	interview_region_census
 		merge m:1 FUID using "${PSID_dtInt}/PSID_const_1999_fam.dta", keepusing(`import_vars') nogen assert(3)
