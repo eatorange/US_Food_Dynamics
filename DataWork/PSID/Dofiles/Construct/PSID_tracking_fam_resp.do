@@ -200,8 +200,13 @@
 		
 			*	1999 Family ID (base-year)
 			assert !mi( splitoff_indicator1999) if !mi( x11102_1999)
-			generate	fam_ID_1999	=	x11102_1999	if	!mi()
+			generate	fam_ID_1999	=	x11102_1999	if	!mi(x11102_1999)
+			lab	var	fam_ID_1999	"Family ID in 1999"
+			
+			
 		
+	
+	
 	
 	*	Descriptive Stats
 	
