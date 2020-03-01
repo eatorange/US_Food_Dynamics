@@ -79,7 +79,8 @@
 		*	ID
 		clonevar	FUID	=	ER33501
 		order	FUID
-		keep	if	FUID!=0	&	inrange(ER33502,1,20) //	Keep only individuals living together in 1999
+		*keep	if	FUID!=0	&	inrange(ER33502,1,20) //	Keep only individuals living together in 1999
+		keep	if	FUID!=0	&	(ER33502!=0) //	New code, to be consistent with official PSID technical report. (sample size N=20515 matches)
 	
 		*	Age
 		replace	ER33504	=.d	if	ER33504==999

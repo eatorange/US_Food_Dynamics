@@ -132,10 +132,12 @@
 		merge	1:m	FUID	using	`indiv_1999', keepusing(ER31996 ER31997) keep(3) nogen assert(3)
 		duplicates drop
 	
-		svyset	ER31997 [pweight=ER16519], strata(ER31996)	//	Define as a survey data, using cross-sectional family weight
+		*svyset	ER31997 [pweight=ER16518], strata(ER31996)	//	Define as a survey data, using cross-sectional family weight
+		svyset	ER31997 [pweight=ER16518], strata(ER31996)	//	Define as a survey data, using longitudinal family weight, as PSID officially suggested to use longitudinal weight for family cross-sectional analysis. Also some descriptive statistics match with PSID official statistics under this setting (ex. race of head: 12.6%, weighted)
 			
 			*	Construct integer part of suvey weight to be used as a frequency weight
-			gen	ER16519_int	=	int(ER16519)
+			*gen	ER16519_int	=	int(ER16519)
+			gen	ER16518_int	=	int(ER16518)
 		
 		*	Save
 		tempfile	family_1999
