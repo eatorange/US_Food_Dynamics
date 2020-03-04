@@ -84,7 +84,7 @@
 							
 		tempfile relat_to_head_ind
 		save	`relat_to_head_ind'
-
+		
 		*	Splitoff indicator (fam)
 		psid use || splitoff_indicator [99]ER13005E [01]ER17006 [03]ER21005 [05]ER25005 [07]ER36005 [09]ER42005 [11]ER47305 [13]ER53005 [15]ER60005 [17]ER66005	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
@@ -106,6 +106,28 @@
 		tempfile	main_fam_ID
 		save		`main_fam_ID'
 		
+		*	Survey Weights
+		
+			*	Longitudinal, individual-level
+			psid use || weight_long_ind [99]ER33546 [01]ER33637 [03]ER33740 [05]ER33848 [07]ER33950 [09]ER34045 [11]ER34154 [13]ER34268 [15]ER34413 [17]ER34650	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+			
+			tempfile	weight_long_ind
+			save		`weight_long_ind'
+			
+			*	Cross-sectional, individual-level
+			psid use || weight_cross_ind [99]ER33547 [01]ER33639 [03]ER33742 [05]ER33849 [07]ER33951 [09]ER34046 [11]ER34155 [13]ER34269 [15]ER34414 [17]ER34651	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+			
+			tempfile	weight_cross_ind
+			save		`weight_cross_ind'
+			
+			*	Longitudinal, family-level
+			psid use || weight_long_fam [99]ER16518 [01]ER20394 [03]ER24179 [05]ER28078 [07]ER41069 [09]ER47012 [11]ER52436 [13]ER58257 [15]ER65492 [17]ER71570	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+			
+			tempfile	weight_long_fam
+			save		`weight_long_fam'
 		
 		
 	*	Merge individual cross-wave with family cross-wave
@@ -114,6 +136,10 @@
 	merge 1:1 x11101ll using `splitoff_indicator_fam', keepusing(splitoff_indicator*) nogen assert(3)
 	merge 1:1 x11101ll using `num_splitoff_fam', keepusing(num_split_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `main_fam_ID', keepusing(main_fam_ID*) nogen assert(3)
+	merge 1:1 x11101ll using `weight_long_ind', keepusing(weight_long_ind*) nogen assert(3)
+	merge 1:1 x11101ll using `weight_cross_ind', keepusing(weight_cross_ind*) nogen assert(3)
+	merge 1:1 x11101ll using `weight_long_fam', keepusing(weight_long_fam*) nogen assert(3)
+	
 
 	
 	/****************************************************************
