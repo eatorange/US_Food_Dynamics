@@ -151,7 +151,7 @@
 				*/
 				
 				* % of tail distribution per sample
-				local	years	1999 2001 2003 2005 2007 2009 2011 2013 2015 2017
+				local	years	1969 1999 2001 2003 2005 2007 2009 2011 2013 2015 2017
 				
 				foreach	year	of	local	years	{
 					
@@ -173,7 +173,10 @@
 					tab sample_source if xsqnr_`year'!=0	&	inrange(sample_source,1,3)	&	weight_long_ind`year'<=`r(p5)'
 					qui summ	weight_long_ind`year'	if	xsqnr_`year'!=0	&	inrange(sample_source,1,3), d 
 					di "Year `year', above 95 percentile"
-					tab sample_source if xsqnr_`year'!=0	&	inrange(sample_source,1,3)	&	weight_long_ind`year'>=`r(p95)'			
+					*tab sample_source if xsqnr_`year'!=0	&	inrange(sample_source,1,3)	&	weight_long_ind`year'>=`r(p95)'
+					gen	weight_long_ind_top95_`year'=1 if xsqnr_`year'!=0	&	inrange(sample_source,1,3)	&	weight_long_ind`year'>=`r(p95)'
+					replace	weight_long_ind_top95_`year'=0	if	weight_long_ind_top95_`year'!=1
+					replace	weight_long_ind_top95_`year'=.	if	!(xsqnr_`year'!=0	&	inrange(sample_source,1,3))
 				}
 				
 				*	% of non-sample members in family-level
