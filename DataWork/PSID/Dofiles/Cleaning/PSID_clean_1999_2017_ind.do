@@ -70,8 +70,31 @@
 	*	I found that "psid add" has a critical problem; when using "psid add" command, it imports the values of only strongly balanced observation. In other words, if an observation has a missing interview in any of the wave, that observation gets missing values for ALL the waves.
 	*	Therefore, I will us "psid use" command only for each variable and merge them. This takes more time and requires more work than using "psid add", but still takes much less time than manual cleaning
 	
-	* Import relevant variables using "psidtools" command
+	* Import relevant variables using "psidtools" command	
+				
+		*	Survey Weights
+		
+			*	Longitudinal, individual-level
+			psid use || weight_long_ind [68]ER30019 [69]ER30042 [70]ER30066 [71]ER30090 [72]ER30116 [73]ER30137 [74]ER30159 [75]ER30187 [76]ER30216 [77]ER30245 [78]ER30282 [79]ER30312 [80]ER30342 [81]ER30372 [82]ER30398 [83]ER30428 [84]ER30462 [85]ER30497 [86]ER30534 [87]ER30569 [88]ER30605 [89]ER30641 [90]ER30686 [91]ER30730 [92]ER30803	[93]ER30864 [94]ER33119 [95]ER33275 [96]ER33318	[97]ER33430	[99]ER33546 [01]ER33637 [03]ER33740 [05]ER33848 [07]ER33950 [09]ER34045 [11]ER34154 [13]ER34268 [15]ER34413 [17]ER34650	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
 			
+			tempfile	weight_long_ind
+			save		`weight_long_ind'
+			
+			*	Cross-sectional, individual-level
+			psid use || weight_cross_ind [99]ER33547 [01]ER33639 [03]ER33742 [05]ER33849 [07]ER33951 [09]ER34046 [11]ER34155 [13]ER34269 [15]ER34414 [17]ER34651	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+			
+			tempfile	weight_cross_ind
+			save		`weight_cross_ind'
+			
+			*	Longitudinal, family-level
+			psid use || weight_long_fam [99]ER16518 [01]ER20394 [03]ER24179 [05]ER28078 [07]ER41069 [09]ER47012 [11]ER52436 [13]ER58257 [15]ER65492 [17]ER71570	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+			
+			tempfile	weight_long_fam
+			save		`weight_long_fam'
+		
 		*	Respondent (ind)
 		psid use || respondent	[99]ER33511 [01]ER33611 [03]ER33711 [05]ER33811 [07]ER33911 [09]ER34011 [11]ER34111 [13]ER34211 [15]ER34312 [17]ER34511	///
 							using "${PSID_dtRaw}/Main", design(any) clear
@@ -84,6 +107,47 @@
 							
 		tempfile relat_to_head_ind
 		save	`relat_to_head_ind'
+		
+		*	Age (indiv)
+		psid use || age_ind [68]ER30004 [69]ER30023 [70]ER30046 [71]ER30070 [72]ER30094 [73]ER30120 [74]ER30141 [75]ER30163 [76]ER30191 [77]ER30220 [78]ER30249 [79]ER30286 [80]ER30316 [81]ER30346 [82]ER30376 [83]ER30402 [84]ER30432 [85]ER30466 [86]ER30501 [87]ER30538 [88]ER30573 [89]ER30609 [90]ER30645 [91]ER30692 [92]ER30736 [93]ER30809 [94]ER33104 [95]ER33204 [96]ER33304 [97]ER33404 [99]ER33504 [01]ER33604 [03]ER33704 [05]ER33804 [07]ER33904 [09]ER34004 [11]ER34104 [13]ER34204 [15]ER34305 [17]ER34504	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+		
+		qui ds age_ind*
+		foreach var in `r(varlist)'	{
+			replace	`var'=.d	if	inlist(`var',999)
+			replace	`var'=.n	if	inlist(`var',0)
+		}
+		
+		tempfile	main_age_ind
+		save		`main_age_ind'
+		
+		*	Years of education (indiv)
+		psid use || edu_years [68]ER30010 [70]ER30052 [71]ER30076 [72]ER30100 [73]ER30126 [74]ER30147 [75]ER30169 [76]ER30197 [77]ER30226 [78]ER30255 [79]ER30296 [80]ER30326 [81]ER30356 [82]ER30384 [83]ER30413 [84]ER30443 [85]ER30478 [86]ER30513 [87]ER30549 [88]ER30584 [89]ER30620 [90]ER30657 [91]ER30703 [92]ER30748 [93]ER30820 [94]ER33115 [95]ER33215 [96]ER33315 [97]ER33415 [99]ER33516 [01]ER33616 [03]ER33716 [05]ER33817 [07]ER33917 [09]ER34020 [11]ER34119 [13]ER34230 [15]ER34349 [17]ER34548	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+	
+		qui ds edu_years*
+		foreach var in `r(varlist)'	{
+			replace	`var'=.d	if	`var'==98
+			replace	`var'=.n	if	inlist(`var',0,99)
+		}
+		
+		
+		tempfile	edu_years_ind
+		save		`edu_years_ind'
+		
+		*	Age of head (fam)
+		psid use || age_head [68]V117 [69]V1008 [99]ER13010 [01]ER17013 [03]ER21017 [05]ER25017 [07]ER36017 [09]ER42017 [11]ER47317 [13]ER53017 [15]ER60017 [17]ER66017	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+	
+		tempfile	age_head_fam
+		save		`age_head_fam'
+		
+		*	Race of head (fam)
+		psid use || race_head [68]V181 [69]V801 [99]ER15928 [01]ER19989 [03]ER23426 [05]ER27393 [07]ER40565 [09]ER46543 [11]ER51904 [13]ER57659 [15]ER64810 [17]ER70882	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+	
+		tempfile	race_head_fam
+		save		`race_head_fam'
 		
 		*	Splitoff indicator (fam)
 		psid use || splitoff_indicator [99]ER13005E [01]ER17006 [03]ER21005 [05]ER25005 [07]ER36005 [09]ER42005 [11]ER47305 [13]ER53005 [15]ER60005 [17]ER66005	///
@@ -106,33 +170,18 @@
 		tempfile	main_fam_ID
 		save		`main_fam_ID'
 		
-		*	Survey Weights
-		
-			*	Longitudinal, individual-level
-			psid use || weight_long_ind [99]ER33546 [01]ER33637 [03]ER33740 [05]ER33848 [07]ER33950 [09]ER34045 [11]ER34154 [13]ER34268 [15]ER34413 [17]ER34650	///
-							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
-			
-			tempfile	weight_long_ind
-			save		`weight_long_ind'
-			
-			*	Cross-sectional, individual-level
-			psid use || weight_cross_ind [99]ER33547 [01]ER33639 [03]ER33742 [05]ER33849 [07]ER33951 [09]ER34046 [11]ER34155 [13]ER34269 [15]ER34414 [17]ER34651	///
-							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
-			
-			tempfile	weight_cross_ind
-			save		`weight_cross_ind'
-			
-			*	Longitudinal, family-level
-			psid use || weight_long_fam [99]ER16518 [01]ER20394 [03]ER24179 [05]ER28078 [07]ER41069 [09]ER47012 [11]ER52436 [13]ER58257 [15]ER65492 [17]ER71570	///
-							using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
-			
-			tempfile	weight_long_fam
-			save		`weight_long_fam'
 		
 		
 	*	Merge individual cross-wave with family cross-wave
-	use	`respondent_ind', clear
+	use	`weight_long_ind', clear
+	merge 1:1 x11101ll using `weight_cross_ind', keepusing(weight_cross_ind*) nogen assert(3)
+	merge 1:1 x11101ll using `weight_long_fam', keepusing(weight_long_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `respondent_ind', keepusing(respondent*) nogen assert(3)
 	merge 1:1 x11101ll using `relat_to_head_ind', keepusing(relat_to_head*) nogen assert(3)
+	merge 1:1 x11101ll using `main_age_ind', keepusing(age_ind*) nogen assert(3)
+	merge 1:1 x11101ll using `edu_years_ind', keepusing(edu_years*) nogen assert(3)
+	merge 1:1 x11101ll using `age_head_fam', keepusing(age_head*) nogen assert(3)
+	merge 1:1 x11101ll using `race_head_fam', keepusing(race_head*) nogen assert(3)
 	merge 1:1 x11101ll using `splitoff_indicator_fam', keepusing(splitoff_indicator*) nogen assert(3)
 	merge 1:1 x11101ll using `num_splitoff_fam', keepusing(num_split_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `main_fam_ID', keepusing(main_fam_ID*) nogen assert(3)
@@ -233,5 +282,13 @@
 // Number of splitoff interviews; [99]ER16433 [01]ER20379 [03]ER24156 [05]ER28055 [07]ER41045 [09]ER46989 [11]ER52413 [13]ER58231 [15]ER65467 [17]ER71546
 
 // Main family ID for this splitoff: [99]ER16434 [01]ER20380 [03]ER24157 [05]ER28056 [07]ER41046 [09]ER46990 [11]ER52414 [13]ER58232 [15]ER65468 [17]ER71547
+
+// Age: [68]ER30004 [69]ER30023 [70]ER30046 [71]ER30070 [72]ER30094 [73]ER30120 [74]ER30141 [75]ER30163 [76]ER30191 [77]ER30220 [78]ER30249 [79]ER30286 [80]ER30316 [81]ER30346 [82]ER30376 [83]ER30402 [84]ER30432 [85]ER30466 [86]ER30501 [87]ER30538 [88]ER30573 [89]ER30609 [90]ER30645 [91]ER30692 [92]ER30736 [93]ER30809 [94]ER33104 [95]ER33204 [96]ER33304 [97]ER33404 [99]ER33504 [01]ER33604 [03]ER33704 [05]ER33804 [07]ER33904 [09]ER34004 [11]ER34104 [13]ER34204 [15]ER34305 [17]ER34504
+
+// Years of education: [68]ER30010 [70]ER30052 [71]ER30076 [72]ER30100 [73]ER30126 [74]ER30147 [75]ER30169 [76]ER30197 [77]ER30226 [78]ER30255 [79]ER30296 [80]ER30326 [81]ER30356 [82]ER30384 [83]ER30413 [84]ER30443 [85]ER30478 [86]ER30513 [87]ER30549 [88]ER30584 [89]ER30620 [90]ER30657 [91]ER30703 [92]ER30748 [93]ER30820 [94]ER33115 [95]ER33215 [96]ER33315 [97]ER33415 [99]ER33516 [01]ER33616 [03]ER33716 [05]ER33817 [07]ER33917 [09]ER34020 [11]ER34119 [13]ER34230 [15]ER34349 [17]ER34548
+
+// Age of head: [68]V117 [69]V1008 [70]V1239 [71]V1942 [72]V2542 [73]V3095 [74]V3508 [75]V3921 [76]V4436 [77]V5350 [78]V5850 [79]V6462 [80]V7067 [81]V7658 [82]V8352 [83]V8961 [84]V10419 [85]V11606 [86]V13011 [87]V14114 [88]V15130 [89]V16631 [90]V18049 [91]V19349 [92]V20651 [93]V22406 [94]ER2007 [95]ER5006 [96]ER7006 [97]ER10009 [99]ER13010 [01]ER17013 [03]ER21017 [05]ER25017 [07]ER36017 [09]ER42017 [11]ER47317 [13]ER53017 [15]ER60017 [17]ER66017
+
+// Race of head:  	[68]V181 [69]V801 [70]V1490 [71]V2202 [72]V2828 [73]V3300 [74]V3720 [75]V4204 [76]V5096 [77]V5662 [78]V6209 [79]V6802 [80]V7447 [81]V8099 [82]V8723 [83]V9408 [84]V11055 [85]V11938 [86]V13565 [87]V14612 [88]V16086 [89]V17483 [90]V18814 [91]V20114 [92]V21420 [93]V23276 [94]ER3944 [95]ER6814 [96]ER9060 [97]ER11848 [99]ER15928 [01]ER19989 [03]ER23426 [05]ER27393 [07]ER40565 [09]ER46543 [11]ER51904 [13]ER57659 [15]ER64810 [17]ER70882
 
 		
