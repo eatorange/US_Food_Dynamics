@@ -74,9 +74,9 @@
 	
 		*	Keep relevant variables only
 		local	ID_vars			FUID	ER33502
-		local	age_vars		ER33504
+		local	age_vars		ER33504 age_dist
 		local	gender_var		ER32000
-		local	educ_vars		ER33516	hs_graduate	bachelor_degree
+		local	educ_vars		ER33516	hs_graduate	bachelor_degree edu_dist
 		*local	martial_vars
 		*local	emp_vars		ER33512
 		local	splitoff_vars	ER33539	ER33540	ER33541
@@ -183,7 +183,7 @@
 				
 				*	% of Bachelor's by gender, age 25>=
 				svy, subpop(if ER33504>=25 & !mi(ER33504)): mean bachelor_degree, over(ER32000)
-						
+									
 	
 	*	Family_level
 	use	"${PSID_dtInt}/PSID_const_1999_fam.dta", clear
@@ -293,3 +293,9 @@
 			graph	export	"${PSID_outRaw}/pop_sample_99_fam.png", replace
 			graph	close
 		
+		*	# of Child
+			svy: proportion	has_child
+			
+		*	Education
+			svy: proportion	edu_years_head_cat
+			

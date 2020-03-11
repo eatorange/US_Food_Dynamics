@@ -86,6 +86,17 @@
 		gen	ER33547_int	=	int(ER33547)
 		gen	ER33546_int	=	int(ER33546)
 		
+		*	Age Distribution
+			loc	var	age_dist
+			cap	drop	`var'
+			gen		`var'=. //
+			replace	`var'=1	if	inrange(ER33504,0,17)
+			replace	`var'=2	if	inrange(ER33504,18,29)
+			replace	`var'=3	if	inrange(ER33504,30,44)
+			replace	`var'=4	if	inrange(ER33504,45,64)
+			replace	`var'=5	if	ER33504>=65 & !mi(ER33504)
+			lab	var	`var'	"Distribution of Age"
+		
 		*	Education
 			*	High School Graduate
 			gen		hs_graduate	=.
@@ -96,6 +107,15 @@
 			gen		bachelor_degree	=.
 			replace	bachelor_degree	=0	if	inrange(ER33516,0,15)
 			replace	bachelor_degree	=1	if	ER33516>=16	&	!mi(ER33516)
+			
+			* Distribution
+			local	var	edu_dist
+			capture	drop	`var'
+			gen	`var'=.
+			replace	`var'=1	if	inrange(ER33516,0,11)
+			replace	`var'=2	if	inrange(ER33516,12,13)
+			replace	`var'=3	if	inrange(ER33516,14,15)
+			replace	`var'=4	if	ER33516>=16 & !mi(ER33516)
 		
 		*	Save
 		tempfile	indiv_1999
@@ -117,6 +137,15 @@
 		label	values	sample_source		sample_source
 		label	variable	sample_source	"Source of Sample"
 		
+		*	Age of Household Head
+		gen		age_head_cat=1	if	inrange(ER13010,16,24)
+		replace	age_head_cat=2	if	inrange(ER13010,25,34)
+		replace	age_head_cat=3	if	inrange(ER13010,35,44)
+		replace	age_head_cat=4	if	inrange(ER13010,45,54)
+		replace	age_head_cat=5	if	inrange(ER13010,55,64)
+		replace	age_head_cat=6	if	inrange(ER13010,65,150)
+		label	var	age_head_cat	"Age of Household Head (category)"
+		
 		*	Region (for comparison with 1999 census)
 		gen	interview_region_census=.
 		replace	interview_region_census=1	if	inlist(ER13004,46,36,4,25,11,49,27,43,5,2,30,50,51)
@@ -128,6 +157,17 @@
 		label	define	region_census	1	"West"	2	"Midwest"	3	"South"	4	"Northeast"	0	"N/A"
 		label	values	interview_region_census	region_census
 		
+		*	Education
+		gen		edu_years_head_cat=1	if	inrange(ER16516,1,11)
+		replace	edu_years_head_cat=2	if	inrange(ER16516,12,12)
+		replace	edu_years_head_cat=3	if	inrange(ER16516,13,15)
+		replace	edu_years_head_cat=4	if	ER16516>=16 & !mi(ER16516)
+		
+		label	define	edu_head_cat	1	"Less than HS"	2	"HS"	3	"Some College"	4	"College Degree"
+		label 	values	edu_years_head_cat	edu_head_cat
+		label	var	edu_years_head_cat	"Years of Household Head Education (category)"
+		
+
 		*	Import survey variables from individual data
 		merge	1:m	FUID	using	`indiv_1999', keepusing(ER31996 ER31997) keep(3) nogen assert(3)
 		duplicates drop
