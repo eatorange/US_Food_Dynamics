@@ -118,6 +118,14 @@
 		
 		*	Family Size
 		*	ER13009
+		
+		*	Child
+		gen		has_child=1 if ER13013>0
+		replace	has_child=0 if ER13013==0
+		lab	var	has_child	"Family has a child"
+		
+		*	Education (head)
+		replace	ER16516=.n	if	ER16516==99
 
 		*	Location
 		
