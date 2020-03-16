@@ -269,8 +269,122 @@
 				label	var	resp_consist_15_17	"Respondent is consistent"
 				
 				label	values	resp_consist*	yesno
+				
+	*	Federal Poverty Line
+	
+		*	1998 HHS Poverty Guideline (https://aspe.hhs.gov/1998-hhs-poverty-guidelines)
+		scalar	FPL_base_48_1999	=	8050
+		scalar	FPL_base_AL_1999	=	10070
+		scalar	FPL_base_HA_1999	=	9260
+		scalar	FPL_mult_48_1999	=	2800
+		scalar	FPL_mult_AL_1999	=	3500
+		scalar	FPL_mult_HA_1999	=	3200
+		
+		*	2000 HHS Poverty Guideline (https://aspe.hhs.gov/2000-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2001	=	8350
+		scalar	FPL_base_AL_2001	=	10430
+		scalar	FPL_base_HA_2001	=	9590
+		scalar	FPL_mult_48_2001	=	2900
+		scalar	FPL_mult_AL_2001	=	3630
+		scalar	FPL_mult_HA_2001	=	3340
+		
+		*	2002 HHS Poverty Guideline (https://aspe.hhs.gov/2002-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2003	=	8860
+		scalar	FPL_base_AL_2003	=	11080
+		scalar	FPL_base_HA_2003	=	10200
+		scalar	FPL_mult_48_2003	=	3080
+		scalar	FPL_mult_AL_2003	=	3850
+		scalar	FPL_mult_HA_2003	=	3540
+		
+		*	2014 HHS Poverty Guideline (https://aspe.hhs.gov/2014-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2015	=	11670
+		scalar	FPL_base_AL_2015	=	14580
+		scalar	FPL_base_HA_2015	=	13420
+		scalar	FPL_mult_48_2015	=	4060
+		scalar	FPL_mult_AL_2015	=	5080
+		scalar	FPL_mult_HA_2015	=	4670
+		
+		*	2016 HHS Poverty Guideline (https://aspe.hhs.gov/2014-hhs-poverty-guidelines)
+		*	2016 Line has complicated design
+		scalar	FPL_base_48_2017	=	11880
+		scalar	FPL_base_AL_2017	=	14850	//	11,880 * 1.25 (AL scaling factor)
+		scalar	FPL_base_HA_2017	=	13660	//	11,880 * 1.25 (HA scaling factor)
+		scalar	FPL_mult_48_2017	=	4140	
+		scalar	FPL_mult_AL_2017	=	5180	//	4,140 * 1.25 (AL scaling factor)
+		scalar	FPL_mult_HA_2017	=	4670	//	4,760 * 1.15 (HA scaling factor)
+		
+		scalar	FPL_line_48_7_2017	=	36730	//	(6 members + 4,150)
+		scalar	FPL_line_AL_7_2017	=	45920
+		scalar	FPL_line_HA_7_2017	=	42230
+		
+		scalar	FPL_mult_48_over7_2017	=	4160	
+		scalar	FPL_mult_AL_over7_2017	=	5200	//	4,160 * 1.25 (AL scaling factor)
+		scalar	FPL_mult_HA_over7_2017	=	4780	//	4,160 * 1.15 (HA scaling factor)
+		
 
+		*	Calculate FPL
 
+			*	1999-2003, 2015
+			foreach	year	in	1999	2001	2003	2015	{
+				gen 	FPL_`year'	=	FPL_base_48_`year'	+	(num_FU_fam`year'-1)*FPL_mult_48_`year'	if	inrange(state_resid_fam`year',1,49)
+				replace	FPL_`year'	=	FPL_base_AL_`year'	+	(num_FU_fam`year'-1)*FPL_mult_AL_`year'	if	state_resid_fam`year'==50
+				replace	FPL_`year'	=	FPL_base_HA_`year'	+	(num_FU_fam`year'-1)*FPL_mult_HA_`year'	if	state_resid_fam`year'==51
+				replace	FPL_`year'	=.	if	inrange(xsqnr_`year',1,89)	&	state_resid_fam`year'==0	//	Inappropriate state
+				replace	FPL_`year'	=.n	if	!inrange(xsqnr_`year',1,89)		//	Outside wave
+				label	var	FPL_`year'	"Federal Poverty Line, `year'"
+			}
+			
+			*	2017 (2016 FPL) has different design as below.
+				
+				*	Families with member 6 or below.
+				gen 	FPL_2017	=	FPL_base_48_2017	+	(num_FU_fam2017-1)*FPL_mult_48_2017	if	num_FU_fam2017<=6	&	inrange(state_resid_fam2017,1,49)
+				replace	FPL_2017	=	FPL_base_AL_2017	+	(num_FU_fam2017-1)*FPL_mult_AL_2017	if	num_FU_fam2017<=6	&	state_resid_fam2017==50
+				replace	FPL_2017	=	FPL_base_HA_2017	+	(num_FU_fam2017-1)*FPL_mult_HA_2017	if	num_FU_fam2017<=6	&	state_resid_fam2017==51
+				
+				*	Families with 7 members
+				replace	FPL_2017	=	FPL_line_48_7_2017	if	num_FU_fam2017==7	&	inrange(state_resid_fam2017,1,49)
+				replace	FPL_2017	=	FPL_line_AL_7_2017	if	num_FU_fam2017==7	&	state_resid_fam2017==50
+				replace	FPL_2017	=	FPL_line_HA_7_2017	if	num_FU_fam2017==7	&	state_resid_fam2017==51
+				
+				*	Families with 8 or more members
+				replace	FPL_2017	=	FPL_line_48_7_2017	+	(num_FU_fam2017-7)*FPL_mult_48_over7_2017	if	num_FU_fam2017>=8	&	inrange(state_resid_fam2017,1,49)
+				replace	FPL_2017	=	FPL_line_AL_7_2017	+	(num_FU_fam2017-7)*FPL_mult_AL_over7_2017	if	num_FU_fam2017>=8	&	state_resid_fam2017==50
+				replace	FPL_2017	=	FPL_line_HA_7_2017	+	(num_FU_fam2017-7)*FPL_mult_HA_over7_2017	if	num_FU_fam2017>=8	&	state_resid_fam2017==51
+				
+				*	Missing values
+				replace	FPL_2017	=.	if	inrange(xsqnr_2017,1,89)	&	state_resid_fam2017==0	//	Inappropriate state
+				replace	FPL_2017	=.n	if	!inrange(xsqnr_2017,1,89)		//	Outside wave
+				
+				label	var	FPL_2017	"Federal Poverty Line, 2017"
+				
+			*	FPL Category
+			foreach	year	in	1999	2001	2003	2015	2017	{
+				gen		FPL_cat`year'=.
+				replace	FPL_cat`year'=1	if	total_income_fam`year'<FPL_`year'
+				replace	FPL_cat`year'=2	if	inrange(total_income_fam`year',FPL_`year',2*FPL_`year')
+				replace	FPL_cat`year'=3	if	total_income_fam`year'>=2*FPL_`year'
+				replace	FPL_cat`year'=0	if	FPL_`year'==.
+				replace	FPL_cat`year'=.n	if	FPL_`year'==.n
+				label	var	FPL_cat`year'	"Income Category(FPL), `year'"
+			}
+			
+			label	define	income_cat_FPL	1	"<100% FPL"	2	"100%~200% FPL"	3	">200% FPL"	0	"Inappropriate"
+			label	values	FPL_cat*	income_cat_FPL
+		
+		
+		*	Education	(category)
+			foreach	year	in	1999	2001	2003	2015	2017	{
+				gen		grade_comp_cat`year'	=1	if	inrange(edu_years_head_fam`year',0,11)
+				replace	grade_comp_cat`year'	=2	if	inrange(edu_years_head_fam`year',12,12)
+				replace	grade_comp_cat`year'	=3	if	inrange(edu_years_head_fam`year',13,15)
+				replace	grade_comp_cat`year'	=4	if	edu_years_head_fam`year'>=16 & !mi(edu_years_head_fam`year')
+				replace	grade_comp_cat`year'	=.n	if	mi(edu_years_head_fam`year')
+				label	var	grade_comp_cat`year'	"Grade Household Head Completed, `year'"
+			}
+			
+			label	define	grade_comp_cat	1	"Less than HS"	2	"HS"	3	"Some College"	4	"College Degree"
+			label 	values	grade_comp_cat*	grade_comp_cat
+			
 	/****************************************************************
 		SECTION X: Save and Exit
 	****************************************************************/

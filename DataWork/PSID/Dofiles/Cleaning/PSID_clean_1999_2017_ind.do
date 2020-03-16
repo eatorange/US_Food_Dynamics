@@ -136,14 +136,14 @@
 		save		`edu_years_ind'
 		
 		*	Age of head (fam)
-		psid use || age_head [68]V117 [69]V1008 [99]ER13010 [01]ER17013 [03]ER21017 [05]ER25017 [07]ER36017 [09]ER42017 [11]ER47317 [13]ER53017 [15]ER60017 [17]ER66017	///
+		psid use || age_head_fam [68]V117 [69]V1008 [99]ER13010 [01]ER17013 [03]ER21017 [05]ER25017 [07]ER36017 [09]ER42017 [11]ER47317 [13]ER53017 [15]ER60017 [17]ER66017	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
 	
 		tempfile	age_head_fam
 		save		`age_head_fam'
 		
 		*	Race of head (fam)
-		psid use || race_head [68]V181 [69]V801 [99]ER15928 [01]ER19989 [03]ER23426 [05]ER27393 [07]ER40565 [09]ER46543 [11]ER51904 [13]ER57659 [15]ER64810 [17]ER70882	///
+		psid use || race_head_fam [68]V181 [69]V801 [99]ER15928 [01]ER19989 [03]ER23426 [05]ER27393 [07]ER40565 [09]ER46543 [11]ER51904 [13]ER57659 [15]ER64810 [17]ER70882	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
 	
 		tempfile	race_head_fam
@@ -170,7 +170,60 @@
 		tempfile	main_fam_ID
 		save		`main_fam_ID'
 		
+		*	Total Family Income (fam)
+		psid use || total_income_fam [68]V81 [69]V529 /*[70]V1514 [71]V2226 [72]V2852 [73]V3256 [74]V3676 [75]V4154 [76]V5029 [77]V5626 [78]V6173 [79]V6766 [80]V7412 [81]V8065 [82]V8689 [83]V9375 [84]V11022 [85]V12371 [86]V13623 [87]V14670 [88]V16144 [89]V17533 [90]V18875 [91]V20175 [92]V21481 [93]V23322 [94]ER4153 [95]ER6993 [96]ER9244 [97]ER12079*/ [99]ER16462 [01]ER20456 [03]ER24099 [05]ER28037 [07]ER41027 [09]ER46935 [11]ER52343 [13]ER58152 [15]ER65349 [17]ER71426	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+	
+		tempfile	total_income_fam
+		save		`total_income_fam'
 		
+		*	Martial Status of Head (fam)
+		psid use || marital_status_fam /*[77]V5502 [78]V6034 [79]V6659 [80]V7261 [81]V7952 [82]V8603 [83]V9276 [84]V10426 [85]V11612 [86]V13017 [87]V14120 [88]V15136 [89]V16637 [90]V18055 [91]V19355 [92]V20657 [93]V22412 [94]ER2014 [95]ER5013 [96]ER7013 [97]ER10016*/ [99]ER13021 [01]ER17024 [03]ER21023 [05]ER25023 [07]ER36023 [09]ER42023 [11]ER47323 [13]ER53023 [15]ER60024 [17]ER66024	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+	
+		tempfile	marital_status_fam
+		save		`marital_status_fam'
+		
+		
+		* # of people in FU (fam)
+		psid use || num_FU_fam [68]V115 [69]V549 /*[70]V1238 [71]V1941 [72]V2541 [73]V3094 [74]V3507 [75]V3920 [76]V4435 [77]V5349 [78]V5849 [79]V6461 [80]V7066 [81]V7657 [82]V8351 [83]V8960 [84]V10418 [85]V11605 [86]V13010 [87]V14113 [88]V15129 [89]V16630 [90]V18048 [91]V19348 [92]V20650 [93]V22405 [94]ER2006 [95]ER5005 [96]ER7005 [97]ER10008*/ [99]ER13009 [01]ER17012 [03]ER21016 [05]ER25016 [07]ER36016 [09]ER42016 [11]ER47316 [13]ER53016 [15]ER60016 [17]ER66016	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear			
+		
+		
+		tempfile	num_FU_fam
+		save		`num_FU_fam'
+		 	
+		
+		*	# of Children in HH (fam)
+		psid use || num_child_fam [68]V398 [69]V550 /*[70]V1242 [71]V1945 [72]V2545 [73]V3098 [74]V3511 [75]V3924 [76]V4439 [77]V5353 [78]V5853 [79]V6465 [80]V7070 [81]V7661 [82]V8355 [83]V8964 [84]V10422 [85]V11609 [86]V13014 [87]V14117 [88]V15133 [89]V16634 [90]V18052 [91]V19352 [92]V20654 [93]V22409 [94]ER2010 [95]ER5009 [96]ER7009 [97]ER10012*/ [99]ER13013 [01]ER17016 [03]ER21020 [05]ER25020 [07]ER36020 [09]ER42020 [11]ER47320 [13]ER53020 [15]ER60021 [17]ER66021	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear			
+		
+		
+		tempfile	num_child_fam
+		save		`num_child_fam'
+		
+		*	Gender of Household Head (fam)
+		psid use || gender_head_fam [68]V119 [69]V1010 /*[70]V1240 [71]V1943 [72]V2543 [73]V3096 [74]V3509 [75]V3922 [76]V4437 [77]V5351 [78]V5851 [79]V6463 [80]V7068 [81]V7659 [82]V8353 [83]V8962 [84]V10420 [85]V11607 [86]V13012 [87]V14115 [88]V15131 [89]V16632 [90]V18050 [91]V19350 [92]V20652 [93]V22407 [94]ER2008 [95]ER5007 [96]ER7007 [97]ER10010*/ [99]ER13011 [01]ER17014 [03]ER21018 [05]ER25018 [07]ER36018 [09]ER42018 [11]ER47318 [13]ER53018 [15]ER60018 [17]ER66018	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear			
+		
+		
+		tempfile	gender_head_fam
+		save		`gender_head_fam'
+		
+		*	Grades Househould head completed (fam)
+		psid use || edu_years_head_fam /*[75]V4093 [76]V4684 [77]V5608 [78]V6157 [79]V6754 [80]V7387 [81]V8039 [82]V8663 [83]V9349 [84]V10996 [91]V20198 [92]V21504 [93]V23333 [94]ER4158 [95]ER6998 [96]ER9249 [97]ER12222*/ [99]ER16516 [01]ER20457 [03]ER24148 [05]ER28047 [07]ER41037 [09]ER46981 [11]ER52405 [13]ER58223 [15]ER65459 [17]ER71538	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	edu_years_head_fam
+		save		`edu_years_head_fam'
+		
+		*	State of Residence (fam)
+		
+		psid use || state_resid_fam [68]V93 [69]V537 /*[70]V1103 [71]V1803 [72]V2403 [73]V3003 [74]V3403 [75]V3803 [76]V4303 [77]V5203 [78]V5703 [79]V6303 [80]V6903 [81]V7503 [82]V8203 [83]V8803 [84]V10003 [85]V11103 [86]V12503 [87]V13703 [88]V14803 [89]V16303 [90]V17703 [91]V19003 [92]V20303 [93]V21603 [94]ER4156 [95]ER6996 [96]ER9247 [97]ER12221*/ [99]ER13004 [01]ER17004 [03]ER21003 [05]ER25003 [07]ER36003 [09]ER42003 [11]ER47303 [13]ER53003 [15]ER60003 [17]ER66003	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	state_resid_fam
+		save		`state_resid_fam'
 		
 	*	Merge individual cross-wave with family cross-wave
 	use	`weight_long_ind', clear
@@ -181,13 +234,20 @@
 	merge 1:1 x11101ll using `main_age_ind', keepusing(age_ind*) nogen assert(3)
 	merge 1:1 x11101ll using `edu_years_ind', keepusing(edu_years*) nogen assert(3)
 	merge 1:1 x11101ll using `age_head_fam', keepusing(age_head*) nogen assert(3)
-	merge 1:1 x11101ll using `race_head_fam', keepusing(race_head*) nogen assert(3)
+	merge 1:1 x11101ll using `race_head_fam', keepusing(race_head_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `splitoff_indicator_fam', keepusing(splitoff_indicator*) nogen assert(3)
 	merge 1:1 x11101ll using `num_splitoff_fam', keepusing(num_split_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `main_fam_ID', keepusing(main_fam_ID*) nogen assert(3)
 	merge 1:1 x11101ll using `weight_long_ind', keepusing(weight_long_ind*) nogen assert(3)
 	merge 1:1 x11101ll using `weight_cross_ind', keepusing(weight_cross_ind*) nogen assert(3)
 	merge 1:1 x11101ll using `weight_long_fam', keepusing(weight_long_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `total_income_fam', keepusing(total_income_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `marital_status_fam', keepusing(marital_status_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `num_FU_fam', keepusing(num_FU_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `num_child_fam', keepusing(num_child_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `gender_head_fam', keepusing(gender_head_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `edu_years_head_fam', keepusing(edu_years_head_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `state_resid_fam', keepusing(state_resid_fam*) nogen assert(3)
 	
 
 	
@@ -222,7 +282,79 @@
 			*	Other variables
 			label values	splitoff_indicator*	splitoff_indicator
 			
-
+		*	Age of Household Head
+		replace	age_head_fam1968	=	.d	if	age_head_fam1968==98
+		replace	age_head_fam1968	=	.n	if	age_head_fam1968==99
+		replace	age_head_fam1969	=	.n	if	age_head_fam1969==99
+				
+		qui	ds	age_head_fam1999-age_head_fam2017
+		foreach	var in `r(varlist)'	{
+			replace	`var'=.	if	`var'==999
+		}
+		
+		*	Marital status of head
+		qui ds marital_status_fam1999-marital_status_fam2017
+		foreach	var in `r(varlist)'	{
+			replace	`var'=.d	if	`var'==8
+			replace	`var'=.n	if	`var'==9
+		}
+		
+		*	Grade completed of household head (fam)
+		qui ds edu_years_head_fam1999-edu_years_head_fam2017
+		foreach	var	in	`r(varlist)'	{
+			replace	`var'=.n	if	`var'==99
+		}
+		
+		*	Location
+		
+			*	State of Residence
+				label define	statecode	0	"Inap.: U.S. territory or foreign country"	99	"D.K; N.A"	///
+											1	"Alabama"		2	"Arizona"			3	"Arkansas"	///
+											4	"California"	5	"Colorado"			6	"Connecticut"	///
+											7	"Delaware"		8	"D.C."				9	"Florida"	///
+											10	"Georgia"		11	"Idaho"				12	"Illinois"	///
+											13	"Indiana"		14	"Iowa"				15	"Kansas"	///
+											16	"Kentucky"		17	"Lousiana"			18	"Maine"		///
+											19	"Maryland"		20	"Massachusetts"		21	"Michigan"	///
+											22	"Minnesota"		23	"Mississippi"		24	"Missouri"	///
+											25	"Montana"		26	"Nebraska"			27	"Nevada"	///
+											28	"New Hampshire"	29	"New Jersey"		30	"New Mexico"	///
+											31	"New York"		32	"North Carolina"	33	"North Dakota"	///
+											34	"Ohio"			35	"Oklahoma"			36	"Oregon"	///
+											37	"Pennsylvania"	38	"Rhode Island"		39	"South Carolina"	///
+											40	"South Dakota"	41	"Tennessee"			42	"Texas"	///
+											43	"Utah"			44	"Vermont"			45	"Virginia"	///
+											46	"Washington"	47	"West Virginia"		48	"Wisconsin"	///
+											49	"Wyoming"		50	"Alaska"			51	"Hawaii"
+				lab	val	state_resid_fam* statecode
+			
+		*	Race
+			
+			*	1999-2003
+			label	define	race_99_03	1 	"White"	///
+										2	"Black"	///
+										3	"American Indian, Aleut, Eskimo"	///
+										4	"Asian, Pacific Islander"	///
+										5	"Latino origin or descent"	///
+										6	"Color other than black or white"	///
+										7	"Other"	///
+										8	"DK"	///
+										9	"NA; refused"	///
+										0 	"Inap.: no wife in FU"
+			label	val	race_head_fam1999 race_head_fam2001 race_head_fam2003	race_99_03
+			
+			*	2015-2017
+			label	define	race_15_17	1 	"White"	///
+										2	"Black, African-American or Negro"	///
+										3	"American Indian or Alaska Native"	///
+										4	"Asian"	///
+										5	"Native Hawaiian or Pacific Islander"	///
+										7	"Other"	///
+										9	"DK; NA; refused"	///
+										0 	"Inap.: no wife in FU"
+			label	val	race_head_fam2015 race_head_fam2017 race_15_17
+		
+		
 	/****************************************************************
 		SECTION X: Save and Exit
 	****************************************************************/
@@ -292,3 +424,4 @@
 // Race of head:  	[68]V181 [69]V801 [70]V1490 [71]V2202 [72]V2828 [73]V3300 [74]V3720 [75]V4204 [76]V5096 [77]V5662 [78]V6209 [79]V6802 [80]V7447 [81]V8099 [82]V8723 [83]V9408 [84]V11055 [85]V11938 [86]V13565 [87]V14612 [88]V16086 [89]V17483 [90]V18814 [91]V20114 [92]V21420 [93]V23276 [94]ER3944 [95]ER6814 [96]ER9060 [97]ER11848 [99]ER15928 [01]ER19989 [03]ER23426 [05]ER27393 [07]ER40565 [09]ER46543 [11]ER51904 [13]ER57659 [15]ER64810 [17]ER70882
 
 		
+// Grades complete (head):  	[75]V4093 [76]V4684 [77]V5608 [78]V6157 [79]V6754 [80]V7387 [81]V8039 [82]V8663 [83]V9349 [84]V10996 [91]V20198 [92]V21504 [93]V23333 [94]ER4158 [95]ER6998 [96]ER9249 [97]ER12222 [99]ER16516 [01]ER20457 [03]ER24148 [05]ER28047 [07]ER41037 [09]ER46981 [11]ER52405 [13]ER58223 [15]ER65459 [17]ER71538
