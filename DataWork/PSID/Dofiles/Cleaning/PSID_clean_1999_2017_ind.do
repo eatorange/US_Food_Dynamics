@@ -218,12 +218,20 @@
 		save		`edu_years_head_fam'
 		
 		*	State of Residence (fam)
-		
 		psid use || state_resid_fam [68]V93 [69]V537 /*[70]V1103 [71]V1803 [72]V2403 [73]V3003 [74]V3403 [75]V3803 [76]V4303 [77]V5203 [78]V5703 [79]V6303 [80]V6903 [81]V7503 [82]V8203 [83]V8803 [84]V10003 [85]V11103 [86]V12503 [87]V13703 [88]V14803 [89]V16303 [90]V17703 [91]V19003 [92]V20303 [93]V21603 [94]ER4156 [95]ER6996 [96]ER9247 [97]ER12221*/ [99]ER13004 [01]ER17004 [03]ER21003 [05]ER25003 [07]ER36003 [09]ER42003 [11]ER47303 [13]ER53003 [15]ER60003 [17]ER66003	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
 		
 		tempfile	state_resid_fam
 		save		`state_resid_fam'
+		
+		*	Food Security Category (fam)
+		psid use || fs_cat_fam	[99]ER14331U [01]ER18470U [03]ER21735U [15]ER60799 [17]ER66847	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	fs_cat_fam
+		save		`fs_cat_fam'
+		
+		
 		
 	*	Merge individual cross-wave with family cross-wave
 	use	`weight_long_ind', clear
@@ -248,6 +256,7 @@
 	merge 1:1 x11101ll using `gender_head_fam', keepusing(gender_head_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `edu_years_head_fam', keepusing(edu_years_head_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `state_resid_fam', keepusing(state_resid_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `fs_cat_fam', keepusing(fs_cat_fam*) nogen assert(3)
 	
 
 	
@@ -353,7 +362,23 @@
 										9	"DK; NA; refused"	///
 										0 	"Inap.: no wife in FU"
 			label	val	race_head_fam2015 race_head_fam2017 race_15_17
+			
+		*	Marital	Status
+			label	define	marital_status	1	"Married"	///
+											2	"Never married"	///
+											3	"Widowed"	///
+											4 	"Divorced, annulled"	///
+											5	"Separated"	///
+											8	"DK"	///
+											9	"NA; refused"
+			label values	marital_status*	marital_status	
 		
+		*	Food Security
+		label	define	fs_cat	1	"High Food Security"	///
+								2	"Marginal Food Security"	///
+								3	"Low Food Security"	///
+								4 	"Very Low Food Security"
+		label values	fs_cat_fam*	fs_cat	
 		
 	/****************************************************************
 		SECTION X: Save and Exit

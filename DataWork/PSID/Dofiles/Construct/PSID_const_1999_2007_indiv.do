@@ -329,8 +329,8 @@
 				gen 	FPL_`year'	=	FPL_base_48_`year'	+	(num_FU_fam`year'-1)*FPL_mult_48_`year'	if	inrange(state_resid_fam`year',1,49)
 				replace	FPL_`year'	=	FPL_base_AL_`year'	+	(num_FU_fam`year'-1)*FPL_mult_AL_`year'	if	state_resid_fam`year'==50
 				replace	FPL_`year'	=	FPL_base_HA_`year'	+	(num_FU_fam`year'-1)*FPL_mult_HA_`year'	if	state_resid_fam`year'==51
-				replace	FPL_`year'	=.	if	inrange(xsqnr_`year',1,89)	&	state_resid_fam`year'==0	//	Inappropriate state
-				replace	FPL_`year'	=.n	if	!inrange(xsqnr_`year',1,89)		//	Outside wave
+				*replace	FPL_`year'	=.	if	inrange(xsqnr_`year',1,89)	&	state_resid_fam`year'==0	//	Inappropriate state
+				*replace	FPL_`year'	=.n	if	!inrange(xsqnr_`year',1,89)		//	Outside wave
 				label	var	FPL_`year'	"Federal Poverty Line, `year'"
 			}
 			
@@ -363,8 +363,8 @@
 				replace	FPL_cat`year'=1	if	total_income_fam`year'<FPL_`year'
 				replace	FPL_cat`year'=2	if	inrange(total_income_fam`year',FPL_`year',2*FPL_`year')
 				replace	FPL_cat`year'=3	if	total_income_fam`year'>=2*FPL_`year'
-				replace	FPL_cat`year'=0	if	FPL_`year'==.
-				replace	FPL_cat`year'=.n	if	FPL_`year'==.n
+				*replace	FPL_cat`year'=0	if	FPL_`year'==.
+				*replace	FPL_cat`year'=.n	if	FPL_`year'==.n
 				label	var	FPL_cat`year'	"Income Category(FPL), `year'"
 			}
 			
@@ -384,6 +384,7 @@
 			
 			label	define	grade_comp_cat	1	"Less than HS"	2	"HS"	3	"Some College"	4	"College Degree"
 			label 	values	grade_comp_cat*	grade_comp_cat
+			
 			
 	/****************************************************************
 		SECTION X: Save and Exit
