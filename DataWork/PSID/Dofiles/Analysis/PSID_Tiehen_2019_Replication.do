@@ -132,6 +132,8 @@
 		
 		label	var	gender_head_fam`year'	"Gender Household Head (category), `year'"
 	}
+	label	define	gender_head_cat	0	"Female"	1	"Male"
+	label	values	gender_head_fam*	gender_head_cat
 	
 	*	Save
 	*clonevar	ER13002=x11102_1999
@@ -141,6 +143,12 @@
 	/****************************************************************
 		SECTION 2: Replication
 	****************************************************************/		
+	
+	loc	rep_table_2		0
+	loc	rep_table_3		0
+	loc	rep_table_4_8	0
+	loc	rep_table_9_13	0
+	loc	rep_table_14_18	1
 		
 	*	Before replicating, import variables for sampling error estimation
 		use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
@@ -177,8 +185,8 @@
 			save		`dta_fam_`year''
 		}
 	
-	/*
 	* Table 2
+	if	`rep_table_2'==1	{
 
 		mat drop _all
 		
@@ -222,17 +230,245 @@
 								empty_row	\	grade_comp_cat`year'	\	empty_row	\	gender_head_fam`year'
 		}
 		mat	table_2	=	nullmat(table_2),	summary_1999,	summary_2001,	summary_2003,	summary_2015,	summary_2017
-	*/
-	*	Table 3
-	mat	drop	_all
+		
+		*	Output
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table2) modify
+		*putexcel	A2 = "CPS-PSID Summary Statistics"
+		putexcel	A3	=	matrix(table_2), names overwritefmt nformat(number_d1)
 	
-	use	`dta_fam_2001', clear
-	svy: proportion fs_cat_fam2001
+	}
+	
+	*	Table 3
+	if	`rep_table_3'==1	{
+	
+	mat drop _all
+		
+		foreach	year	in	1999	2001	2003	2015	2017	{
+			
+			use	`dta_fam_`year'', clear			
+			
+			*	Food Security
+			svy: proportion fs_cat_fam`year'
+			mat	FS_PSID_`year'=(e(b)[1,2..4])'
+			
+		}
+		
+		*	Append matrices
+		mat	empty_row	=	J(1,1,.)
+		
+		mat	table_3	=	nullmat(table_3)	\	FS_PSID_1999	\	empty_row	\	FS_PSID_2001	\	empty_row	\	///
+						FS_PSID_2003	\	empty_row	\	FS_PSID_2015	\	empty_row	\	FS_PSID_2017
+						
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table3) modify
+		*putexcel	A2 = "CPS-PSID Summary Statistics"
+		putexcel	A3	=	matrix(table_3), names overwritefmt nformat(number_d1)	
+	}
+	
+	*	Table 4 - Table 8
+	if	`rep_table_4_8'==1	{
+	
+		mat	drop	_all
+		
+		foreach	year	in	1999	2001	2003	2015	2017	{
+			
+			use	`dta_fam_`year'', clear
+					
+			*	Full Sample
+			svy: proportion fs_cat_fam`year'
+			mat	full_dem_`year'	=	nullmat(full_dem_`year')	\	(e(b)[1,2..4])
+			
+			*	Income Category
+			forval	i=1/3	{
+				svy, subpop	(if	FPL_cat`year'==`i'): proportion fs_cat_fam`year'
+				mat	FPL_dem_`year'	=	nullmat(FPL_dem_`year')	\	(e(b)[1,2..4])
+			}
+			
+			*	Racial Category
+			forval	i=1/3	{
+				svy, subpop	(if	race_head_cat`year'==`i'): proportion fs_cat_fam`year'
+				mat	race_dem_`year'	=	nullmat(race_dem_`year')	\	(e(b)[1,2..4])
+			}
+			
+			*	Marital Status
+			forval	i=1/2	{
+				svy, subpop	(if	marital_status_cat`year'==`i'): proportion fs_cat_fam`year'
+				mat	marital_dem_`year'	=	nullmat(marital_dem_`year')	\	(e(b)[1,2..4])
+			}
+			
+			*	Children
+			forval	i=1/2	{
+				svy, subpop	(if	child_in_FU_cat`year'==`i'): proportion fs_cat_fam`year'
+				mat	child_dem_`year'	=	nullmat(child_dem_`year')	\	(e(b)[1,2..4])
+			}
+			
+			*	Age
+			forval	i=1/6	{
+				svy, subpop	(if	age_head_cat`year'==`i'): proportion fs_cat_fam`year'
+				mat	age_dem_`year'	=	nullmat(age_dem_`year')	\	(e(b)[1,2..4])
+			}
+			
+			*	Gender
+			foreach	i	in	1	0	{
+				svy, subpop	(if	gender_head_fam`year'==`i'): proportion fs_cat_fam`year'
+				mat	gender_dem_`year'	=	nullmat(gender_dem_`year')	\	(e(b)[1,2..4])
+			}
+			
+			*	Grade Completed
+			forval	i=1/4	{
+				svy, subpop	(if	grade_comp_cat`year'==`i'): proportion fs_cat_fam`year'
+				mat	grade_dem_`year'	=	nullmat(grade_dem_`year')	\	(e(b)[1,2..4])
+			}
+			
+			*	Append
+			mat	empty_row	=	J(1,3,.)
+			
+			mat	table_dem_`year'	=	full_dem_`year'	\	empty_row	\	FPL_dem_`year'	\	empty_row	\	race_dem_`year'	\	empty_row	\	///
+									marital_dem_`year'	\	empty_row	\	child_dem_`year'	\	empty_row	\	///
+									age_dem_`year'	\	empty_row	\	gender_dem_`year'	\	empty_row	\	grade_dem_`year'
+		}	//	Year
+			
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table4) modify
+		putexcel	A2 = "Food Insecurity Rates by Demographic Group – 1998"
+		putexcel	A3	=	matrix(table_dem_1999), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table5) modify
+		putexcel	A2 = "Food Insecurity Rates by Demographic Group – 2000"
+		putexcel	A3	=	matrix(table_dem_2001), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table6) modify
+		putexcel	A2 = "Food Insecurity Rates by Demographic Group – 2002"
+		putexcel	A3	=	matrix(table_dem_2003), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table7) modify
+		putexcel	A2 = "Food Insecurity Rates by Demographic Group – 2014"
+		putexcel	A3	=	matrix(table_dem_2015), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table8) modify
+		putexcel	A2 = "Food Insecurity Rates by Demographic Group – 2016"
+		putexcel	A3	=	matrix(table_dem_2017), names overwritefmt nformat(number_d1)	
+	}	//	Table 4 ~ Table 8
+
+	
+	* Table 9-13
+	if	`rep_table_9_13'==1	{
+	
+		mat	drop	_all
+		mat	empty_row	=	J(1,1,.)
+		
+		foreach	year	in	1999	2001	2003	2015	2017	{	
+			
+			use	`dta_fam_`year'', clear
+			
+			forval	i=2/4	{	//	Food security category
+				
+				*	Income categories
+				svy, subpop(if	fs_cat_fam`year'==`i'): proportion FPL_cat`year'
+				mat	summary_FScat_`year'_`i'	=	nullmat(FPL_FScat_`year')	\	e(b)'	\	empty_row
+				
+				*	Racial categories
+				svy, subpop(if	fs_cat_fam`year'==`i'): proportion race_head_cat`year'
+				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				
+				*	Marital status
+				svy, subpop(if	fs_cat_fam`year'==`i'): proportion marital_status_cat`year'
+				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				
+				*	Children
+				svy, subpop(if	fs_cat_fam`year'==`i'): proportion child_in_FU_cat`year'
+				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				
+				*	Age
+				svy, subpop(if	fs_cat_fam`year'==`i'): proportion age_head_cat`year'
+				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				
+				*	Education (Grades Completed)
+				svy, subpop(if	fs_cat_fam`year'==`i'): proportion grade_comp_cat`year'
+				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				
+				*	Gender
+				svy, subpop(if	fs_cat_fam`year'==`i'): proportion gender_head_fam`year'
+				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'
+					
+				}
+				
+			*	Append
+			mat	summary_FScat_`year'	=	summary_FScat_`year'_2,	summary_FScat_`year'_3,	summary_FScat_`year'_4
+		}	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table9) modify
+		putexcel	A2 = "Summary Statistics by Food Insecurity Category – 1998"
+		putexcel	A3	=	matrix(summary_FScat_1999), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table10) modify
+		putexcel	A2 = "Summary Statistics by Food Insecurity Category – 2000"
+		putexcel	A3	=	matrix(summary_FScat_2001), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table11) modify
+		putexcel	A2 = "Summary Statistics by Food Insecurity Category – 2002"
+		putexcel	A3	=	matrix(summary_FScat_2003), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table12) modify
+		putexcel	A2 = "Summary Statistics by Food Insecurity Category – 2014"
+		putexcel	A3	=	matrix(summary_FScat_2015), names overwritefmt nformat(number_d1)	
+		
+		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table13) modify
+		putexcel	A2 = "Summary Statistics by Food Insecurity Category – 2016"
+		putexcel	A3	=	matrix(summary_FScat_2017), names overwritefmt nformat(number_d1)	
+
+	}
+	
+	* Table 14-18
+	if	`rep_table_14_18'==1	{
+	
+		mat	drop	_all
+		eststo	clear
+		
+		foreach	year	in	1999	2001	2003	2015	2017	{	
+			
+			use	`dta_fam_`year'', clear	
+			
+			tab fs_cat_fam`year', generate(fs_cat_`year'_)
+			label	var	fs_cat_`year'_2	"PSID Marginal"
+			label	var	fs_cat_`year'_3	"PSID Food Insecure"
+			label	var	fs_cat_`year'_4	"PSID Very Low"
+			
+			eststo clear
+			
+			svy: reg	fs_cat_`year'_2	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
+								ib2.child_in_FU_cat`year'	ib1.age_head_cat`year'	ib1.grade_comp_cat`year'	///
+								ib1.gender_head_fam`year'
+			est	store	PSID_Marginal_`year'
+			
+			svy: reg	fs_cat_`year'_3	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
+								ib2.child_in_FU_cat`year'	ib1.age_head_cat`year'	ib1.grade_comp_cat`year'	///
+								ib1.gender_head_fam`year'
+			est	store	PSID_FoodInsecure_`year'
+			
+			svy: reg	fs_cat_`year'_4	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
+								ib2.child_in_FU_cat`year'	ib1.age_head_cat`year'	ib1.grade_comp_cat`year'	///
+								ib1.gender_head_fam`year'
+			est	store	PSID_VeryLow_`year'
+			
+			esttab	PSID_Marginal_`year'	PSID_FoodInsecure_`year'	PSID_VeryLow_`year' using "${PSID_outRaw}/Tiehen_Reg_`year'.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Food Insecurity Estimates_`year') replace
+		}
+	*estout	PSID_Marginal_`year'	PSID_FoodInsecure_`year'	PSID_VeryLow_`year' using "${PSID_outRaw}/Table14.csv", cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Table 14. Food Insecurity Estimates – 1998) replace
+	}
+	
 	
 	/*
-	*	Keep variables on interest only in 1999
-	keep x11102_1999 weight_long_fam1999 age_head_fam1999 race_head_fam1999 total_income_fam1999 marital_status_fam1999 num_FU_fam1999 num_child_fam1999 gender_head_fam1999 edu_years_head_fam1999 state_resid_fam1999
-	duplicates drop
-	drop	if	mi(x11102_1999)
 	
+	Each table presents six sets of results that compare estimates of each of the three food insecurity measures between the two datasets, where the independent variables are the groups of demographic variables in the previous tables. The omitted categories are income less than 100%FPL, white, non-married, age 16-24, less than high school education, and male. Standard errors are corrected using Huber-White robust standard errors and survey weights are used
+	
+	
+	
+	mat	drop	_all
+	
+	use	`dta_fam_1999', clear
+	svy: proportion fs_cat_fam1999
+	clonevar	ER13002=x11102_1999
+	merge	m:1	ER13002		using	"${PSID_dtRaw}/Main/fam1999er.dta", assert(1 3) keep(3) keepusing(ER16519) nogen
+	svyset	ER31997 [pweight=weight_long_fam1999], strata(ER31996)
+
 	
