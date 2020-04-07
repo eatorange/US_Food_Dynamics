@@ -112,13 +112,13 @@
 	
 	*	Age of Head (Category)
 	foreach	year	in	1999	2001	2003	2015	2017	{
-		gen		age_head_cat`year'=.
-		replace	age_head_cat`year'=1		if	inrange(age_head_fam`year',16,24)
-		replace	age_head_cat`year'=2		if	inrange(age_head_fam`year',25,34)
-		replace	age_head_cat`year'=3		if	inrange(age_head_fam`year',35,44)
-		replace	age_head_cat`year'=4		if	inrange(age_head_fam`year',45,54)
-		replace	age_head_cat`year'=5		if	inrange(age_head_fam`year',55,64)
-		replace	age_head_cat`year'=6		if	age_head_fam`year'>=65	&	!mi(age_head_fam`year'>=65)
+		gen		age_head_cat`year'=1	if	inrange(age_head_fam`year',16,24)
+		replace	age_head_cat`year'=2	if	inrange(age_head_fam`year',25,34)
+		replace	age_head_cat`year'=3	if	inrange(age_head_fam`year',35,44)
+		replace	age_head_cat`year'=4	if	inrange(age_head_fam`year',45,54)
+		replace	age_head_cat`year'=5	if	inrange(age_head_fam`year',55,64)
+		replace	age_head_cat`year'=6	if	age_head_fam`year'>=65	&	!mi(age_head_fam`year'>=65)
+		replace	age_head_cat`year'=.	if	mi(age_head_fam`year')
 		
 		label	var	age_head_cat`year'	"Age of Household Head (category), `year'"
 	}
@@ -134,6 +134,22 @@
 	}
 	label	define	gender_head_cat	0	"Female"	1	"Male"
 	label	values	gender_head_fam*	gender_head_cat
+	
+	*	Create dummy variables for food security status, compatible with literature
+	foreach	year	in	1999	2001	2003	2015	2017	{
+		
+		generate	fs_cat_MS`year'		=	0	if	!mi(fs_cat_fam`year')
+		generate	fs_cat_IS`year'		=	0	if	!mi(fs_cat_fam`year')
+		generate	fs_cat_VLS`year'	=	0	if	!mi(fs_cat_fam`year')
+				
+		replace		fs_cat_MS`year'	=	1	if	inrange(fs_cat_fam`year',2,4)
+		replace		fs_cat_IS`year'	=	1	if	inrange(fs_cat_fam`year',3,4)
+		replace		fs_cat_VLS`year'	=	1	if	fs_cat_fam`year'==4
+		
+		label	var	fs_cat_VLS`year'	"Very Low Food Secure (cum) - `year'"
+		label	var	fs_cat_IS`year'		"Food Insecure (cum) - `year'"
+		label	var	fs_cat_MS`year'		"Marginally Food Insecure (cum) - `year'"
+	}
 	
 	*	Save
 	*clonevar	ER13002=x11102_1999
@@ -162,7 +178,6 @@
 	*	Import variables
 	use	`dta_constructed', clear
 	merge	m:1	x11101ll	using	`Ind', assert(2 3) keep(3) keepusing(ER31996 ER31997) nogen
-	*merge	m:1	ER13002		using	"${PSID_dtRaw}/Main/fam1999er.dta", assert(1 3) keep(3) keepusing(ER16519) nogen
 	
 	save	`dta_constructed', replace
 	
@@ -176,7 +191,7 @@
 			keep	x11102_`year'	weight_long_fam`year'	age_head_fam`year'	race_head_fam`year'	total_income_fam`year'	///	
 					marital_status_fam`year'	num_FU_fam`year'	num_child_fam`year'	gender_head_fam`year'	edu_years_head_fam`year'	///
 					state_resid_fam`year'	sample_source FPL_`year' FPL_cat`year' grade_comp_cat`year' race_head_cat`year'	///
-					marital_status_cat`year' child_in_FU_cat`year' age_head_cat`year'	fs_cat_fam`year' ER31996 ER31997	/*ER16519*/
+					marital_status_cat`year' child_in_FU_cat`year' age_head_cat`year'	fs_cat*`year' ER31996 ER31997	/*ER16519*/
 			drop	if	mi(x11102_`year')
 			duplicates drop
 			svyset	ER31997 [pweight=weight_long_fam`year'], strata(ER31996)
@@ -184,6 +199,8 @@
 			tempfile	dta_fam_`year'
 			save		`dta_fam_`year''
 		}
+		
+		use	`dta_fam_1999', clear
 	
 	* Table 2
 	if	`rep_table_2'==1	{
@@ -248,9 +265,10 @@
 			use	`dta_fam_`year'', clear			
 			
 			*	Food Security
-			svy: proportion fs_cat_fam`year'
-			mat	FS_PSID_`year'=(e(b)[1,2..4])'
-			
+			//	svy: proportion fs_cat_fam`year'
+			//	mat	FS_PSID_`year'=(e(b)[1,2..4])'
+			svy: mean fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+			mat FS_PSID_`year'=(e(b))'
 		}
 		
 		*	Append matrices
@@ -275,49 +293,49 @@
 			use	`dta_fam_`year'', clear
 					
 			*	Full Sample
-			svy: proportion fs_cat_fam`year'
-			mat	full_dem_`year'	=	nullmat(full_dem_`year')	\	(e(b)[1,2..4])
+			svy: mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+			mat	full_dem_`year'	=	nullmat(full_dem_`year')	\	(e(b))
 			
 			*	Income Category
 			forval	i=1/3	{
-				svy, subpop	(if	FPL_cat`year'==`i'): proportion fs_cat_fam`year'
-				mat	FPL_dem_`year'	=	nullmat(FPL_dem_`year')	\	(e(b)[1,2..4])
+				svy, subpop	(if	FPL_cat`year'==`i'): mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+				mat	FPL_dem_`year'	=	nullmat(FPL_dem_`year')	\	(e(b))
 			}
 			
 			*	Racial Category
 			forval	i=1/3	{
-				svy, subpop	(if	race_head_cat`year'==`i'): proportion fs_cat_fam`year'
-				mat	race_dem_`year'	=	nullmat(race_dem_`year')	\	(e(b)[1,2..4])
+				svy, subpop	(if	race_head_cat`year'==`i'): mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+				mat	race_dem_`year'	=	nullmat(race_dem_`year')	\	(e(b))
 			}
 			
 			*	Marital Status
 			forval	i=1/2	{
-				svy, subpop	(if	marital_status_cat`year'==`i'): proportion fs_cat_fam`year'
-				mat	marital_dem_`year'	=	nullmat(marital_dem_`year')	\	(e(b)[1,2..4])
+				svy, subpop	(if	marital_status_cat`year'==`i'): mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+				mat	marital_dem_`year'	=	nullmat(marital_dem_`year')	\	(e(b))
 			}
 			
 			*	Children
 			forval	i=1/2	{
-				svy, subpop	(if	child_in_FU_cat`year'==`i'): proportion fs_cat_fam`year'
-				mat	child_dem_`year'	=	nullmat(child_dem_`year')	\	(e(b)[1,2..4])
+				svy, subpop	(if	child_in_FU_cat`year'==`i'): mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+				mat	child_dem_`year'	=	nullmat(child_dem_`year')	\	(e(b))
 			}
 			
 			*	Age
 			forval	i=1/6	{
-				svy, subpop	(if	age_head_cat`year'==`i'): proportion fs_cat_fam`year'
-				mat	age_dem_`year'	=	nullmat(age_dem_`year')	\	(e(b)[1,2..4])
+				svy, subpop	(if	age_head_cat`year'==`i'): mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+				mat	age_dem_`year'	=	nullmat(age_dem_`year')	\	(e(b))
 			}
 			
 			*	Gender
-			foreach	i	in	1	0	{
-				svy, subpop	(if	gender_head_fam`year'==`i'): proportion fs_cat_fam`year'
-				mat	gender_dem_`year'	=	nullmat(gender_dem_`year')	\	(e(b)[1,2..4])
+			foreach	i	in	0	1	{
+				svy, subpop	(if	gender_head_fam`year'==`i'): mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+				mat	gender_dem_`year'	=	nullmat(gender_dem_`year')	\	(e(b))
 			}
 			
 			*	Grade Completed
 			forval	i=1/4	{
-				svy, subpop	(if	grade_comp_cat`year'==`i'): proportion fs_cat_fam`year'
-				mat	grade_dem_`year'	=	nullmat(grade_dem_`year')	\	(e(b)[1,2..4])
+				svy, subpop	(if	grade_comp_cat`year'==`i'): mean	fs_cat_MS`year' fs_cat_IS`year' fs_cat_VLS`year'
+				mat	grade_dem_`year'	=	nullmat(grade_dem_`year')	\	(e(b))
 			}
 			
 			*	Append
@@ -360,40 +378,40 @@
 			
 			use	`dta_fam_`year'', clear
 			
-			forval	i=2/4	{	//	Food security category
+			foreach	fscat	in	MS	IS	VLS	{	//	Food security category
 				
 				*	Income categories
-				svy, subpop(if	fs_cat_fam`year'==`i'): proportion FPL_cat`year'
-				mat	summary_FScat_`year'_`i'	=	nullmat(FPL_FScat_`year')	\	e(b)'	\	empty_row
+				svy, subpop(if	fs_cat_`fscat'`year'==1): proportion FPL_cat`year'
+				mat	summary_FScat_`year'_`fscat'	=	nullmat(FPL_FScat_`year')	\	e(b)'	\	empty_row
 				
 				*	Racial categories
-				svy, subpop(if	fs_cat_fam`year'==`i'): proportion race_head_cat`year'
-				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				svy, subpop(if	fs_cat_`fscat'`year'==1): proportion race_head_cat`year'
+				mat	summary_FScat_`year'_`fscat'	=	summary_FScat_`year'_`fscat'	\	e(b)'	\	empty_row
 				
 				*	Marital status
-				svy, subpop(if	fs_cat_fam`year'==`i'): proportion marital_status_cat`year'
-				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				svy, subpop(if	fs_cat_`fscat'`year'==1): proportion marital_status_cat`year'
+				mat	summary_FScat_`year'_`fscat'	=	summary_FScat_`year'_`fscat'	\	e(b)'	\	empty_row
 				
 				*	Children
-				svy, subpop(if	fs_cat_fam`year'==`i'): proportion child_in_FU_cat`year'
-				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				svy, subpop(if	fs_cat_`fscat'`year'==1): proportion child_in_FU_cat`year'
+				mat	summary_FScat_`year'_`fscat'	=	summary_FScat_`year'_`fscat'	\	e(b)'	\	empty_row
 				
 				*	Age
-				svy, subpop(if	fs_cat_fam`year'==`i'): proportion age_head_cat`year'
-				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				svy, subpop(if	fs_cat_`fscat'`year'==1): proportion age_head_cat`year'
+				mat	summary_FScat_`year'_`fscat'	=	summary_FScat_`year'_`fscat'	\	e(b)'	\	empty_row
 				
 				*	Education (Grades Completed)
-				svy, subpop(if	fs_cat_fam`year'==`i'): proportion grade_comp_cat`year'
-				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'	\	empty_row
+				svy, subpop(if	fs_cat_`fscat'`year'==1): proportion grade_comp_cat`year'
+				mat	summary_FScat_`year'_`fscat'	=	summary_FScat_`year'_`fscat'	\	e(b)'	\	empty_row
 				
 				*	Gender
-				svy, subpop(if	fs_cat_fam`year'==`i'): proportion gender_head_fam`year'
-				mat	summary_FScat_`year'_`i'	=	summary_FScat_`year'_`i'	\	e(b)'
+				svy, subpop(if	fs_cat_`fscat'`year'==1): proportion gender_head_fam`year'
+				mat	summary_FScat_`year'_`fscat'	=	summary_FScat_`year'_`fscat'	\	e(b)'
 					
 				}
 				
 			*	Append
-			mat	summary_FScat_`year'	=	summary_FScat_`year'_2,	summary_FScat_`year'_3,	summary_FScat_`year'_4
+			mat	summary_FScat_`year'	=	summary_FScat_`year'_MS,	summary_FScat_`year'_IS,	summary_FScat_`year'_VLS
 		}	
 		
 		putexcel	set "${PSID_outRaw}/Tiehen_2019_replication_raw", sheet(table9) modify
@@ -428,24 +446,26 @@
 			
 			use	`dta_fam_`year'', clear	
 			
+			/*
 			tab fs_cat_fam`year', generate(fs_cat_`year'_)
 			label	var	fs_cat_`year'_2	"PSID Marginal"
 			label	var	fs_cat_`year'_3	"PSID Food Insecure"
 			label	var	fs_cat_`year'_4	"PSID Very Low"
+			*/
 			
 			eststo clear
 			
-			svy: reg	fs_cat_`year'_2	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
+			svy: reg	/*fs_cat_`year'_2*/	fs_cat_MS`year'	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
 								ib2.child_in_FU_cat`year'	ib1.age_head_cat`year'	ib1.grade_comp_cat`year'	///
 								ib1.gender_head_fam`year'
 			est	store	PSID_Marginal_`year'
 			
-			svy: reg	fs_cat_`year'_3	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
+			svy: reg	/*fs_cat_`year'_3*/	fs_cat_IS`year'	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
 								ib2.child_in_FU_cat`year'	ib1.age_head_cat`year'	ib1.grade_comp_cat`year'	///
 								ib1.gender_head_fam`year'
 			est	store	PSID_FoodInsecure_`year'
 			
-			svy: reg	fs_cat_`year'_4	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
+			svy: reg	/*fs_cat_`year'_4*/	fs_cat_VLS`year'	ib1.FPL_cat`year'	ib1.race_head_cat`year'	ib2.marital_status_cat`year'	///
 								ib2.child_in_FU_cat`year'	ib1.age_head_cat`year'	ib1.grade_comp_cat`year'	///
 								ib1.gender_head_fam`year'
 			est	store	PSID_VeryLow_`year'
