@@ -359,12 +359,12 @@
 				
 			*	FPL Category
 			foreach	year	in	1999	2001	2003	2015	2017	{
-				gen		FPL_cat`year'=.
-				replace	FPL_cat`year'=1	if	total_income_fam`year'<FPL_`year'
-				replace	FPL_cat`year'=2	if	inrange(total_income_fam`year',FPL_`year',2*FPL_`year')
-				replace	FPL_cat`year'=3	if	total_income_fam`year'>=2*FPL_`year'
-				*replace	FPL_cat`year'=0	if	FPL_`year'==.
-				*replace	FPL_cat`year'=.n	if	FPL_`year'==.n
+				*gen		FPL_cat`year'=.
+				*replace	FPL_cat`year'=1	if	total_income_fam`year'<FPL_`year'
+				generate	FPL_cat`year'=1	if	total_income_fam`year'<FPL_`year'
+				replace		FPL_cat`year'=2	if	inrange(total_income_fam`year',FPL_`year',2*FPL_`year')
+				replace		FPL_cat`year'=3	if	total_income_fam`year'>=2*FPL_`year'
+				replace		FPL_cat`year'=.	if	mi(FPL_`year')
 				label	var	FPL_cat`year'	"Income Category(FPL), `year'"
 			}
 			
