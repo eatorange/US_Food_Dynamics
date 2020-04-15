@@ -117,6 +117,42 @@
 		label	variable	sample_source	"Source of Sample"	
 			
 		
+		*	Family Composition Change
+		
+			*	As the first step, we construct the maximum sequence number per each family unit per each wave
+			*	This maximum sequence number will be used to detect whether family unit has change in composition
+			*	This step is needed as "family composition change" variable is not enough: there are families which recorded "no family change" but some family members actually moved out (either to institution or to form other FU)
+			*	This could be the reason why PSID guide movie suggested to "keep individuals with a sequence number 1-20"
+			
+			foreach	year	in	1999	2001	2003	2015	2017	{			
+				cap	drop	max_sequence_no`year'
+				bys	x11102_`year':	egen	max_sequence_no`year'	=	max(xsqnr_`year')
+				label	var	max_sequence_no`year'	"Maximum sequence number of FU in `year'"
+			}
+			
+			*	1999-2003 (1999 as base year)
+				
+				*	No change
+				local	var	fam_comp_nochange_99_03
+				cap	drop	`var'
+				gen		`var'=.
+				replace	`var'=0		if	inrange(xsqnr_1999,1,89)
+				replace	`var'=1		if	inrange(xsqnr_1999,1,89)	///	/*	All individuals	as of 1999	*/
+									&	family_comp_change2001==0	&	inrange(max_sequence_no2001,1,20)	///	/*	No member change in 2001	*/
+									&	family_comp_change2003==0	&	inrange(max_sequence_no2003,1,20)	//	/*	No member change in 2003	*/
+				label	var	`var'	"FU has no member change during 1999-2003"
+				
+				*	Same household head
+				local	var	fam_comp_samehead_99_03
+				cap	drop	`var'
+				gen		`var'=.
+				replace	`var'=0		if	inrange(xsqnr_1999,1,89)
+				replace	`var'=1		if	relat_to_head1999==10	&	xsqnr_1999==1	///	/*	Head in 1999	*/
+									&	inrange(family_comp_change2001,0,2)	&	relat_to_head2001==10	&	xsqnr_2001==1	///	/*	Head in 2001	*/
+									&	inrange(family_comp_change2003,0,2)	&	relat_to_head2003==10	&	xsqnr_2003==1	/*	Head in 2003	*/
+				label	var	`var'	"FU has same household head during 1999-2003"
+							
+		
 		*	Family Spllit-off (1999-2003)
 		
 			*	1999 Family ID (base-year)
@@ -384,6 +420,34 @@
 			
 			label	define	grade_comp_cat	1	"Less than HS"	2	"HS"	3	"Some College"	4	"College Degree"
 			label 	values	grade_comp_cat*	grade_comp_cat
+			
+		*	Child food assistance program 
+	
+		foreach	year	in	1999	2001	2003	{
+			foreach	meal	in	bf	lunch	{
+				replace	child_`meal'_assist`year'	=.n	if	child_`meal'_assist`year'==0
+				replace	child_`meal'_assist`year'	=.d	if	child_`meal'_assist`year'==8
+				replace	child_`meal'_assist`year'	=.r	if	child_`meal'_assist`year'==9
+				replace	child_`meal'_assist`year'	=0	if	child_`meal'_assist`year'==5
+			}
+			generate	child_meal_assist`year'	=.
+			
+			replace		child_meal_assist`year'	=.n	if	child_bf_assist`year'==.n	&	child_lunch_assist`year'==.n
+			replace		child_meal_assist`year'	=0	if	child_bf_assist`year'==0	&	child_lunch_assist`year'==0
+			replace		child_meal_assist`year'	=.d	if	inlist(.d,child_bf_assist`year',child_lunch_assist`year')
+			replace		child_meal_assist`year'	=.r	if	inlist(.r,child_bf_assist`year',child_lunch_assist`year')
+			replace		child_meal_assist`year'	=1	if	inlist(1,child_bf_assist`year',child_lunch_assist`year')
+			label	variable	child_meal_assist`year'	"Child received free meal in `year'"
+		}
+		order	child_meal_assist1999	child_meal_assist2001	child_meal_assist2003, before(child_meal_assist2015)
+		
+		foreach	year	in	2015	2017	{
+			replace	child_meal_assist`year'	=.n	if	child_meal_assist`year'==0
+			replace	child_meal_assist`year'	=.d	if	child_meal_assist`year'==8
+			replace	child_meal_assist`year'	=.r	if	child_meal_assist`year'==9
+			replace	child_meal_assist`year'	=0	if	child_meal_assist`year'==5
+			replace	child_meal_assist`year'	=1	if	inrange(child_meal_assist`year',1,3)
+		}
 			
 			
 	/****************************************************************
