@@ -224,6 +224,20 @@
 		tempfile	state_resid_fam
 		save		`state_resid_fam'
 		
+		*	Food security score (raw)
+		psid use || fs_raw_fam	[99]ER14331S [01]ER18470S [03]ER21735S [15]ER60797 [17]ER66845	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	fs_raw_fam
+		save		`fs_raw_fam'
+		
+		*	Food security score (scale)
+		psid use || fs_scale_fam	[99]ER14331T [01]ER18470T [03]ER21735T [15]ER60798 [17]ER66846	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	fs_scale_fam
+		save		`fs_scale_fam'
+		
 		*	Food Security Category (fam)
 		psid use || fs_cat_fam	[99]ER14331U [01]ER18470U [03]ER21735U [15]ER60799 [17]ER66847	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
@@ -231,7 +245,54 @@
 		tempfile	fs_cat_fam
 		save		`fs_cat_fam'
 		
+		*	Food Stamp Usage (2 years ago)
+		psid use || food_stamp_used_2yr	[99]ER14240 [01]ER18370 [03]ER21636 [15]ER60718 [17]ER66765	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
 		
+		tempfile	food_stamp_used_2yr
+		save		`food_stamp_used_2yr'
+		
+		*	Food Stamp Usage (previous year)
+		psid use || food_stamp_used_1yr	[99]ER14255 [01]ER18386 [03]ER21652 [15]ER60719 [17]ER66766	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	food_stamp_used_1yr
+		save		`food_stamp_used_1yr'
+		
+		*	Child received free or reduced cost meal (lunch)
+		psid use || child_lunch_assist	[99]ER16418 [01]ER20364 [03]ER24069	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	child_lunch_assist_fam
+		save		`child_lunch_assist_fam'
+		
+		*	Child received free or reduced cost meal (breakfast)
+		psid use || child_bf_assist	[99]ER16419 [01]ER20365 [03]ER24070	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	child_bf_assist_fam
+		save		`child_bf_assist_fam'
+		
+		*	Child received free or reduced cost meal (breakfast and/or lunch)
+		psid use || child_meal_assist	[15]ER60695 [17]ER66742	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	child_meal_assist_fam
+		save		`child_meal_assist_fam'
+		
+		*	WIC received last years
+		psid use || WIC_received_last	[99]ER16421 [01]ER20367 [03]ER24072 [15]ER60715 [17]ER66762	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	WIC_received_last
+		save		`WIC_received_last'
+		
+		*	Family composition change
+		psid use || family_comp_change	[99]ER13008A [01]ER17007 [03]ER21007 [15]ER60007 [17]ER66007	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	family_comp_change
+		save		`family_comp_change'
 		
 	*	Merge individual cross-wave with family cross-wave
 	use	`weight_long_ind', clear
@@ -256,9 +317,16 @@
 	merge 1:1 x11101ll using `gender_head_fam', keepusing(gender_head_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `edu_years_head_fam', keepusing(edu_years_head_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `state_resid_fam', keepusing(state_resid_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `fs_raw_fam', keepusing(fs_raw_fam*) nogen assert(3)
+	merge 1:1 x11101ll using `fs_scale_fam', keepusing(fs_scale_fam*) nogen assert(3)
 	merge 1:1 x11101ll using `fs_cat_fam', keepusing(fs_cat_fam*) nogen assert(3)
-	
-
+	merge 1:1 x11101ll using `food_stamp_used_2yr', keepusing(food_stamp_used_2yr*) nogen assert(3)
+	merge 1:1 x11101ll using `food_stamp_used_1yr', keepusing(food_stamp_used_1yr*) nogen assert(3)
+	merge 1:1 x11101ll using `child_bf_assist_fam', keepusing(child_bf_assist*) nogen assert(3)
+	merge 1:1 x11101ll using `child_lunch_assist_fam', keepusing(child_lunch_assist*) nogen assert(3)
+	merge 1:1 x11101ll using `child_meal_assist_fam', keepusing(child_meal_assist*) nogen assert(3)
+	merge 1:1 x11101ll using `WIC_received_last', keepusing(WIC_received_last*) nogen assert(3)
+	merge 1:1 x11101ll using `family_comp_change', keepusing(family_comp_change*) nogen assert(3)
 	
 	/****************************************************************
 		SECTION 2: Clean variable labels and values
@@ -314,6 +382,14 @@
 			replace	`var'=.n	if	`var'==99
 		}
 		
+		*	Food Stamp & WIC
+		qui ds	food_stamp_used_2yr1999-food_stamp_used_1yr2017 WIC_received_last1999-WIC_received_last2017
+		foreach	var	in	`r(varlist)'	{
+			replace	`var'=.d	if	`var'==8
+			replace	`var'=.r	if	`var'==9
+			replace	`var'=.n	if	`var'==0
+			replace	`var'=0		if	`var'==5
+		}
 		*	Location
 		
 			*	State of Residence
@@ -379,6 +455,7 @@
 								3	"Low Food Security"	///
 								4 	"Very Low Food Security"
 		label values	fs_cat_fam*	fs_cat	
+
 		
 	/****************************************************************
 		SECTION X: Save and Exit
