@@ -448,7 +448,117 @@
 			replace	child_meal_assist`year'	=0	if	child_meal_assist`year'==5
 			replace	child_meal_assist`year'	=1	if	inrange(child_meal_assist`year',1,3)
 		}
+		
+		*	Body Mass Index (BMI)
+		foreach	year	in	1999	2001	2003	2015	2017	{
 			
+			*	Treat missing values
+				
+				*	Height (Feet)
+				replace	height_feet`year'	=.d	if	height_feet`year'==8
+				replace	height_feet`year'	=.r	if	height_feet`year'==9
+				replace	height_feet`year'	=.n	if	height_feet`year'==0
+				
+				*	Height (Inches)
+				replace	height_inch`year'	=.d	if	height_inch`year'==98
+				replace	height_inch`year'	=.r	if	height_inch`year'==99	
+				if	inrange(`year',2011,2017)	{
+					replace	height_inch`year'	=.n	if	height_inch`year'==0
+				}
+				
+				*	Height (Meters)
+				if	inrange(`year',2011,2017)	{
+					replace	height_meter`year'	=.n	if	height_meter`year'==0
+					replace	height_meter`year'	=.d	if	height_meter`year'==8
+					replace	height_meter`year'	=.r	if	height_meter`year'==9	
+				}
+				
+				*	Weight (lbs)
+				replace	weight_lbs`year'	=.d	if	weight_lbs`year'==998
+				replace	weight_lbs`year'	=.r	if	weight_lbs`year'==999			
+				replace	weight_lbs`year'	=.n	if	inlist(weight_lbs`year',0,6)
+				
+				*	Weight (Kilo)
+				if	inrange(`year',2011,2017)	{
+					replace	weight_kg`year'	=.n	if	weight_kg`year'==0
+					replace	weight_kg`year'	=.d	if	weight_kg`year'==998
+					replace	weight_kg`year'	=.r	if	weight_kg`year'==999	
+				}
+				
+			*	Convert units into metrics
+				
+				*	Height
+				if	inrange(`year',1999,2009)	{
+					gen		height_meter`year'	=		(height_feet`year'*30.48)	+	(height_inch`year'*2.54)
+				}
+				else	if	inrange(`year',2011,2017)	{
+					replace	height_meter`year'	=		(height_feet`year'*30.48)	+	(height_inch`year'*2.54)	if	!mi(height_feet`year')	&	mi(height_meter`year')
+				}
+				
+				*	Weight
+				if	inrange(`year',1999,2009)	{
+					gen		weight_kg`year'	=		(weight_lbs`year'*0.454)
+				}
+				else	if	inrange(`year',2011,2017)	{
+					replace	weight_kg`year'	=		(weight_lbs`year'*0.454)	if	!mi(weight_lbs`year')	&	mi(weight_kg`year')
+				}
+				
+				label	var	height_meter`year'	"Respondent's height (cm)"
+				label	var	weight_kg`year'		"Respondent's weight (kg)"
+				
+			*	Calculate BMI
+				gen	respondent_BMI`year'	=		weight_kg`year'	/	(height_meter`year'/100)^2
+				label	variable	respondent_BMI`year'	"Respondent's BMI, `year'"
+		}
+		
+		*	Winsorize family income and food expenditure
+		foreach	year	in	1997	1999	2001	2003	2013	2015	2017	{
+			winsor total_income_fam`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(total_income_fam_wins`year') p(0.01) 
+			if	`year'!=1997	{
+				winsor food_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(food_exp_total_wins`year') p(0.01) 
+			}
+		}
+		
+		
+		*	Total income & food expenditure per capita
+			
+			foreach	year	in	1997	1999	2001	2003	2013	2015	2017	{
+					
+					*	Income per capita
+					gen	income_pc`year'	=	total_income_fam_wins`year'/num_FU_fam`year'
+					label	variable	income_pc`year'	"Family income per capita, `year'"
+					
+					*	Food expenditure
+					if	`year'!=1997	{
+						gen	food_exp_pc`year'	=	food_exp_total_wins`year'/num_FU_fam`year'
+						label	variable	food_exp_pc`year'	"Food expenditure per capita, `year'"
+					}
+					
+					*	Average income/expenditure over two years(this wave and previous wave) per capita
+					if	inlist(`year',1999,2001,2003,2015,2017)	{
+						
+						local	prevyear=`year'-2
+						gen	avg_income_pc`year'		=	(income_pc`year'+income_pc`prevyear')/2
+						label	variable	avg_income_pc`year'		"Averge income per capita income, `year'-`prevyear'"
+						
+						if	`year'!=1999	{
+							gen	avg_foodexp_pc`year'	=	(food_exp_pc`year'+food_exp_pc`prevyear')/2
+							label	variable	avg_foodexp_pc`year'	"Averge food expenditure per capita income, `year'-`prevyear'"
+						}
+					}
+			}
+			
+		*	School Completion
+		foreach	year	in	1999	2001	2003	2015	2017	{
+			
+			*	High School
+			recode	hs_completed`year'	(1 2=1)	(3=0)	(8=.d)	(9=.r)	//	Treat "inappropriate (no education ,outside the U.S.) as "no high school"
+			label	variable	hs_completed`year'	"HH has high school diploma or GED, `year'"
+			
+			*	College
+			recode	college_completed`year'	(5=0)	(8=.d)	(9=.r)	//	Treat "inappropriate (no education ,outside the U.S.) as "no college"
+			label	variable	college_completed`year'	"HH Has college degree, `year'"
+		}
 			
 	/****************************************************************
 		SECTION X: Save and Exit
