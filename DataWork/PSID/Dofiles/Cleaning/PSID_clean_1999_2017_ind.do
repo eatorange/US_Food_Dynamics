@@ -171,7 +171,7 @@
 		save		`main_fam_ID'
 		
 		*	Total Family Income (fam)
-		psid use || total_income_fam [68]V81 [69]V529 /*[70]V1514 [71]V2226 [72]V2852 [73]V3256 [74]V3676 [75]V4154 [76]V5029 [77]V5626 [78]V6173 [79]V6766 [80]V7412 [81]V8065 [82]V8689 [83]V9375 [84]V11022 [85]V12371 [86]V13623 [87]V14670 [88]V16144 [89]V17533 [90]V18875 [91]V20175 [92]V21481 [93]V23322 [94]ER4153 [95]ER6993 [96]ER9244 [97]ER12079*/ [99]ER16462 [01]ER20456 [03]ER24099 [05]ER28037 [07]ER41027 [09]ER46935 [11]ER52343 [13]ER58152 [15]ER65349 [17]ER71426	///
+		psid use || total_income_fam [68]V81 [69]V529 /*[70]V1514 [71]V2226 [72]V2852 [73]V3256 [74]V3676 [75]V4154 [76]V5029 [77]V5626 [78]V6173 [79]V6766 [80]V7412 [81]V8065 [82]V8689 [83]V9375 [84]V11022 [85]V12371 [86]V13623 [87]V14670 [88]V16144 [89]V17533 [90]V18875 [91]V20175 [92]V21481 [93]V23322 [94]ER4153 [95]ER6993 [96]ER9244*/ [97]ER12079 [99]ER16462 [01]ER20456 [03]ER24099 [05]ER28037 [07]ER41027 [09]ER46935 [11]ER52343 [13]ER58152 [15]ER65349 [17]ER71426	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
 	
 		tempfile	total_income_fam
@@ -186,7 +186,7 @@
 		
 		
 		* # of people in FU (fam)
-		psid use || num_FU_fam [68]V115 [69]V549 /*[70]V1238 [71]V1941 [72]V2541 [73]V3094 [74]V3507 [75]V3920 [76]V4435 [77]V5349 [78]V5849 [79]V6461 [80]V7066 [81]V7657 [82]V8351 [83]V8960 [84]V10418 [85]V11605 [86]V13010 [87]V14113 [88]V15129 [89]V16630 [90]V18048 [91]V19348 [92]V20650 [93]V22405 [94]ER2006 [95]ER5005 [96]ER7005 [97]ER10008*/ [99]ER13009 [01]ER17012 [03]ER21016 [05]ER25016 [07]ER36016 [09]ER42016 [11]ER47316 [13]ER53016 [15]ER60016 [17]ER66016	///
+		psid use || num_FU_fam [68]V115 [69]V549 /*[70]V1238 [71]V1941 [72]V2541 [73]V3094 [74]V3507 [75]V3920 [76]V4435 [77]V5349 [78]V5849 [79]V6461 [80]V7066 [81]V7657 [82]V8351 [83]V8960 [84]V10418 [85]V11605 [86]V13010 [87]V14113 [88]V15129 [89]V16630 [90]V18048 [91]V19348 [92]V20650 [93]V22405 [94]ER2006 [95]ER5005 [96]ER7005*/ [97]ER10008 [99]ER13009 [01]ER17012 [03]ER21016 [05]ER25016 [07]ER36016 [09]ER42016 [11]ER47316 [13]ER53016 [15]ER60016 [17]ER66016	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear			
 		
 		
@@ -294,6 +294,64 @@
 		tempfile	family_comp_change
 		save		`family_comp_change'
 		
+		*	Total food expenditure
+		psid use || food_exp_total	[99]ER16515A1 [01]ER20456A1 [03]ER24138A1 /*[05]ER28037A1 [07]ER41027A1 [09]ER46971A1 [11]ER52395A1*/ [13]ER58212A1 [15]ER65410 [17]ER71487	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	food_exp_total
+		save		`food_exp_total'
+		
+		*	Height of the respondent (feet part)
+		psid use || height_feet	[99]ER15553 [01]ER19718 [03]ER23133 /*[05]ER27110 [07]ER38321 [09]ER44294 [11]ER49633 [13]ER55381*/ [15]ER62503 [17]ER68568	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	height_feet
+		save		`height_feet'
+		
+		*	Height of the respondent (inch part)
+		psid use || height_inch	[99]ER15554 [01]ER19719 [03]ER23134 /*[05]ER27111 [07]ER38322 [09]ER44295 [11]ER49634 [13]ER55382*/ [15]ER62504 [17]ER68569	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	height_inch
+		save		`height_inch'
+		
+		*	Height of the respondent (meters)
+		psid use || height_meter	/*[11]ER49635 [13]ER55383*/ [15]ER62505 [17]ER68570	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	height_meter
+		save		`height_meter'
+		
+		*	Weight of the respondent (lbs)
+		psid use || weight_lbs	[99]ER15552 [01]ER19717 [03]ER23132 /*[05]ER27109 [07]ER38320 [09]ER44293 [11]ER49631 [13]ER55379*/ [15]ER62501 [17]ER68566	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	weight_lbs
+		save		`weight_lbs'
+		
+		*	Weight of the respondent (kg)
+		psid use || weight_kg	/*[11]ER49632 [13]ER55380*/ [15]ER62502 [17]ER68567	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	weight_kg
+		save		`weight_kg'
+		
+		*	Finished high school or GED
+		psid use || hs_completed	[99]ER15937 [01]ER19998 [03]ER23435 /*[05]ER27402 [07]ER40574 [09]ER46552 [11]ER51913 [13]ER57669*/ [15]ER64821 [17]ER70893	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	hs_completed
+		save		`hs_completed'
+		
+		*	Finished college
+		psid use || college_completed	[99]ER15952 [01]ER20013 [03]ER23450 /*[05]ER27417 [07]ER40589 [09]ER46567 [11]ER51928 [13]ER57684*/ [15]ER64836 [17]ER70908	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+		
+		tempfile	college_completed
+		save		`college_completed'
+		
+		
+		
 	*	Merge individual cross-wave with family cross-wave
 	use	`weight_long_ind', clear
 	merge 1:1 x11101ll using `weight_cross_ind', keepusing(weight_cross_ind*) nogen assert(3)
@@ -327,6 +385,14 @@
 	merge 1:1 x11101ll using `child_meal_assist_fam', keepusing(child_meal_assist*) nogen assert(3)
 	merge 1:1 x11101ll using `WIC_received_last', keepusing(WIC_received_last*) nogen assert(3)
 	merge 1:1 x11101ll using `family_comp_change', keepusing(family_comp_change*) nogen assert(3)
+	merge 1:1 x11101ll using `food_exp_total', keepusing(food_exp_total*) nogen assert(3)
+	merge 1:1 x11101ll using `height_feet', keepusing(height_feet*) nogen assert(3)
+	merge 1:1 x11101ll using `height_inch', keepusing(height_inch*) nogen assert(3)
+	merge 1:1 x11101ll using `height_meter', keepusing(height_meter*) nogen assert(3)
+	merge 1:1 x11101ll using `weight_lbs', keepusing(weight_lbs*) nogen assert(3)
+	merge 1:1 x11101ll using `weight_kg', keepusing(weight_kg*) nogen assert(3)
+	merge 1:1 x11101ll using `hs_completed', keepusing(hs_completed*) nogen assert(3)
+	merge 1:1 x11101ll using `college_completed', keepusing(college_completed*) nogen assert(3)
 	
 	/****************************************************************
 		SECTION 2: Clean variable labels and values
