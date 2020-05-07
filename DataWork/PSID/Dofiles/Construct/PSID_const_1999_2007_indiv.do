@@ -130,28 +130,44 @@
 				label	var	max_sequence_no`year'	"Maximum sequence number of FU in `year'"
 			}
 			
-			*	1999-2003 (1999 as base year)
+
+			*	No change (1999-2003, 1999 as base year)
+			local	var	fam_comp_nochange_99_03
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0		if	inrange(xsqnr_1999,1,89)
+			replace	`var'=1		if	inrange(xsqnr_1999,1,89)	///	/*	All individuals	as of 1999	*/
+								&	family_comp_change2001==0	&	inrange(max_sequence_no2001,1,20)	///	/*	No member change in 2001	*/
+								&	family_comp_change2003==0	&	inrange(max_sequence_no2003,1,20)	//	/*	No member change in 2003	*/
+			label	var	`var'	"FU has no member change during 1999-2003"
+			
+			*	Same household head (1999-2003, 1999 as base year)
+			local	var	fam_comp_samehead_99_03
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0		if	inrange(xsqnr_1999,1,89)
+			replace	`var'=1		if	relat_to_head1999==10	&	xsqnr_1999==1	///	/*	Head in 1999	*/
+								&	inrange(family_comp_change2001,0,2)	&	relat_to_head2001==10	&	xsqnr_2001==1	///	/*	Head in 2001	*/
+								&	inrange(family_comp_change2003,0,2)	&	relat_to_head2003==10	&	xsqnr_2003==1	/*	Head in 2003	*/
+			label	var	`var'	"FU has same household head during 1999-2003"
+			
+			*	Same household head (1999-2017, 1999 as base year)
 				
-				*	No change
-				local	var	fam_comp_nochange_99_03
+				*	Condition macro
+				local	nochange_hh	relat_to_head1999==10	&	xsqnr_1999==1
+				foreach	year	in	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+					local	nochange_hh	`nochange_hh'	&	inrange(family_comp_change`year',0,2)	&	relat_to_head`year'==10	&	xsqnr_`year'==1
+				}
+				di "`nochange_hh'"
+				
+				local	var	fam_comp_samehead_99_17
 				cap	drop	`var'
 				gen		`var'=.
 				replace	`var'=0		if	inrange(xsqnr_1999,1,89)
-				replace	`var'=1		if	inrange(xsqnr_1999,1,89)	///	/*	All individuals	as of 1999	*/
-									&	family_comp_change2001==0	&	inrange(max_sequence_no2001,1,20)	///	/*	No member change in 2001	*/
-									&	family_comp_change2003==0	&	inrange(max_sequence_no2003,1,20)	//	/*	No member change in 2003	*/
-				label	var	`var'	"FU has no member change during 1999-2003"
-				
-				*	Same household head
-				local	var	fam_comp_samehead_99_03
-				cap	drop	`var'
-				gen		`var'=.
-				replace	`var'=0		if	inrange(xsqnr_1999,1,89)
-				replace	`var'=1		if	relat_to_head1999==10	&	xsqnr_1999==1	///	/*	Head in 1999	*/
-									&	inrange(family_comp_change2001,0,2)	&	relat_to_head2001==10	&	xsqnr_2001==1	///	/*	Head in 2001	*/
-									&	inrange(family_comp_change2003,0,2)	&	relat_to_head2003==10	&	xsqnr_2003==1	/*	Head in 2003	*/
-				label	var	`var'	"FU has same household head during 1999-2003"
-							
+				replace	`var'=1		if	`nochange_hh'	//	No change in HH member other than head since 1999 to 2017
+				label	var	`var'	"FU has same household head during 1999-2017"
+
+			drop	max_sequence_no*			
 		
 		*	Family Spllit-off (1999-2003)
 		
@@ -305,7 +321,28 @@
 				label	var	resp_consist_15_17	"Respondent is consistent"
 				
 				label	values	resp_consist*	yesno
-				
+		
+	*	Income & expenditures (food, child, cloth, health, etc.) & wealth
+	
+		*	Winsorize family income and expenditures at top 1%
+		foreach	year	in	1997	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+			winsor total_income_fam`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(total_income_fam_wins`year') p(0.01) 
+			if	`year'!=1997	{
+				winsor food_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(food_exp_total_wins`year') p(0.01) 
+				winsor child_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(child_exp_total_wins`year') p(0.01)
+				winsor edu_exp_total`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(edu_exp_total_wins`year') p(0.01)	
+				winsor health_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(health_exp_total_wins`year') p(0.01)
+				winsor house_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(house_exp_total_wins`year') p(0.01)
+				winsor property_tax`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(property_tax_wins`year') p(0.01)
+				winsor transport_exp`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(transport_exp_wins`year') p(0.01)
+				*winsor other_debts`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(other_debts_wins`year') p(0.01)
+				winsor wealth_total`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(wealth_total_wins`year') p(0.01)
+			}
+			if	inrange(`year',2005,2017)	{
+				winsor cloth_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(cloth_exp_total_wins`year') p(0.01)
+			}
+		}
+		
 	*	Federal Poverty Line
 	
 		*	1998 HHS Poverty Guideline (https://aspe.hhs.gov/1998-hhs-poverty-guidelines)
@@ -409,7 +446,7 @@
 		
 		
 		*	Education	(category)
-			foreach	year	in	1999	2001	2003	2015	2017	{
+			foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 				gen		grade_comp_cat`year'	=1	if	inrange(edu_years_head_fam`year',0,11)
 				replace	grade_comp_cat`year'	=2	if	inrange(edu_years_head_fam`year',12,12)
 				replace	grade_comp_cat`year'	=3	if	inrange(edu_years_head_fam`year',13,15)
@@ -422,69 +459,37 @@
 			label 	values	grade_comp_cat*	grade_comp_cat
 			
 		*	Child food assistance program 
+		**	Let "N/A (no child)" as 0 for now.
 	
-		foreach	year	in	1999	2001	2003	{
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	{
 			foreach	meal	in	bf	lunch	{
-				replace	child_`meal'_assist`year'	=.n	if	child_`meal'_assist`year'==0
-				replace	child_`meal'_assist`year'	=.d	if	child_`meal'_assist`year'==8
-				replace	child_`meal'_assist`year'	=.r	if	child_`meal'_assist`year'==9
-				replace	child_`meal'_assist`year'	=0	if	child_`meal'_assist`year'==5
+				*replace	child_`meal'_assist`year'	=.n	if	child_`meal'_assist`year'==0
+				*replace	child_`meal'_assist`year'	=.d	if	child_`meal'_assist`year'==8
+				*replace	child_`meal'_assist`year'	=.r	if	child_`meal'_assist`year'==9
+				*replace	child_`meal'_assist`year'	=0	if	child_`meal'_assist`year'==5
 			}
 			generate	child_meal_assist`year'	=.
 			
-			replace		child_meal_assist`year'	=.n	if	child_bf_assist`year'==.n	&	child_lunch_assist`year'==.n
-			replace		child_meal_assist`year'	=0	if	child_bf_assist`year'==0	&	child_lunch_assist`year'==0
-			replace		child_meal_assist`year'	=.d	if	inlist(.d,child_bf_assist`year',child_lunch_assist`year')
-			replace		child_meal_assist`year'	=.r	if	inlist(.r,child_bf_assist`year',child_lunch_assist`year')
-			replace		child_meal_assist`year'	=1	if	inlist(1,child_bf_assist`year',child_lunch_assist`year')
+			*	Merge breakfast and lunch in to one variable, to be compatible with 2013-2017 data.
+			*replace		child_meal_assist`year'	=.n	if	child_bf_assist`year'==.n	&	child_lunch_assist`year'==.n
+			replace		child_meal_assist`year'	=8	if	child_bf_assist`year'==8	|	child_lunch_assist`year'==8	//	"Don't know" if either lunch or breakfast is "don't know'"
+			replace		child_meal_assist`year'	=9	if	child_bf_assist`year'==9	|	child_lunch_assist`year'==9	//	"Refuse to answer" if either lunch or breakfast is "refuse to answer"
+			replace		child_meal_assist`year'	=0	if	child_bf_assist`year'==0	&	child_lunch_assist`year'==0	//	"Inapp" if both breakfast and lunch are inapp.
+			replace		child_meal_assist`year'	=5	if	child_bf_assist`year'==5	&	child_lunch_assist`year'==5	//	"No" if both breakfast and lunch are "No".
+			replace		child_meal_assist`year'	=1	if	inlist(1,child_bf_assist`year',child_lunch_assist`year')	//	"Yes" if either breakfast or lunch is "Yes"
 			label	variable	child_meal_assist`year'	"Child received free meal in `year'"
+			label value	child_meal_assist`year'	YNDRI
 		}
-		order	child_meal_assist1999	child_meal_assist2001	child_meal_assist2003, before(child_meal_assist2015)
+		order	child_meal_assist1999-child_meal_assist2011, before(child_meal_assist2013)
 		
-		foreach	year	in	2015	2017	{
-			replace	child_meal_assist`year'	=.n	if	child_meal_assist`year'==0
-			replace	child_meal_assist`year'	=.d	if	child_meal_assist`year'==8
-			replace	child_meal_assist`year'	=.r	if	child_meal_assist`year'==9
-			replace	child_meal_assist`year'	=0	if	child_meal_assist`year'==5
-			replace	child_meal_assist`year'	=1	if	inrange(child_meal_assist`year',1,3)
+		foreach	year	in	2013	2015	2017	{
+			replace	child_meal_assist`year'	=1	if	inrange(child_meal_assist`year',1,3)	//	Received either breakfast or lunch
 		}
+		label values	child_meal_assist*	YNDRI
 		
 		*	Body Mass Index (BMI)
-		foreach	year	in	1999	2001	2003	2015	2017	{
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			
-			*	Treat missing values
-				
-				*	Height (Feet)
-				replace	height_feet`year'	=.d	if	height_feet`year'==8
-				replace	height_feet`year'	=.r	if	height_feet`year'==9
-				replace	height_feet`year'	=.n	if	height_feet`year'==0
-				
-				*	Height (Inches)
-				replace	height_inch`year'	=.d	if	height_inch`year'==98
-				replace	height_inch`year'	=.r	if	height_inch`year'==99	
-				if	inrange(`year',2011,2017)	{
-					replace	height_inch`year'	=.n	if	height_inch`year'==0
-				}
-				
-				*	Height (Meters)
-				if	inrange(`year',2011,2017)	{
-					replace	height_meter`year'	=.n	if	height_meter`year'==0
-					replace	height_meter`year'	=.d	if	height_meter`year'==8
-					replace	height_meter`year'	=.r	if	height_meter`year'==9	
-				}
-				
-				*	Weight (lbs)
-				replace	weight_lbs`year'	=.d	if	weight_lbs`year'==998
-				replace	weight_lbs`year'	=.r	if	weight_lbs`year'==999			
-				replace	weight_lbs`year'	=.n	if	inlist(weight_lbs`year',0,6)
-				
-				*	Weight (Kilo)
-				if	inrange(`year',2011,2017)	{
-					replace	weight_kg`year'	=.n	if	weight_kg`year'==0
-					replace	weight_kg`year'	=.d	if	weight_kg`year'==998
-					replace	weight_kg`year'	=.r	if	weight_kg`year'==999	
-				}
-				
 			*	Convert units into metrics
 				
 				*	Height
@@ -511,54 +516,165 @@
 				label	variable	respondent_BMI`year'	"Respondent's BMI, `year'"
 		}
 		
-		*	Winsorize family income and food expenditure
-		foreach	year	in	1997	1999	2001	2003	2013	2015	2017	{
-			winsor total_income_fam`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(total_income_fam_wins`year') p(0.01) 
-			if	`year'!=1997	{
-				winsor food_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(food_exp_total_wins`year') p(0.01) 
-			}
-		}
 		
-		
-		*	Total income & food expenditure per capita
+		*	Income &  expenditure & wealth & tax per capita
 			
-			foreach	year	in	1997	1999	2001	2003	2013	2015	2017	{
+			foreach	year	in	1997	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 					
 					*	Income per capita
 					gen	income_pc`year'	=	total_income_fam_wins`year'/num_FU_fam`year'
 					label	variable	income_pc`year'	"Family income per capita, `year'"
 					
-					*	Food expenditure
+					*	Expenditures, tax, debt and wealth per capita
 					if	`year'!=1997	{
-						gen	food_exp_pc`year'	=	food_exp_total_wins`year'/num_FU_fam`year'
+						gen	food_exp_pc`year'			=	food_exp_total_wins`year'/num_FU_fam`year'
+						gen	child_exp_pc`year'			=	child_exp_total_wins`year'/num_FU_fam`year'
+						gen	edu_exp_pc`year'			=	edu_exp_total_wins`year'/num_FU_fam`year'
+						gen	health_exp_pc`year'			=	health_exp_total_wins`year'/num_FU_fam`year'
+						gen	house_exp_pc`year'			=	house_exp_total_wins`year'/num_FU_fam`year'
+						gen	property_tax_pc`year'		=	property_tax_wins`year'/num_FU_fam`year'
+						gen	transport_exp_pc`year'		=	transport_exp_wins`year'/num_FU_fam`year'
+						*gen	other_debts_pc`year'		=	other_debts_wins`year'/num_FU_fam`year'
+						gen	wealth_pc`year'				=	wealth_total_wins`year'/num_FU_fam`year'
+						
 						label	variable	food_exp_pc`year'	"Food expenditure per capita, `year'"
+						label	variable	child_exp_pc`year'	"Child expenditure per capita, `year'"
+						label	variable	edu_exp_pc`year'	"Education expenditure per capita, `year'"
+						label	variable	health_exp_pc`year'	"Health expenditure per capita, `year'"
+						label	variable	house_exp_pc`year'	"House expenditure per capita, `year'"
+						label	variable	property_tax_pc`year'	"Property tax per capita, `year'"
+						label	variable	transport_exp_pc`year'	"Transportation expenditure per capita, `year'"
+						*label	variable	other_debts_pc`year'	"Other debts per capita, `year'"
+						label	variable	wealth_pc`year'			"Wealth per capita, `year'"
 					}
 					
-					*	Average income/expenditure over two years(this wave and previous wave) per capita
-					if	inlist(`year',1999,2001,2003,2015,2017)	{
+					if	inrange(`year',2005,2017)	{	//	Cloth
+						gen	cloth_exp_pc`year'	=	cloth_exp_total_wins`year'/num_FU_fam`year'
+						label	variable	cloth_exp_pc`year'	"Cloth expenditure per capita, `year'"
+					}
+					
+					*	Average over the two years	(starting 2001, as we have data from 1999)
+					if	inrange(`year',2001,2017)	{
 						
 						local	prevyear=`year'-2
-						gen	avg_income_pc`year'		=	(income_pc`year'+income_pc`prevyear')/2
-						label	variable	avg_income_pc`year'		"Averge income per capita income, `year'-`prevyear'"
+						gen	avg_income_pc`year'		=	(income_pc`year'+income_pc`prevyear')/2	//	average income per capita
+						gen	avg_foodexp_pc`year'	=	(food_exp_pc`year'+food_exp_pc`prevyear')/2
+						gen	avg_childexp_pc`year'	=	(child_exp_pc`year'+child_exp_pc`prevyear')/2
+						gen	avg_eduexp_pc`year'		=	(edu_exp_pc`year'+edu_exp_pc`prevyear')/2
+						gen	avg_healthexp_pc`year'	=	(health_exp_pc`year'+health_exp_pc`prevyear')/2
+						gen	avg_houseexp_pc`year'	=	(house_exp_pc`year'+house_exp_pc`prevyear')/2
+						gen	avg_proptax_pc`year'	=	(property_tax_pc`year'+property_tax_pc`prevyear')/2
+						gen	avg_transexp_pc`year'	=	(transport_exp_pc`year'+transport_exp_pc`prevyear')/2
+						*gen	avg_othdebts_pc`year'	=	(other_debts_pc`year'+other_debts_pc`prevyear')/2
+						gen	avg_wealth_pc`year'		=	(wealth_pc`year'+wealth_pc`prevyear')/2
 						
-						if	`year'!=1999	{
-							gen	avg_foodexp_pc`year'	=	(food_exp_pc`year'+food_exp_pc`prevyear')/2
-							label	variable	avg_foodexp_pc`year'	"Averge food expenditure per capita income, `year'-`prevyear'"
+						
+						label	variable	avg_income_pc`year'		"Averge income per capita income, `year'-`prevyear'"
+						label	variable	avg_foodexp_pc`year'	"Averge food expenditure per capita income, `year'-`prevyear'"
+						
+						if	inrange(`year',2007,2017)	{	//	cloths							
+							gen	avg_clothexp_pc`year'	=	(cloth_exp_pc`year'+cloth_exp_pc`prevyear')/2
 						}
 					}
 			}
 			
-		*	School Completion
-		foreach	year	in	1999	2001	2003	2015	2017	{
+		*	Employed status (simplified)
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+			gen		emp_HH_simple`year'	=.
+			replace	emp_HH_simple`year'	=1	if	inrange(emp_status_head`year',1,2)	//	Employed
+			replace	emp_HH_simple`year'	=5	if	inrange(emp_status_head`year',3,3)	//	Unemployed
+			replace	emp_HH_simple`year'	=0	if	inrange(emp_status_head`year',4,99)	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)
 			
-			*	High School
-			recode	hs_completed`year'	(1 2=1)	(3=0)	(8=.d)	(9=.r)	//	Treat "inappropriate (no education ,outside the U.S.) as "no high school"
-			label	variable	hs_completed`year'	"HH has high school diploma or GED, `year'"
+			gen		emp_spouse_simple`year'	=.
+			replace	emp_spouse_simple`year'	=1	if	inrange(emp_status_spouse`year',1,2)	//	Employed
+			replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,3)	//	Unemployed
+			replace	emp_spouse_simple`year'	=0	if	inrange(emp_status_spouse`year',4,99)	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)	
+		}
+		
+		
+		
+		*	Food price
+		tempfile temp
+		save	`temp'
+
+		*	clean food price data
+		import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("food_cost_month") firstrow clear
+		recode year (2014=2015) (2016=2017) /*(2014=9) (2016=10)*/
+		
+		*	calculate adult expenditure by average male and female
+			foreach	plan	in	thrifty low moderate liberal	{
+				egen	adult_`plan'	=	rowmean(male_`plan' female_`plan')
+			}
 			
-			*	College
+		*	Reshape to me merged
+		gen	temptag=1
+		reshape	wide	child_thrifty-adult_liberal,	i(temptag)	j(year)
+				
+		tempfile monthly_foodprice
+		save 	`monthly_foodprice'
+
+		*	Merge food price data into the main data
+		use	`temp', clear
+		gen	temptag=1
+		merge m:1 temptag using `monthly_foodprice', assert(1	3) nogen
+		drop	temptag
+
+		*	Calculate annual household food expenditure per each 
+			
+			*	Yearly food expenditure = monthly food expenditure * 12
+			*	Monthly food expenditure is calculated by the (# of children * children cost) + (# of adult * adult cost)
+			foreach	plan	in	thrifty low moderate liberal	{
+				
+				foreach	year	in	2015	2017	{
+				
+					*	Unadjusted
+					gen	double	foodexp_W_`plan'`year'	=	((num_child_fam`year'*child_`plan'`year')	+	((num_FU_fam`year'-num_child_fam`year')*adult_`plan'`year'))*12
+					
+					*	Adjust by the number of families
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.2	if	num_FU_fam`year'==1	//	1 person family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.1	if	num_FU_fam`year'==2	//	2 people family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.05	if	num_FU_fam`year'==3	//	3 people family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*0.95	if	inlist(num_FU_fam`year',5,6)	//	5-6 people family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*0.90	if	num_FU_fam`year'>=7	//	7+ people family
+					
+					*	Divide by the number of families to get the threshold value(W) per capita
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'/num_FU_fam`year'
+					
+					*	Get the average value per capita
+					sort	fam_ID_1999
+					if	`year'==2017	{
+						local	prevyear=`year'-2
+						gen	avg_foodexp_W_`plan'`year'	=	(foodexp_W_`plan'`year'+foodexp_W_`plan'`prevyear')/2
+					}
+					
+				}
+			}
+		
+		*	Drop variables no longer needed
+		drop child_thrifty2015-adult_liberal2017
+
+		
+		
+		/*
+		*	School Completion (Disabled - no longer recodees nonresponses as missing)
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+			
+			*	High School (head)
+			recode	hs_completed_head`year'	(1 2=1)	(3=0)	(8=.d)	(9=.r)	//	Treat "inappropriate (no education ,outside the U.S.) as "no high school"
+			label	variable	hs_completed_head`year'	"HH has high school diploma or GED, `year'"
+			
+			*	High School (spouse)
+			recode	hs_completed_spouse`year'	(1 2=1)	(3=0)	(8=.d)	(9=.r)	//	Treat "inappropriate (no education ,outside the U.S.) as "no high school"
+			label	variable	hs_completed_spouse`year'	"Spouse has high school diploma or GED, `year'"
+
+			*	College (HH)
 			recode	college_completed`year'	(5=0)	(8=.d)	(9=.r)	//	Treat "inappropriate (no education ,outside the U.S.) as "no college"
 			label	variable	college_completed`year'	"HH Has college degree, `year'"
+			
+			*	College (Spouse)
+			recode	college_comp_spouse`year'	(5=0)	(8=.d)	(9=.r)	//	Treat "inappropriate (no education ,outside the U.S.) as "no college"
 		}
+		*/
 			
 	/****************************************************************
 		SECTION X: Save and Exit
