@@ -420,7 +420,312 @@
 		graph	close
 		drop	log_respondent_BMI
 	
+
+	
+		*	Distribution of food expenditure
+		graph twoway (kdensity avg_foodexp_pc if year==10) (kdensity avg_foodexp_pc if (cvlass_sample==1)	&	(cvlass_sample2==1)), ///
+				title (Distribution of Avg.food expenditure per capita)	///
+				subtitle(Entire sample and regression sample)	///
+				legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))
+				
+				
+		*	Summary statistics
+		eststo drop	Total SRC	SEO	Imm
+
+		local	sumvars	age_head_fam num_FU_fam num_child_fam edu_years_head_fam alcohol_head smoke_head	fs_scale_fam food_stamp_used_1yr 	///
+						income_pc food_exp_pc edu_exp_pc health_exp_pc	///
+
+		preserve
+		recode		alcohol_head	smoke_head		food_stamp_used_1yr	(5=0)
+						
+						
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/
+		est store Total
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==1
+		est store SRC
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==2
+		est store SEO
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==3
+		est store Imm
+
+
+		esttab Total SRC SEO Imm using tt2.csv, replace ///
+		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
+		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
+		title (Summary Statistics) ///
+		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
+		addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)
+
+		restore
+		
+		*	Distribution of food expenditure
+		graph twoway (kdensity avg_foodexp_pc if year==10) (kdensity avg_foodexp_pc if year==10 & cvlass_sample==1), ///
+				title (Distribution of Avg.food expenditure per capita)	///
+				subtitle(Entire sample and regression sample)	///
+				note(note: Top 1% of weight is winsorized)	///
+				legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))
+				
+		graph twoway (kdensity rho1_avg_foodexp_pc_thrifty) , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Thrifty Food Plan) name(thrifty, replace)
+
+		graph twoway (kdensity rho1_avg_foodexp_pc_low)	 , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Low Food Plan) name(low, replace)
+				
+		graph twoway (kdensity rho1_avg_foodexp_pc_moderate) , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Moderate Food Plan) name(moderate, replace)
+				
+		graph twoway (kdensity rho1_avg_foodexp_pc_liberal) , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Liberal Food Plan) name(liberal, replace)
+				
+		graph close
+
+		graph combine thrifty	low	moderate	liberal
+	
+	*	Variable selection
+	
+	local	statevars	cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc	//	up to the order of 5
+	local	healthvars	respondent_BMI	ib5.alcohol_head ib5.alcohol_spouse	ib5.smoke_head ib5.smoke_spouse	ib5.phys_disab_head ib5.phys_disab_spouse
+	local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	ib2.marital_status_fam	ib1.gender_head_fam	ib0.state_resid_fam	c.age_spouse##c.age_spouse	ib5.housing_status	ib5.veteran_head ib5.veteran_spouse
+	local	econvars	c.avg_income_pc##c.avg_income_pc	c.avg_wealth_pc##c.avg_wealth_pc	ib5.sup_outside_FU	ib5.tax_item_deduct	ib5.retire_plan_head ib5.retire_plan_spouse	ib5.annuities_IRA
+	local	empvars		ib5.emp_HH_simple	ib5.emp_spouse_simple
+	local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status	ib5.head_status ib5.spouse_new
+	local	eduvars		ib5.attend_college_head ib5.attend_college_spouse	college_yrs_head college_yrs_spouse	(ib5.hs_completed_head	ib5.college_completed	ib5.other_degree_head)##c.edu_years_head_fam	(ib5.hs_completed_spouse	ib5.college_comp_spouse	ib5.other_degree_spouse)##c.edu_years_spouse
+	local	foodvars	ib5.food_stamp_used_1yr	ib5.child_meal_assist ib5.WIC_received_last	meal_together	ib5.elderly_meal
+	local	childvars	ib5.child_daycare_any ib5.child_daycare_FSP ib5.child_daycare_snack	
+
+	/*			
+	local numvars : list sizeof `statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+					`familyvars'	`eduvars'	`foodvars'	`childvars'
+	macro list numvars
+	*/
+	
+
+		
+	*	Recode nonresponses (dk, refuse, inappropriate) as "negative"
+	local	recode_vars	1
+	if	`recode_vars'==1	{
+		qui	ds	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse	veteran_head	veteran_spouse	tax_item_deduct	///
+				retire_plan_head	retire_plan_spouse	annuities_IRA	attend_college_head	attend_college_spouse	hs_completed_head	hs_completed_spouse	///
+				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	child_meal_assist	WIC_received_last	elderly_meal	///
+				child_daycare_any	child_daycare_FSP	child_daycare_snack	
+		recode	`r(varlist)'	(0	8	9	.d	.r=5)
+	}
+	
+	
+	*	Codebook (To share with John, Chris and Liz)
+	/*	
+	codebook	respondent_BMI	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse			///
+				age_head_fam	age_spouse	race_head_cat	marital_status_fam		gender_head_fam		state_resid_fam	housing_status	veteran_head	veteran_spouse	///
+				avg_income_pc	avg_wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head	retire_plan_spouse	annuities_IRA	///
+				emp_HH_simple	emp_spouse_simple	///
+				num_FU_fam	num_child_fam	family_comp_change	couple_status	head_status	spouse_new	///
+				edu_years_head_fam	edu_years_spouse	attend_college_head	attend_college_spouse	college_yrs_head	college_yrs_spouse	///
+				hs_completed_head	hs_completed_spouse	college_completed	college_comp_spouse	other_degree_head	other_degree_spouse					///
+				food_stamp_used_1yr	child_meal_assist	WIC_received_last	meal_together	elderly_meal	child_daycare_any	child_daycare_FSP	child_daycare_snack, compact
+				
+	*/			
+				
+	
+	*	Step 1
+	local	run_step1	1
+	if	`run_step1'==1	{
+		
+		*	Feature Selection
+		*	Run Lasso with "rolling ahead" validation
+		
+		local	depvar	c.avg_foodexp_pc
+		*local	depvar	c.fs_scale_fam
+		*local	statevars	cl.fs_scale_fam##cl.fs_scale_fam##cl.fs_scale_fam##cl.fs_scale_fam##cl.fs_scale_fam
+		
+		cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+					`familyvars'	`eduvars'	`foodvars'	`childvars' if inlist(year,1,2,3,9,10),	///
+				lopt /*lse*/	rolling	h(1)	seed(20200505)	prestd fe /*postres		ols*/	plotcv 
+
+		gen	cvlass_sample=1	if	e(sample)==1		
+
+		*	Predict conditional means and variance from LASSO (original LASSO)
+		predict double mean1_avgfoodexp, lopt
+		predict double e1_avgfoodexp, lopt e
+		gen e1_avgfoodexp_sq = e1_avgfoodexp^2
+
+		*	Post-lasso estimation
+		cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
+		global selected `e(selected)'
+		*svy:	reg `e(depvar)' `e(selected)'
+		*est store step1_postlasso
+	}
+
+	*	Step 2
+	local	run_step2	1
+	if	`run_step2'==0	{
+		
+		local	depvar	e1_avgfoodexp_sq
+
+		cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+						`familyvars'	`eduvars'	`foodvars'	`childvars',	///
+					lopt /*lse*/	rolling	h(1)	seed(20200505)	prestd fe /*postres		ols*/	plotcv ///
+
+		gen	cvlass_sample2=1	if	e(sample)==1
+		
+		predict	double	var2_avgfoodexp, xb
+		
+		svy:	reg `e(depvar)' `e(selected)'
+		est store step2_postlasso
+	}
+
+	*	Step 3
+	local	run_step3	1
+	if	`run_step3'==1	{
+		
+		*	Assume the outcome variable follows the Gamma distribution
+		gen alpha1_avg_foodexp_pc = mean1_avgfoodexp^2 / var2_avgfoodexp	//	shape parameter of Gamma (alpha)
+		gen beta1_avg_foodexp_pc = var2_avgfoodexp / mean1_avgfoodexp	//	scale parameter of Gamma (beta)
+		
+		*	Construct CDF
+		foreach	plan	in	thrifty low moderate liberal	{
+			gen rho1_avg_foodexp_pc_`plan' = gammaptail(alpha1_avg_foodexp_pc, avg_foodexp_W_`plan'/beta1_avg_foodexp_pc)	if	(cvlass_sample==1)	&	(cvlass_sample2==1)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+			label	var	rho1_avg_foodexp_pc_`plan' "Resilience score, `plan' plan"
+		}
+	}
+	
+				
+	*	Validation
+	* among the reduced sample (_N=1,724), 89.85% are “high food security”, “5.92% are marginal food security”, 4.23% are “food insecurity”
+	* We will use this cutoff to validate performance
+
+	clonevar	fs_cat_fam_simp	=	fs_cat_fam
+	*recode		fs_cat_fam_simp	(3,4=1) (1,2=1)
+	*label	define	fs_cat_simp	1	"High Secure"	2	"Marginal Secure"	3	"Insecure"
+	recode		fs_cat_fam_simp	(2 3 4=0) (1=1)
+	label	define	fs_cat_simp	0	"Food Insecure (any)"	1	"Food Secure", replace
+	label values	fs_cat_fam_simp	fs_cat_simp
+
+	foreach	plan	in	thrifty low moderate liberal	{
+		
+		
+		xtile `plan'_pctile = rho1_avg_foodexp_pc_`plan' if !mi(rho1_avg_foodexp_pc_`plan'), nq(1000)
+		
+		gen		rho1_`plan'_IS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
+		replace	rho1_`plan'_IS	=	1	if	inrange(`plan'_pctile,1,41)	//	Food insecure
+		
+		gen		rho1_`plan'_MS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
+		replace	rho1_`plan'_MS	=	1	if	inrange(`plan'_pctile,42,100)	//	Marginal food secure
+		
+		gen		rho1_`plan'_HS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
+		replace	rho1_`plan'_HS	=	1	if	inrange(`plan'_pctile,101,1000)	//	Highly secure
+		
+	}
+
+	svy: tab rho1_thrifty_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty), cell
+	svy: tab rho1_low_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_low), cell
+	svy: tab rho1_moderate_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_moderate), cell
+	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal), cell
+
+
+	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal) & sample_source==1, cell
+	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal) & sample_source==2, cell
+	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal) & sample_source==3, cell
+
+
+	graph twoway (kdensity fs_scale_fam), title(Distribution of USDA Measure) name(fs_scale)	
+	graph combine thrifty	fs_scale
+
+								
+/* Junk Code */
+/* The following codes are old codes used when outcome variable are non-negative discrete variables (FS score) */		
+
+/*
 	*	Declare list of variables
+	local	demovars	c.age_head_fam##c.age_head_fam i.race_head_cat gender_head_fam	ib1.marital_status_cat	edu_years_head_fam
+	local	econvars	total_income_fam_wins
+	local	famvars		num_FU_fam	num_child_fam
+	local	foodvars	food_stamp_used_1yr	child_meal_assist	WIC_received_last*
+	
+	* Run 
+  foreach Y in fs_scale_fam {
+   *Mean Specifications 
+
+    *One period lag, with squares and cubes
+	
+		*	Without controls
+		*svy: nbreg `Y' cl.`Y'##cl.`Y'##cl.`Y' 	// nbreg
+		svy: glm `Y' cl.`Y'##cl.`Y'##cl.`Y' , /*vce(cluster ER31996)*/ family(nbinomial) // glm with nbinomial distribution, allows residual prediction
+		est sto base1_`Y'
+		margins, dydx(*) atmeans post	//	marginal effect
+		est	sto	margin1_base_`Y'
+  }	
+		*	With controls
+		*svy: nbreg `Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars'	//	nbreg
+		svy: glm `Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster ER31996)*/ family(nbinomial) 	//	 glm with nbinomial distribution, allows residual prediction
+		est sto mean1_`Y'
+		predict mean1_`Y'
+		predict e1_`Y', r
+		margins, dydx(*) atmeans post	//	marginal effect
+		est	sto	margin1_`Y'
+      
+  *Variance Specification - Negative binomial
+     
+	*One-period lag, with squares and cubes
+	 gen e1`Y'_sq = e1_`Y'^2	//	(SL: squared residual?)
+     svy: glm e1`Y'_sq cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster ER31996)*/ family(nbinomial) 
+	 est sto var1_`Y'
+	 predict var1_`Y'
+	 margins, dydx(*) atmeans post	//	(SL: why do we use GLM instead of OLS? Why didn't we use it in the first step?)
+     est	sto margin2_`Y'  
+
+	
+  *Resilience Scores & Regressions (using poverty line for OUTCOME, wbar2_`Y'), based on negative binomial distribution
+     *One-period lag, with squares and cubes
+	 
+		***************Need to double-check method of moments
+		*	From the first and the second moments we estimated above, we use method of moments to estimate distribution parameter.
+		*	For X ~ NB(r,p), where r is the number of failures and p is the success probability,
+		*	mu = pr/(1-p), sigma2 = pr/(1-p)^2
+		*	Solve the system and we get p = 1 - (mu/sigma2), r = mu^2/(sig2-mu)
+		
+		gen	prob_`Y'	=	1-(mean1_`Y'/var1_`Y')
+		gen	gamma_`Y'	=	(mean1_`Y')^2/(var1_`Y'-mean1_`Y')
+		
+		*	Now estimate CDF of NB(n,r,p) where n is the number of success (support, x-axis)
+		*	We use n=2.32, the threshold of food security scale score indicating ANY food insecurity
+		*	Source: "Measuring Food Security in the United States: Guide to Measuring Household Food Security, Revised 2000 (Bickel et al., 2000)
+		scalar	n=2.32
+		gen rho1_`Y' = nbinomial(n,gamma_`Y',prob_`Y')	//	Probability of being food secure (FS scale score <=2.32)
+	
+		*	Now regress RHS variables on this predicted probability
+		*reg rho1_`Y' cl.`Y'##cl.`Y'##cl.`Y' ndvi_z_var, vce(cluster geo_region)	//	(SL: Do we use LPM, not logit?) (Joan: rho1 is continuous b/w 0 and 1)
+	   *est sto R1_`Y'
+		svy: reg rho1_`Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster geo_region)*/
+		est sto R12_`Y'
+		margins, dydx(*) atmeans post	//	(SL: why do we use GLM instead of OLS? Why didn't we use it in the first step?)
+		est	sto margin3_`Y'
+		svy: fracreg logit	rho1_`Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster geo_region)*/
+	    est sto R12_frac_`Y'  
+		margins, dydx(*) atmeans post
+		est	sto margin3_frac_`Y'
+		
+  }
+
+	*	Output result
+	
+	local	Y	fs_scale_fam
+	
+		*	Regression
+		esttab	base1_fs_scale_fam	mean1_fs_scale_fam	var1_fs_scale_fam	R12_fs_scale_fam	R12_frac_fs_scale_fam	using "${PSID_outRaw}/CB_regression.csv", ///
+				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Regression) replace
+			
+		*	Marginal Effect
+		esttab	margin1_base_`Y'	margin1_`Y'	margin2_`Y' 	margin3_`Y' margin3_frac_`Y' 		using "${PSID_outRaw}/CB_ME.csv", ///
+				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels /*drop(_cons)*/	title(Marginal Effects) replace
+				
+				
+	*	Traditional regression (non-LASSO)
+	
+		*	Declare list of variables
 		
 		*	Common controls
 		local	demovars	c.age_head_fam##c.age_head_fam i.race_head_cat gender_head_fam	ib1.marital_status_cat	
@@ -510,7 +815,7 @@
   }
 
 	*	Output result
-	
+	/*
 	foreach Y in /*avg_foodexp_pc*/	respondent_BMI {
 	
 		*	Regression
@@ -520,92 +825,5 @@
 		*	Marginal Effect
 		esttab	margin1_base_`Y'	margin1_`Y'	margin2_`Y' 	margin3_`Y' margin3_`Y' 		using "${PSID_outRaw}/CB_ME_`Y'.csv", ///
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels /*drop(_cons)*/	title(Marginal Effects) replace
-	}			
-	exit
-							
-/* Junk Code */
-/* The following codes are old codes used when outcome variable are non-negative discrete variables (FS score) */		
-
-/*
-	*	Declare list of variables
-	local	demovars	c.age_head_fam##c.age_head_fam i.race_head_cat gender_head_fam	ib1.marital_status_cat	edu_years_head_fam
-	local	econvars	total_income_fam_wins
-	local	famvars		num_FU_fam	num_child_fam
-	local	foodvars	food_stamp_used_1yr	child_meal_assist	WIC_received_last*
-	
-	* Run 
-  foreach Y in fs_scale_fam {
-   *Mean Specifications 
-
-    *One period lag, with squares and cubes
-	
-		*	Without controls
-		*svy: nbreg `Y' cl.`Y'##cl.`Y'##cl.`Y' 	// nbreg
-		svy: glm `Y' cl.`Y'##cl.`Y'##cl.`Y' , /*vce(cluster ER31996)*/ family(nbinomial) // glm with nbinomial distribution, allows residual prediction
-		est sto base1_`Y'
-		margins, dydx(*) atmeans post	//	marginal effect
-		est	sto	margin1_base_`Y'
-  }	
-		*	With controls
-		*svy: nbreg `Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars'	//	nbreg
-		svy: glm `Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster ER31996)*/ family(nbinomial) 	//	 glm with nbinomial distribution, allows residual prediction
-		est sto mean1_`Y'
-		predict mean1_`Y'
-		predict e1_`Y', r
-		margins, dydx(*) atmeans post	//	marginal effect
-		est	sto	margin1_`Y'
-      
-  *Variance Specification - Negative binomial
-     
-	*One-period lag, with squares and cubes
-	 gen e1`Y'_sq = e1_`Y'^2	//	(SL: squared residual?)
-     svy: glm e1`Y'_sq cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster ER31996)*/ family(nbinomial) 
-	 est sto var1_`Y'
-	 predict var1_`Y'
-	 margins, dydx(*) atmeans post	//	(SL: why do we use GLM instead of OLS? Why didn't we use it in the first step?)
-     est	sto margin2_`Y'  
-
-	
-  *Resilience Scores & Regressions (using poverty line for OUTCOME, wbar2_`Y'), based on negative binomial distribution
-     *One-period lag, with squares and cubes
-	 
-		***************Need to double-check method of moments
-		*	From the first and the second moments we estimated above, we use method of moments to estimate distribution parameter.
-		*	For X ~ NB(r,p), where r is the number of failures and p is the success probability,
-		*	mu = pr/(1-p), sigma2 = pr/(1-p)^2
-		*	Solve the system and we get p = 1 - (mu/sigma2), r = mu^2/(sig2-mu)
-		
-		gen	prob_`Y'	=	1-(mean1_`Y'/var1_`Y')
-		gen	gamma_`Y'	=	(mean1_`Y')^2/(var1_`Y'-mean1_`Y')
-		
-		*	Now estimate CDF of NB(n,r,p) where n is the number of success (support, x-axis)
-		*	We use n=2.32, the threshold of food security scale score indicating ANY food insecurity
-		*	Source: "Measuring Food Security in the United States: Guide to Measuring Household Food Security, Revised 2000 (Bickel et al., 2000)
-		scalar	n=2.32
-		gen rho1_`Y' = nbinomial(n,gamma_`Y',prob_`Y')	//	Probability of being food secure (FS scale score <=2.32)
-	
-		*	Now regress RHS variables on this predicted probability
-		*reg rho1_`Y' cl.`Y'##cl.`Y'##cl.`Y' ndvi_z_var, vce(cluster geo_region)	//	(SL: Do we use LPM, not logit?) (Joan: rho1 is continuous b/w 0 and 1)
-	   *est sto R1_`Y'
-		svy: reg rho1_`Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster geo_region)*/
-		est sto R12_`Y'
-		margins, dydx(*) atmeans post	//	(SL: why do we use GLM instead of OLS? Why didn't we use it in the first step?)
-		est	sto margin3_`Y'
-		svy: fracreg logit	rho1_`Y' cl.`Y'##cl.`Y'##cl.`Y' `demovars' `econvars'	`famvars'	`foodvars', /*vce(cluster geo_region)*/
-	    est sto R12_frac_`Y'  
-		margins, dydx(*) atmeans post
-		est	sto margin3_frac_`Y'
-		
-  }
-
-	*	Output result
-	
-	local	Y	fs_scale_fam
-	
-		*	Regression
-		esttab	base1_fs_scale_fam	mean1_fs_scale_fam	var1_fs_scale_fam	R12_fs_scale_fam	R12_frac_fs_scale_fam	using "${PSID_outRaw}/CB_regression.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Regression) replace
-			
-		*	Marginal Effect
-		esttab	margin1_base_`Y'	margin1_`Y'	margin2_`Y' 	margin3_`Y' margin3_frac_`Y' 		using "${PSID_outRaw}/CB_ME.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels /*drop(_cons)*/	title(Marginal Effects) replace
+	}
+	*/
