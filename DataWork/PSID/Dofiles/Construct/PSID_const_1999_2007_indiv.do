@@ -588,7 +588,7 @@
 			gen		emp_spouse_simple`year'	=.
 			replace	emp_spouse_simple`year'	=1	if	inrange(emp_status_spouse`year',1,2)	//	Employed
 			replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,3)	//	Unemployed
-			replace	emp_spouse_simple`year'	=0	if	inrange(emp_status_spouse`year',4,99)	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)	
+			replace	emp_spouse_simple`year'	=0	if	inrange(emp_status_spouse`year',4,99)	|	emp_status_spouse`year'==0	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)	
 		}
 		
 		
