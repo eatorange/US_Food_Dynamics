@@ -1,45 +1,6 @@
-/*
-	local	demovars	c.age_head_fam##c.age_head_fam i.race_head_cat gender_head_fam	ib1.marital_status_cat	
-	local	eduvars		edu_years_head_fam	c.edu_years_head_fam#hs_completed c.edu_years_head_fam#college_completed
-	local	econvars	/*total_income_fam_wins*/	avg_income_pc	c.avg_income_pc#c.avg_income_pc
-	local	famvars		num_FU_fam	num_child_fam
-	local	foodvars	food_stamp_used_1yr	child_meal_assist	WIC_received_last*
-*/
-local	depvar	c.avg_foodexp_pc
-local	statevars	cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc	//	up to the order of 5
-local	healthvars	respondent_BMI	ib5.alcohol_head ib5.alcohol_spouse	ib5.smoke_head ib5.smoke_spouse	ib5.phys_disab_head ib5.phys_disab_spouse
-local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	ib2.marital_status_fam	ib1.gender_head_fam	ib0.state_resid_fam	c.age_spouse##c.age_spouse	ib5.housing_status	ib5.veteran_head ib5.veteran_spouse
-local	econvars	c.avg_income_pc##c.avg_income_pc	c.avg_wealth_pc##c.avg_wealth_pc	ib5.sup_outside_FU	ib5.tax_item_deduct	ib5.retire_plan_head ib5.retire_plan_spouse	ib5.annuities_IRA
-local	empvars		ib5.emp_HH_simple	ib5.emp_spouse_simple
-local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status	ib5.head_status ib5.spouse_new
-local	eduvars		ib5.attend_college_head ib5.attend_college_spouse	college_yrs_head college_yrs_spouse	(ib5.hs_completed_head	ib5.college_completed	ib5.other_degree_head)##c.edu_years_head_fam	(ib5.hs_completed_spouse	ib5.college_comp_spouse	ib5.other_degree_spouse)##c.edu_years_spouse
-local	foodvars	ib5.food_stamp_used_1yr	ib5.child_meal_assist ib5.WIC_received_last	meal_together	ib5.elderly_meal
-local	childvars	ib5.child_daycare_any ib5.child_daycare_FSP ib5.child_daycare_snack	
-
-*	Recode nonresponses (dk, refuse, inappropriate) as "negative"
-qui	ds	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse	veteran_head	veteran_spouse	tax_item_deduct	///
-		retire_plan_spouse	retire_plan_spouse	annuities_IRA	attend_college_head	attend_college_spouse	hs_completed_head	hs_completed_spouse	///
-		college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	child_meal_assist	WIC_received_last	elderly_meal	///
-		child_daycare_any	child_daycare_FSP	child_daycare_snack
-*recode	`r(varlist)'	(0	8	9	.d	.r=5)
-codebook		`r(varlist)'	
-		
 
 
-*	Feature Selection
-*	Run Lasso with "rolling ahead" validation
-cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-			`familyvars'	`eduvars'	`foodvars'	`childvars',	///
-		lopt /*lse*/	rolling	h(1)	seed(20200505)	prestd fe /*postres		ols*/	plotcv 
 
-gen	cvlass_sample=1	if	e(sample)==1		
-
-/*		
-predict double mean1_avgfoodexp, lopt
-predict double e1_avgfoodexp, lopt e
-
-gen e1_avgfoodexp_sq = e1_avgfoodexp^2
-*/
 
 
 ****** cvlasso does not generate e(selected) macro, which has the list of the seletected variables.
@@ -66,7 +27,7 @@ gen e2_avgfoodexp_sq = e2_avgfoodexp^2
 svy: reg e2_avgfoodexp_sq `selectedvars'	if	cvlass_sample==1	
 
 
-predict	var2_avgfoodexp, xb
+predict	double	var2_avgfoodexp, xb
 
 *	Step 3
 
@@ -78,63 +39,8 @@ foreach	plan	in	thrifty low moderate liberal	{
 }
 
 
-*	Distribution of food expenditure
-graph twoway (kdensity avg_foodexp_pc if year==10) (kdensity avg_foodexp_pc if year==10 & cvlass_sample==1), ///
-		title (Distribution of Avg.food expenditure per capita)	///
-		subtitle(Entire sample and regression sample)	///
-		note(note: Top 1% of weight is winsorized)	///
-		legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))
-		
-graph twoway (kdensity rho1_avg_foodexp_pc_thrifty) , ///
-		title (Distribution of Resilience Score)	///
-		subtitle(Thrifty Food Plan) name(thrifty, replace)
 
-graph twoway (kdensity rho1_avg_foodexp_pc_low)	 , ///
-		title (Distribution of Resilience Score)	///
-		subtitle(Low Food Plan) name(low, replace)
 		
-graph twoway (kdensity rho1_avg_foodexp_pc_moderate) , ///
-		title (Distribution of Resilience Score)	///
-		subtitle(Moderate Food Plan) name(moderate, replace)
-		
-graph twoway (kdensity rho1_avg_foodexp_pc_liberal) , ///
-		title (Distribution of Resilience Score)	///
-		subtitle(Liberal Food Plan) name(liberal, replace)
-		
-graph close
-
-graph combine thrifty	low	moderate	liberal
-		
-			
-*	Validation
-* among the reduced sample (_N=1,724), 89.85% are “high food security”, “5.92% are marginal food security”, 4.23% are “food insecurity”
-* We will use this cutoff to validate performance
-
-clonevar	fs_cat_fam_simp	=	fs_cat_fam
-*recode		fs_cat_fam_simp	(3,4=1) (1,2=1)
-*label	define	fs_cat_simp	1	"High Secure"	2	"Marginal Secure"	3	"Insecure"
-recode		fs_cat_fam_simp	(2 3 4=0) (1=1)
-label	define	fs_cat_simp	0	"Food Insecure (any)"	1	"Food Secure", replace
-label values	fs_cat_fam_simp	fs_cat_simp
-
-foreach	plan	in	thrifty low moderate liberal	{
-	
-	
-	xtile `plan'_pctile = rho1_avg_foodexp_pc_`plan' if !mi(rho1_avg_foodexp_pc_`plan'), nq(1000)
-	
-	gen		rho1_`plan'_IS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
-	replace	rho1_`plan'_IS	=	1	if	inrange(`plan'_pctile,1,41)	//	Food insecure
-	
-	gen		rho1_`plan'_MS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
-	replace	rho1_`plan'_MS	=	1	if	inrange(`plan'_pctile,42,101)	//	Marginal food secure
-	
-	gen		rho1_`plan'_HS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
-	replace	rho1_`plan'_HS	=	1	if	inrange(`plan'_pctile,102,1000)	//	Highly secure
-	
-}
-
-graph twoway (kdensity fs_scale_fam), title(Distribution of USDA Measure) name(fs_scale)	
-graph combine thrifty	fs_scale
 
 /*
 ** Testing estimability of margin.
