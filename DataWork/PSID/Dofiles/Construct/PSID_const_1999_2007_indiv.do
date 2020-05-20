@@ -582,13 +582,15 @@
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			gen		emp_HH_simple`year'	=.
 			replace	emp_HH_simple`year'	=1	if	inrange(emp_status_head`year',1,2)	//	Employed
-			replace	emp_HH_simple`year'	=5	if	inrange(emp_status_head`year',3,3)	//	Unemployed
-			replace	emp_HH_simple`year'	=0	if	inrange(emp_status_head`year',4,99)	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)
+			replace	emp_HH_simple`year'	=5	if	inrange(emp_status_head`year',3,99)	//	Unemployed (including retired, disabled, keeping house, inapp, ...)
+			*replace	emp_HH_simple`year'	=5	if	inrange(emp_status_head`year',3,3)	//	Unemployed
+			*replace	emp_HH_simple`year'	=0	if	inrange(emp_status_head`year',4,99)	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)
 			
 			gen		emp_spouse_simple`year'	=.
 			replace	emp_spouse_simple`year'	=1	if	inrange(emp_status_spouse`year',1,2)	//	Employed
-			replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,3)	//	Unemployed
-			replace	emp_spouse_simple`year'	=0	if	inrange(emp_status_spouse`year',4,99)	|	emp_status_spouse`year'==0	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)	
+			replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,99)	|	emp_status_spouse`year'==0	//	Unemployed (including retired, disabled, keeping house, inapp, DK, NA,...)	
+			*replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,3)	//	Unemployed
+			*replace	emp_spouse_simple`year'	=0	if	inrange(emp_status_spouse`year',4,99)	|	emp_status_spouse`year'==0	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)	
 		}
 		
 		
@@ -599,7 +601,7 @@
 
 		*	clean food price data
 		import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("food_cost_month") firstrow clear
-		recode year (2014=2015) (2016=2017) /*(2014=9) (2016=10)*/
+		recode year (2012=2013)	(2014=2015) (2016=2017) /*(2014=9) (2016=10)*/
 		
 		*	calculate adult expenditure by average male and female
 			foreach	plan	in	thrifty low moderate liberal	{
@@ -625,7 +627,7 @@
 			*	Monthly food expenditure is calculated by the (# of children * children cost) + (# of adult * adult cost)
 			foreach	plan	in	thrifty low moderate liberal	{
 				
-				foreach	year	in	2015	2017	{
+				foreach	year	in	2013	2015	2017	{
 				
 					*	Unadjusted
 					gen	double	foodexp_W_`plan'`year'	=	((num_child_fam`year'*child_`plan'`year')	+	((num_FU_fam`year'-num_child_fam`year')*adult_`plan'`year'))*12
@@ -642,7 +644,7 @@
 					
 					*	Get the average value per capita
 					sort	fam_ID_1999
-					if	`year'==2017	{
+					if	inlist(`year',2015,2017)	{
 						local	prevyear=`year'-2
 						gen	avg_foodexp_W_`plan'`year'	=	(foodexp_W_`plan'`year'+foodexp_W_`plan'`prevyear')/2
 					}
@@ -651,9 +653,29 @@
 			}
 		
 		*	Drop variables no longer needed
-		drop child_thrifty2015-adult_liberal2017
-
+		drop child_thrifty2013-adult_liberal2017
 		
+		*	Food security category (simplified)
+		*	This simplified category is based on Tiehen(2019)
+		foreach	year	in	1999	2001	2003	2015	2017	{
+			
+			clonevar	fs_cat_fam_simp`year'	=	fs_cat_fam`year'
+			*recode		fs_cat_fam_simp	(3,4=1) (1,2=1)
+			*label	define	fs_cat_simp	1	"High Secure"	2	"Marginal Secure"	3	"Insecure"
+			recode		fs_cat_fam_simp`year'	(2 3 4=0) (1=1)
+
+		}
+		label	define	fs_cat_simp	0	"Food Insecure (any)"	1	"Food Secure"
+		label values	fs_cat_fam_simp*	fs_cat_simp
+		
+		*	Food security score (Rescaled)
+		*	Rescaled to be comparable to C&B resilience scores
+		foreach	year	in	1999	2001	2003	2015	2017	{
+
+			gen	double	fs_scale_fam_rescale`year'	=	(9.3-fs_scale_fam`year')/9.3
+			lab	var	fs_scale_fam_rescale`year'	"Food Securiy Score (Scale), rescaled"
+			
+		}
 		
 		/*
 		*	School Completion (Disabled - no longer recodees nonresponses as missing)
