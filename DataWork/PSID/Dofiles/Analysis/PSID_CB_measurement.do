@@ -63,6 +63,8 @@
 	di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
 	di "Git branch `r(branch)'; commit `r(sha)'."
 	
+	set	seed 20200513
+	
 	/****************************************************************
 		SECTION 1: Prepare dataset
 	****************************************************************/		
@@ -250,6 +252,7 @@
 		label	var	state_resid_fam		"State of Residence"
 		label 	var	fs_raw_fam 			"Food Security Score (Raw)"
 		label 	var	fs_scale_fam 		"Food Security Score (Scale)"
+		label	var	fs_scale_fam_rescale	"Food Security Score (Scale)-rescaled"
 		label	var	fs_cat_fam 			"Food Security Category"
 		label	var	food_stamp_used_2yr	"Received Food Stamp (2 years ago)"
 		label	var	food_stamp_used_1yr "Received Food Stamp (1 year ago)"
@@ -358,6 +361,7 @@
 		label	var	splitoff_dummy		"Splitoff ummy"
 		label	var	accum_splitoff		"Accumulated splitoff"
 		label	var	other_debts			"Other debts"
+		label	var	fs_cat_fam_simp		"Food Security Category (binary)"
 
 		label	var	cloth_exp_total_wins		"Other debts"
 		
@@ -381,258 +385,485 @@
 		replace	alcohol_head=.n	if	alcohol_head==0	// only 1 obs
 		replace	smoke_head=.n	if	smoke_head==0	// only 1 obs
                                                
-	
-	/****************************************************************
-		SECTION 2: Construct CB measurement
-	****************************************************************/	
-	
 	*	Recode time variables, to start from 1 and increase by 1 in every wave
 	replace	year	=	(year-1997)/2
+	
+	*	Generate in-sample and out-of-sample for performance check
+	*	We use the data up to 2015 as "in-sample", and the data in 2018 as "out-of-sample"
+	gen		in_sample	=	0
+	replace	in_sample	=	1	if	inrange(year,3,9)
+	label	var	in_sample	"In-sample (2003~2015)"
+	
+	gen		out_of_sample	=	0
+	replace	out_of_sample	=	1	if	year==10
+	label	var	out_of_sample	"Out of sample (2017)"
 	
 	*	Define the data as survey data and time-series data
 	svyset	ER31997 [pweight=weight_long_fam], strata(ER31996)	singleunit(scaled)
 	xtset fam_ID_1999 year,	delta(1)
 	
-	*	Review outcome variables
-		
-		*	Correlation between FS scores and outcome variables
-		corr fs_scale_fam income_pc	food_exp_pc  avg_income_pc avg_foodexp_pc	respondent_BMI
-		
-		*	Data plot of the outcome variables
-		kdensity income_pc, 		title(Household Income per capita) xtitle(Household Income per capita)
-		graph	export	"${PSID_outRaw}/kdensity_income_pc.png",	replace
-		
-		kdensity food_exp_pc, 		title(Household food expenditure per capita) xtitle(Household food expenditure per capita)
-		graph	export	"${PSID_outRaw}/kdensity_food_exp_pc.png",	replace
-		
-		kdensity avg_income_pc, 	title(Average income per capita) xtitle(Average per capita income over the two years)
-		graph	export	"${PSID_outRaw}/kdensity_avg_income_pc.png",	replace
-		
-		kdensity avg_foodexp_pc, 	title(Average food expenditure per capita) xtitle(Average per capita food expenditure over the two years)
-		graph	export	"${PSID_outRaw}/kdensity_avg_foodexp_pc.png",	replace
-		
-		kdensity respondent_BMI, 	title(Respondent BMI) xtitle(Respondent Body Mass Index)
-		graph	export	"${PSID_outRaw}/kdensity_resp_BMI.png",	replace
-		
-		gen		log_respondent_BMI	=	log(respondent_BMI)
-		kdensity log_respondent_BMI, 	title(log(Respondent BMI)) xtitle(Log of Respondent Body Mass Index)
-		graph	export	"${PSID_outRaw}/kdensity_log_resp_BMI.png",	replace
-		graph	close
-		drop	log_respondent_BMI
-	
-
-	
-		*	Distribution of food expenditure
-		graph twoway (kdensity avg_foodexp_pc if year==10) (kdensity avg_foodexp_pc if (cvlass_sample==1)	&	(cvlass_sample2==1)), ///
-				title (Distribution of Avg.food expenditure per capita)	///
-				subtitle(Entire sample and regression sample)	///
-				legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))
-				
-				
-		*	Summary statistics
-		eststo drop	Total SRC	SEO	Imm
-
-		local	sumvars	age_head_fam num_FU_fam num_child_fam edu_years_head_fam alcohol_head smoke_head	fs_scale_fam food_stamp_used_1yr 	///
-						income_pc food_exp_pc edu_exp_pc health_exp_pc	///
-
-		preserve
-		recode		alcohol_head	smoke_head		food_stamp_used_1yr	(5=0)
-						
-						
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/
-		est store Total
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==1
-		est store SRC
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==2
-		est store SEO
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==3
-		est store Imm
-
-
-		esttab Total SRC SEO Imm using tt2.csv, replace ///
-		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
-		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
-		title (Summary Statistics) ///
-		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
-		addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)
-
-		restore
-		
-		*	Distribution of food expenditure
-		graph twoway (kdensity avg_foodexp_pc if year==10) (kdensity avg_foodexp_pc if year==10 & cvlass_sample==1), ///
-				title (Distribution of Avg.food expenditure per capita)	///
-				subtitle(Entire sample and regression sample)	///
-				note(note: Top 1% of weight is winsorized)	///
-				legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))
-				
-		graph twoway (kdensity rho1_avg_foodexp_pc_thrifty) , ///
-				title (Distribution of Resilience Score)	///
-				subtitle(Thrifty Food Plan) name(thrifty, replace)
-
-		graph twoway (kdensity rho1_avg_foodexp_pc_low)	 , ///
-				title (Distribution of Resilience Score)	///
-				subtitle(Low Food Plan) name(low, replace)
-				
-		graph twoway (kdensity rho1_avg_foodexp_pc_moderate) , ///
-				title (Distribution of Resilience Score)	///
-				subtitle(Moderate Food Plan) name(moderate, replace)
-				
-		graph twoway (kdensity rho1_avg_foodexp_pc_liberal) , ///
-				title (Distribution of Resilience Score)	///
-				subtitle(Liberal Food Plan) name(liberal, replace)
-				
-		graph close
-
-		graph combine thrifty	low	moderate	liberal
-	
-	*	Variable selection
-	
-	local	statevars	cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc##cl.avg_foodexp_pc	//	up to the order of 5
-	local	healthvars	respondent_BMI	ib5.alcohol_head ib5.alcohol_spouse	ib5.smoke_head ib5.smoke_spouse	ib5.phys_disab_head ib5.phys_disab_spouse
-	local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	ib2.marital_status_fam	ib1.gender_head_fam	ib0.state_resid_fam	c.age_spouse##c.age_spouse	ib5.housing_status	ib5.veteran_head ib5.veteran_spouse
-	local	econvars	c.avg_income_pc##c.avg_income_pc	c.avg_wealth_pc##c.avg_wealth_pc	ib5.sup_outside_FU	ib5.tax_item_deduct	ib5.retire_plan_head ib5.retire_plan_spouse	ib5.annuities_IRA
-	local	empvars		ib5.emp_HH_simple	ib5.emp_spouse_simple
-	local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status	ib5.head_status ib5.spouse_new
-	local	eduvars		ib5.attend_college_head ib5.attend_college_spouse	college_yrs_head college_yrs_spouse	(ib5.hs_completed_head	ib5.college_completed	ib5.other_degree_head)##c.edu_years_head_fam	(ib5.hs_completed_spouse	ib5.college_comp_spouse	ib5.other_degree_spouse)##c.edu_years_spouse
-	local	foodvars	ib5.food_stamp_used_1yr	ib5.child_meal_assist ib5.WIC_received_last	meal_together	ib5.elderly_meal
-	local	childvars	ib5.child_daycare_any ib5.child_daycare_FSP ib5.child_daycare_snack	
-
-	/*			
-	local numvars : list sizeof `statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-					`familyvars'	`eduvars'	`foodvars'	`childvars'
-	macro list numvars
-	*/
-	
-
-		
 	*	Recode nonresponses (dk, refuse, inappropriate) as "negative"
+	label	define	yes1no0	0	"No"	1	"Yes"
 	local	recode_vars	1
 	if	`recode_vars'==1	{
 		qui	ds	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse	veteran_head	veteran_spouse	tax_item_deduct	///
 				retire_plan_head	retire_plan_spouse	annuities_IRA	attend_college_head	attend_college_spouse	hs_completed_head	hs_completed_spouse	///
 				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	child_meal_assist	WIC_received_last	elderly_meal	///
 				child_daycare_any	child_daycare_FSP	child_daycare_snack	
-		recode	`r(varlist)'	(0	8	9	.d	.r=5)
+		label values	`r(varlist)'	yes1no0
+		recode	`r(varlist)'	(0	5	8	9	.d	.r=0)
 	}
 	
+	*	Create a lagged variable of the outcome variable and its higher polynomial terms (needed for Shapley decomposition and Random Forest)	
+	forval	i=1/5	{
+		gen	lag_avg_foodexp_pc_`i'	=	(cl.avg_foodexp_pc)^`i'
+		label	var	lag_avg_foodexp_pc_`i'	"Lagged avg. food exp (pc), `i'th polynimial	order"
+	}
+	order	lag_avg_foodexp_pc_1-lag_avg_foodexp_pc_5,	after(avg_foodexp_pc)
+	
+	*	Create additional variables, as "rforest" does accept none of the interaction, factor variable and time series variable
+
+		*	Non-linear terms of income & wealth	&	age
+		gen	avg_income_pc_sq	=	(avg_income_pc)^2
+		label	var	avg_income_pc_sq	"(Avg.Income per capita)^2"
+		gen	avg_wealth_pc_sq	=	(avg_wealth_pc)^2
+		gen	age_head_fam_sq		=	(age_head_fam)^2
+		gen	age_spouse_sq		=	(age_spouse)^2
+		
+		*	Decompose unordered categorical variables
+		local	catvars	race_head_cat	marital_status_fam	gender_head_fam	state_resid_fam	housing_status	family_comp_change	couple_status	
+		foreach	var	of	local	catvars	{
+			tab	`var',	gen(`var'_enum)
+		}
+		
+		*	Interaction variables
+			
+			*	Male education
+			foreach	var	in	hs_completed_head	college_completed	other_degree_head	{
+				gen	`var'_interact	=	`var'*edu_years_head_fam
+			}
+		
+			*	Female education
+			foreach	var	in	hs_completed_spouse	college_comp_spouse	other_degree_spouse	{
+				gen	`var'_interact	=	`var'*edu_years_spouse
+			}	
+	
+	sort	fam_ID_1999 year,	stable
 	
 	*	Codebook (To share with John, Chris and Liz)
-	/*	
-	codebook	respondent_BMI	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse			///
-				age_head_fam	age_spouse	race_head_cat	marital_status_fam		gender_head_fam		state_resid_fam	housing_status	veteran_head	veteran_spouse	///
-				avg_income_pc	avg_wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head	retire_plan_spouse	annuities_IRA	///
-				emp_HH_simple	emp_spouse_simple	///
-				num_FU_fam	num_child_fam	family_comp_change	couple_status	head_status	spouse_new	///
-				edu_years_head_fam	edu_years_spouse	attend_college_head	attend_college_spouse	college_yrs_head	college_yrs_spouse	///
-				hs_completed_head	hs_completed_spouse	college_completed	college_comp_spouse	other_degree_head	other_degree_spouse					///
-				food_stamp_used_1yr	child_meal_assist	WIC_received_last	meal_together	elderly_meal	child_daycare_any	child_daycare_FSP	child_daycare_snack, compact
-				
-	*/			
-				
+	local	codebook	1
+	if	`codebook'==1	{
+		codebook	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse			///
+					age_head_fam	age_spouse	race_head_cat	marital_status_fam		gender_head_fam		state_resid_fam	housing_status	veteran_head	veteran_spouse	///
+					/*avg_foodexp_pc*/	avg_income_pc	avg_wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head	retire_plan_spouse	annuities_IRA	///
+					emp_HH_simple	emp_spouse_simple	///
+					num_FU_fam	num_child_fam	family_comp_change	couple_status	head_status	spouse_new	///
+					edu_years_head_fam	edu_years_spouse	attend_college_head	attend_college_spouse	college_yrs_head	college_yrs_spouse	///
+					hs_completed_head	hs_completed_spouse	college_completed	college_comp_spouse	other_degree_head	other_degree_spouse					///
+					food_stamp_used_1yr	child_meal_assist	WIC_received_last	meal_together	elderly_meal	child_daycare_any	child_daycare_FSP	child_daycare_snack	///
+					if	in_sample==1, compact
+		
+	}
 	
-	*	Step 1
-	local	run_step1	1
-	if	`run_step1'==1	{
-		
-		*	Feature Selection
-		*	Run Lasso with "rolling ahead" validation
-		
-		local	depvar	c.avg_foodexp_pc
-		*local	depvar	c.fs_scale_fam
-		*local	statevars	cl.fs_scale_fam##cl.fs_scale_fam##cl.fs_scale_fam##cl.fs_scale_fam##cl.fs_scale_fam
-		
-		cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-					`familyvars'	`eduvars'	`foodvars'	`childvars' if inlist(year,1,2,3,9,10),	///
-				lopt /*lse*/	rolling	h(1)	seed(20200505)	prestd fe /*postres		ols*/	plotcv 
+	*	Keep only observations where the outcome variable is non-missing
+	*	This is necessary for "rforest" command, but it should be safe anyway since we will use only in_sample and out_of_sample.
+	keep	if	inlist(1,in_sample,out_of_sample)	
+	
+	*	Save data
+	tempfile	data_prep
+	save		`data_prep'
 
-		gen	cvlass_sample=1	if	e(sample)==1		
+	/****************************************************************
+		SECTION 2: Construct CB measurement
+	****************************************************************/	
+	
+	*	We will use three methods - classic OLS, LASSO and Random Forest
+	
+	*	OLS
+	local	run_ols	1
+	
+	*	LASSO
+	local	run_lasso	1
+		local	run_lasso_step1	1
+		local	run_lasso_step2	1
+		local	run_lasso_step3	1
+		
+	*	Random Forest
+	local	run_rf	1	
+		local	tune_iter	0	//	Tuning iteration
+		local	tune_numvars	0	//	Tuning numvars
+		local	run_rf_step1	1
+		local	run_rf_step2	1
+		local	run_rf_step3	1
+	
+	*	OLS
+	if	`run_ols'==1	{
+		
+		*	Declare variables
+		local	depvar	avg_foodexp_pc
+		local	statevars	lag_avg_foodexp_pc_1-lag_avg_foodexp_pc_5
+		local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	ib2.marital_status_fam	ib1.gender_head_fam	ib0.state_resid_fam	
+		local	econvars	c.avg_income_pc##c.avg_income_pc
+		local	empvars		emp_HH_simple
+		local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status
+		local	eduvars		attend_college_head college_yrs_head college_yrs_spouse	(hs_completed_head	college_completed	other_degree_head)##c.edu_years_head_fam	
+		local	foodvars	food_stamp_used_1yr	child_meal_assist ib5.WIC_received_last	meal_together	elderly_meal
+		
+		*	Step 1
 
-		*	Predict conditional means and variance from LASSO (original LASSO)
-		predict double mean1_avgfoodexp, lopt
-		predict double e1_avgfoodexp, lopt e
-		gen e1_avgfoodexp_sq = e1_avgfoodexp^2
-
-		*	Post-lasso estimation
-		cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
-		global selected `e(selected)'
+		svy: reg	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	if	in_sample==1
+		*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	if	in_sample==1, family(gamma)	link(log)
+		est	sto	ols_step1
+					
+		gen	ols_step1_sample=1	if	e(sample)==1
+		
+		predict double mean1_avgfoodexp_ols
+		predict double e1_avgfoodexp_ols, r
+		gen e1_avgfoodexp_sq_ols = (e1_avgfoodexp_ols)^2
+		
+		*	Step 2
+		*svy: glm `depvar' `statevars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	if	ols_step1_sample==1, family(gamma) 
+		svy: reg `depvar' `statevars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	if	ols_step1_sample==1
+		gen	ols_step2_sample=1	if	e(sample)==1
 		*svy:	reg `e(depvar)' `e(selected)'
-		*est store step1_postlasso
-	}
-
-	*	Step 2
-	local	run_step2	1
-	if	`run_step2'==0	{
+		predict	double	var1_avgfoodexp_ols
+		est store ols_step2
 		
-		local	depvar	e1_avgfoodexp_sq
-
-		cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-						`familyvars'	`eduvars'	`foodvars'	`childvars',	///
-					lopt /*lse*/	rolling	h(1)	seed(20200505)	prestd fe /*postres		ols*/	plotcv ///
-
-		gen	cvlass_sample2=1	if	e(sample)==1
-		
-		predict	double	var2_avgfoodexp, xb
-		
-		svy:	reg `e(depvar)' `e(selected)'
-		est store step2_postlasso
-	}
-
-	*	Step 3
-	local	run_step3	1
-	if	`run_step3'==1	{
-		
+		*	Step 3
 		*	Assume the outcome variable follows the Gamma distribution
-		gen alpha1_avg_foodexp_pc = mean1_avgfoodexp^2 / var2_avgfoodexp	//	shape parameter of Gamma (alpha)
-		gen beta1_avg_foodexp_pc = var2_avgfoodexp / mean1_avgfoodexp	//	scale parameter of Gamma (beta)
+		gen alpha1_avg_foodexp_pc_ols = (mean1_avgfoodexp_ols)^2 / var1_avgfoodexp_ols	//	shape parameter of Gamma (alpha)
+		gen beta1_avg_foodexp_pc_ols = var1_avgfoodexp_ols / mean1_avgfoodexp_ols	//	scale parameter of Gamma (beta)
 		
 		*	Construct CDF
 		foreach	plan	in	thrifty low moderate liberal	{
-			gen rho1_avg_foodexp_pc_`plan' = gammaptail(alpha1_avg_foodexp_pc, avg_foodexp_W_`plan'/beta1_avg_foodexp_pc)	if	(cvlass_sample==1)	&	(cvlass_sample2==1)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
-			label	var	rho1_avg_foodexp_pc_`plan' "Resilience score, `plan' plan"
+			
+			*	Generate resilience score. 
+			*	Should include in-sample as well as out-of-sample to validate its OOS performance
+			gen rho1_avg_foodexp_pc_`plan'_ols = gammaptail(alpha1_avg_foodexp_pc_ols, avg_foodexp_W_`plan'/beta1_avg_foodexp_pc_ols)	/*if	(lasso_step1_sample==1)	&	(lasso_step2_sample==1)*/	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+			label	var	rho1_avg_foodexp_pc_`plan'_ols "Resilience score (LASSO), `plan' plan"
+		
 		}
 	}
 	
+	*	LASSO
+	if	`run_lasso'==1	{
+		
+		*	Variable selection
+		*	when "0" implies "no". Should yield the same result to the previous coding which "5" implies "no"
+		local	statevars	lag_avg_foodexp_pc_1-lag_avg_foodexp_pc_5	//	up to the order of 5
+		local	healthvars	/*respondent_BMI*/	alcohol_head alcohol_spouse	smoke_head ib5.smoke_spouse	phys_disab_head phys_disab_spouse
+		local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	ib2.marital_status_fam	ib1.gender_head_fam	ib0.state_resid_fam	c.age_spouse##c.age_spouse	ib5.housing_status	veteran_head veteran_spouse
+		local	econvars	c.avg_income_pc##c.avg_income_pc	c.avg_wealth_pc##c.avg_wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
+		local	empvars		emp_HH_simple	emp_spouse_simple
+		local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status	head_status spouse_new
+		local	eduvars		attend_college_head attend_college_spouse	college_yrs_head college_yrs_spouse	(hs_completed_head	college_completed	other_degree_head)##c.edu_years_head_fam	(hs_completed_spouse	college_comp_spouse	other_degree_spouse)##c.edu_years_spouse
+		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
+		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
+		
+		*	Step 1
+		if	`run_lasso_step1'==1	{
+		
+			*	Feature Selection
+			*	Run Lasso with "K-fold" validation	with K=10
+		
+			local	depvar	avg_foodexp_pc
+	
+			cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+				`familyvars'	`eduvars'	`foodvars'	`childvars'	if	in_sample==1,	///
+				/*lopt*/ lse	/*rolling	h(1)*/	seed(20200505)	 /*fe	prestd 	postres	ols*/	plotcv 
+
+			*cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
+			cvlasso, postresult lse
+			
+			gen	lasso_step1_sample=1	if	e(sample)==1		
+
+			*	Predict conditional means and variance from LASSO (original LASSO)
+			*predict double mean1_avgfoodexp, lse
+			*predict double e1_avgfoodexp, lse r
+			*gen e1_avgfoodexp_sq = e1_avgfoodexp^2
+
+			*	Post-lasso estimation
+			*cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
+			*cvlasso, postresult lse	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
+			
+			*	Manually run post-lasso
+				global selected_step1_lasso `e(selected)'
+				svy:	reg `depvar' ${selected_step1_lasso}	if	lasso_step1_sample==1
+				est store lasso_step1_lse
+				
+				*	Predict conditional means and variance from Post-LASSO
+				predict double mean1_avgfoodexp_lasso, xb
+				predict double e1_avgfoodexp_lasso, r
+				gen e1_avgfoodexp_sq_lasso = (e1_avgfoodexp_lasso)^2
+				
+				shapley2, stat(r2)
+				est	store	lasso_step1_shapley
+		}	//	Step 1
+
+		
+		*	Step 2
+		if	`run_lasso_step2'==1	{
+		
+			local	depvar	e1_avgfoodexp_sq_lasso
+
+			*	LASSO
+			cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+							`familyvars'	`eduvars'	`foodvars'	`childvars'	if	lasso_step1_sample==1,	///
+						lopt /*lse	rolling	h(1)*/	seed(20200505)	prestd  /*fe	postres		ols*/	plotcv ///
+
+			gen	lasso_step2_sample=1	if	e(sample)==1		
+			
+			*** Somehow, the lambda from lopt does not reduce dimensionality a lot, and the lambda from lse does not keep ANY RHS varaible.
+			*** For now (2020/5/18), we will just use the residual from lopt, but we could improve it later (ex. using the lambda somewhere between lopt and lse)
+			
+			*	Manually run post-lasso
+			cvlasso, postresult lopt	//	Need this command to use `e(selected)' macro
+			global selected_step2_lasso `e(selected)'
+			svy:	reg `depvar' ${selected_step2_lasso}	if	lasso_step2_sample==1
+			est store lasso_step2_lopt
+			predict	double	var1_avgfoodexp_lasso, xb
+			
+			*	lopt gives too many variables, so we won't use decomposition for now.
+			*shapley2, stat(r2)
+			*est	store	cvlasso_step2_shapley
+			
+		}	//	Step 2
+		
+		*	Step 3
+		if	`run_lasso_step3'==1	{
+		
+			*	Assume the outcome variable follows the Gamma distribution
+			gen alpha1_avg_foodexp_pc_lasso = (mean1_avgfoodexp_lasso)^2 / var1_avgfoodexp_lasso	//	shape parameter of Gamma (alpha)
+			gen beta1_avg_foodexp_pc_lasso = var1_avgfoodexp_lasso / mean1_avgfoodexp_lasso	//	scale parameter of Gamma (beta)
+			
+			*	Construct CDF
+			foreach	plan	in	thrifty low moderate liberal	{
+			
+			*	Generate resilience score. 
+			*	Should include in-sample as well as out-of-sample to validate its OOS performance
+			gen rho1_avg_foodexp_pc_`plan'_ls = gammaptail(alpha1_avg_foodexp_pc_lasso, avg_foodexp_W_`plan'/beta1_avg_foodexp_pc_lasso)	/*if	(lasso_step1_sample==1)	&	(lasso_step2_sample==1)*/	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+			label	var	rho1_avg_foodexp_pc_`plan'_ls "Resilience score (LASSO), `plan' plan"
+			
+			}
+		}	//	Step 3
+		
+	}	//	LASSO
+	
+	*	Random Forest
+	if	`run_rf'==1	{
+		
+		*	Variable Selection
+		local	statevars	lag_avg_foodexp_pc_1-lag_avg_foodexp_pc_5	//	up to the order of 5
+		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse
+		local	demovars	age_head_fam	age_head_fam_sq	race_head_cat_enum1-race_head_cat_enum3	marital_status_fam_enum1-marital_status_fam_enum5	///
+							gender_head_fam_enum1-gender_head_fam_enum2	state_resid_fam_enum1-state_resid_fam_enum52	age_spouse	age_spouse_sq	///
+							housing_status_enum1-housing_status_enum3	veteran_head veteran_spouse
+		local	econvars	avg_income_pc	avg_income_pc_sq	avg_wealth_pc	avg_wealth_pc_sq	sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
+		local	empvars		emp_HH_simple	emp_spouse_simple
+		local	familyvars	num_FU_fam num_child_fam	family_comp_change_enum1-family_comp_change_enum9	couple_status_enum1-couple_status_enum5	head_status spouse_new
+		local	eduvars		attend_college_head attend_college_spouse	college_yrs_head college_yrs_spouse	///
+							hs_completed_head	college_completed	other_degree_head	edu_years_head_fam	///
+							hs_completed_head_interact college_completed_interact other_degree_head_interact	///
+							hs_completed_spouse	college_comp_spouse	other_degree_spouse	edu_years_spouse	///
+							hs_completed_spouse_interact college_comp_spouse_interact other_degree_spouse_interact
+		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
+		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
+		
+		*	Tune how large the value of iterations() need to be
+		if	`tune_iter'==1	{
+			loc	depvar	avg_foodexp_pc
+			generate out_of_bag_error1 = .
+			generate validation_error = .
+			generate iter1 = .
+			local j = 0
+			forvalues i = 10(5)500 {
+				local j = `j' + 1
+				rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	if	in_sample==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
+				quietly replace iter1 = `i' in `j'
+				quietly replace out_of_bag_error1 = `e(OOB_Error)' in `j'
+				predict p if	out_of_sample==1
+				quietly replace validation_error = `e(RMSE)' in `j'
+				drop p
+			}
+			label variable out_of_bag_error1 "Out-of-bag error"
+			label variable iter1 "Iterations"
+			label variable validation_error "Validation error"
+			scatter out_of_bag_error1 iter1, mcolor(blue) msize(tiny)	title(OOB Error and Validation Error) ||	scatter validation_error iter1, mcolor(red) msize(tiny)
+		
+		*	100 seems to be optimal
+		}	//	tune_iter
+		
+			
+		*	Tune the number of variables
+		if	`tune_numvars'==1	{
+			loc	depvar	avg_foodexp_pc
+			generate oob_error = .
+			generate nvars = .
+			generate val_error = .
+			local j = 0
+			forvalues i = 1(1)26 {
+				local j = `j'+ 1
+				rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+											`foodvars'	`childvars'	if	in_sample==1, type(reg)	seed(20200505) iterations(100) numvars(`i')
+				quietly replace nvars = `i' in `j'
+				quietly replace oob_error = `e(OOB_Error)' in `j'
+				predict p	if	out_of_sample==1
+				quietly replace val_error = `e(RMSE)' in `j'
+				drop p
+			}
+			label variable oob_error "Out-of-bag error"
+			label variable val_error "Validation error"
+			label variable nvars "Number of variables randomly selected at each split"
+			scatter oob_error nvars, mcolor(blue) msize(tiny)	title(OOB Error and Validation Error)	subtitle(by the number of variables)	///
+			||	scatter val_error nvars, mcolor(red) msize(tiny)
+			
+			frame put val_error nvars, into(mydata)
+			frame mydata {
+				sort val_error, stable
+				local min_val_err = val_error[1]
+				local min_nvars = nvars[1]
+			}
+			frame drop mydata
+			display "Minimum Error: `min_val_err'; Corresponding number of variables `min_nvars''"
+			* Minimum Error: 1319.663452148438; Corresponding number of variables 7'
+		}	//	tune_numvars
+		
+		
+		*	Step 1
+		if	`run_rf_step1'==1	{
+			
+			loc	depvar	avg_foodexp_pc
+			rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	if	in_sample==1, type(reg)	iterations(100)	numvars(7)	seed(20200505) 
+			
+			* Variable importance plot
+			matrix importance_mean = e(importance)
+			svmat importance_mean
+			generate importid_mean=""
+			local mynames: rownames importance_mean
+			local k: word count `mynames'
+			if `k'>_N {
+				set obs `k'
+			}
+			forvalues i = 1(1)`k' {
+				local aword: word `i' of `mynames'
+				local alabel: variable label `aword'
+				if ("`alabel'"!="") qui replace importid_mean= "`alabel'" in `i'
+				else qui replace importid_mean= "`aword'" in `i'
+			}
+			gsort	-importance_mean1
+			graph hbar (mean) importance_mean1	in	1/12, over(importid_mean, sort(1) label(labsize(2))) ytitle(Importance) title(Feature Importance for Conditional Mean)
+			graph	export	"${PSID_outRaw}/rf_feature_importance_step1.png", replace
+			graph	close
+
+			predict	mean1_avgfoodexp_rf
+			*	"rforest" cannot predict residual, so we need to compute it manually
+			gen	double e1_avgfoodexp_rf	=	avg_foodexp_pc	-	mean1_avgfoodexp_rf
+			gen e1_avgfoodexp_sq_rf = (e1_avgfoodexp_rf)^2
+		}	//	Step 1
+		
+		*	Step 2
+		if	`run_rf_step2'==1	{
+			
+			loc	depvar	e1_avgfoodexp_sq_rf
+			rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	if	in_sample==1, type(reg)	iterations(100)	numvars(7)	seed(20200505) 
+									
+			* Variable importance plot
+			matrix importance_var = e(importance)
+			svmat importance_var
+			generate importid_var=""
+			local mynames: rownames importance_var
+			local k: word count `mynames'
+			if `k'>_N {
+				set obs `k'
+			}
+			forvalues i = 1(1)`k' {
+				local aword: word `i' of `mynames'
+				local alabel: variable label `aword'
+				if ("`alabel'"!="") qui replace importid_var= "`alabel'" in `i'
+				else qui replace importid_var= "`aword'" in `i'
+			}
+			gsort	-importance_var1
+			graph hbar (mean) importance_var1	in	1/12, over(importid_var, sort(1) label(labsize(2))) ytitle(Importance) title(Feature Importance for Conditional Variance)
+			graph	export	"${PSID_outRaw}/rf_feature_importance_step2.png", replace
+			graph	close
+			
+			predict	var1_avgfoodexp_rf
+		}	//	Step 2
+		
+		
+		*	Step 3
+		if	`run_rf_step3'==1	{
+			
+			*	Assume the outcome variable follows the Gamma distribution
+			gen alpha1_avg_foodexp_pc_rf = (mean1_avgfoodexp_rf)^2 / var1_avgfoodexp_rf	//	shape parameter of Gamma (alpha)
+			gen beta1_avg_foodexp_pc_rf = var1_avgfoodexp_rf / mean1_avgfoodexp_rf	//	scale parameter of Gamma (beta)
+			
+			*	Construct CDF
+			foreach	plan	in	thrifty low moderate liberal	{
+				
+				*	Generate resilience score. 
+				*	Should include in-sample as well as out-of-sample to validate its OOS performance
+				gen rho1_avg_foodexp_pc_`plan'_rf = gammaptail(alpha1_avg_foodexp_pc_rf, avg_foodexp_W_`plan'/beta1_avg_foodexp_pc_rf)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+				label	var	rho1_avg_foodexp_pc_`plan'_rf "Resilience score (Random Forest), `plan' plan"
+			}
+		}	//	Step 3		
+	}	//	Random Forest
+	
+
+	
 				
 	*	Validation
-	* among the reduced sample (_N=1,724), 89.85% are “high food security”, “5.92% are marginal food security”, 4.23% are “food insecurity”
+	*	Check the ratio of food security category of the validation year (2017)
+	svy: proportion fs_cat_fam_simp if out_of_sample==1
+	local	prop_insecure	=	round(e(b)[1,1]*1000)
+	local	prop_secure	=	`prop_insecure'+1
+	di "`prop_insecure' and `prop_secure'"
+	* among the reduced sample (_N=2,877), 87.60% are “high food security”, “12.40% are food insecurity"
 	* We will use this cutoff to validate performance
 
-	clonevar	fs_cat_fam_simp	=	fs_cat_fam
-	*recode		fs_cat_fam_simp	(3,4=1) (1,2=1)
-	*label	define	fs_cat_simp	1	"High Secure"	2	"Marginal Secure"	3	"Insecure"
-	recode		fs_cat_fam_simp	(2 3 4=0) (1=1)
-	label	define	fs_cat_simp	0	"Food Insecure (any)"	1	"Food Secure", replace
-	label values	fs_cat_fam_simp	fs_cat_simp
-
-	foreach	plan	in	thrifty low moderate liberal	{
-		
-		
-		xtile `plan'_pctile = rho1_avg_foodexp_pc_`plan' if !mi(rho1_avg_foodexp_pc_`plan'), nq(1000)
-		
-		gen		rho1_`plan'_IS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
-		replace	rho1_`plan'_IS	=	1	if	inrange(`plan'_pctile,1,41)	//	Food insecure
-		
-		gen		rho1_`plan'_MS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
-		replace	rho1_`plan'_MS	=	1	if	inrange(`plan'_pctile,42,100)	//	Marginal food secure
-		
-		gen		rho1_`plan'_HS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
-		replace	rho1_`plan'_HS	=	1	if	inrange(`plan'_pctile,101,1000)	//	Highly secure
-		
+	foreach	type	in	ols	ls	rf	{
+		foreach	plan	in	thrifty low moderate liberal	{
+			
+			
+			xtile `plan'_pctile_`type' = rho1_avg_foodexp_pc_`plan'_`type' if !mi(rho1_avg_foodexp_pc_`plan'_`type'), nq(1000)
+				
+			gen		rho1_`plan'_IS_`type'	=	0	if	!mi(rho1_avg_foodexp_pc_`plan'_`type')
+			replace	rho1_`plan'_IS_`type'	=	1	if	inrange(`plan'_pctile_`type',1,`prop_insecure')	//	Food insecure
+			
+			/*
+			gen		rho1_`plan'_MS	=	0	if	!mi(rho1_avg_foodexp_pc_`plan')
+			replace	rho1_`plan'_MS	=	1	if	inrange(`plan'_pctile,42,100)	//	Marginal food secure
+			*/
+			
+			gen		rho1_`plan'_HS_`type'	=	0	if	!mi(rho1_avg_foodexp_pc_`plan'_`type')
+			replace	rho1_`plan'_HS_`type'	=	1	if	inrange(`plan'_pctile_`type',`prop_secure',1000)	//	Highly secure
+			
+		}
 	}
 
-	svy: tab rho1_thrifty_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty), cell
-	svy: tab rho1_low_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_low), cell
-	svy: tab rho1_moderate_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_moderate), cell
-	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal), cell
+	svy: tab rho1_thrifty_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls), cell
+	svy: tab rho1_low_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_low_ls), cell
+	svy: tab rho1_moderate_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_moderate_ls), cell
+	svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal_ls), cell
 
 
-	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal) & sample_source==1, cell
-	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal) & sample_source==2, cell
-	svy: tab rho1_liberal_HS fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal) & sample_source==3, cell
+	svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==1, cell
+	svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==2, cell
+	svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==3, cell
+	
+	
+	*	Spearman's rank correlation
+	spearman	fs_scale_fam_reverse	rho1_avg_foodexp_pc_thrifty_ols	rho1_avg_foodexp_pc_thrifty_ls	rho1_avg_foodexp_pc_thrifty_rf,	stats(rho obs p)
+	
+	*	Kolmogorov–Smirnov (between LASSO and RF)
+	
+	exit
 
-
-	graph twoway (kdensity fs_scale_fam), title(Distribution of USDA Measure) name(fs_scale)	
-	graph combine thrifty	fs_scale
+	*graph twoway (kdensity fs_scale_fam)	(kdensity	reverse_RS), title(Distribution of USDA Measure) name(fs_scale, replace)	
+	*graph combine thrifty	fs_scale
 
 								
 /* Junk Code */
@@ -826,4 +1057,109 @@
 		esttab	margin1_base_`Y'	margin1_`Y'	margin2_`Y' 	margin3_`Y' margin3_`Y' 		using "${PSID_outRaw}/CB_ME_`Y'.csv", ///
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels /*drop(_cons)*/	title(Marginal Effects) replace
 	}
+	*/
+	
+		/*
+	*	Review outcome variables
+		
+		*	Correlation between FS scores and outcome variables
+		corr fs_scale_fam income_pc	food_exp_pc  avg_income_pc avg_foodexp_pc	respondent_BMI
+		
+		*	Data plot of the outcome variables
+		kdensity income_pc, 		title(Household Income per capita) xtitle(Household Income per capita)
+		graph	export	"${PSID_outRaw}/kdensity_income_pc.png",	replace
+		
+		kdensity food_exp_pc, 		title(Household food expenditure per capita) xtitle(Household food expenditure per capita)
+		graph	export	"${PSID_outRaw}/kdensity_food_exp_pc.png",	replace
+		
+		kdensity avg_income_pc, 	title(Average income per capita) xtitle(Average per capita income over the two years)
+		graph	export	"${PSID_outRaw}/kdensity_avg_income_pc.png",	replace
+		
+		kdensity avg_foodexp_pc, 	title(Average food expenditure per capita) xtitle(Average per capita food expenditure over the two years)
+		graph	export	"${PSID_outRaw}/kdensity_avg_foodexp_pc.png",	replace
+		
+		kdensity respondent_BMI, 	title(Respondent BMI) xtitle(Respondent Body Mass Index)
+		graph	export	"${PSID_outRaw}/kdensity_resp_BMI.png",	replace
+		
+		gen		log_respondent_BMI	=	log(respondent_BMI)
+		kdensity log_respondent_BMI, 	title(log(Respondent BMI)) xtitle(Log of Respondent Body Mass Index)
+		graph	export	"${PSID_outRaw}/kdensity_log_resp_BMI.png",	replace
+		graph	close
+		drop	log_respondent_BMI
+	
+
+	
+		*	Distribution of food expenditure
+		graph twoway (kdensity avg_foodexp_pc if year==10) /*(kdensity avg_foodexp_pc if (classic_step1_sample==1)	&	(classic_step2_sample==1) & year==10)*/, ///
+				title (Distribution of Avg.food expenditure per capita)	/*///
+				subtitle(Entire sample and regression sample)	///
+				legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))*/
+				
+				
+		*	Summary statistics
+		eststo drop	Total SRC	SEO	Imm
+
+		local	sumvars	age_head_fam num_FU_fam num_child_fam edu_years_head_fam alcohol_head smoke_head	fs_scale_fam food_stamp_used_1yr 	///
+						income_pc food_exp_pc edu_exp_pc health_exp_pc	///
+
+		preserve
+		recode		alcohol_head	smoke_head		food_stamp_used_1yr	(5=0)
+						
+						
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/
+		est store Total
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==1
+		est store SRC
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==2
+		est store SEO
+		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==3
+		est store Imm
+		
+		tab	race_head_cat	if inrange(year,3,10)
+		tab	race_head_cat	if inrange(year,3,10)	&	sample_source==1
+		tab	race_head_cat	if inrange(year,3,10)	&	sample_source==2
+		tab	race_head_cat	if inrange(year,3,10)	&	sample_source==3
+
+
+		esttab Total SRC SEO Imm using tt2.csv, replace ///
+		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
+		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
+		title (Summary Statistics) ///
+		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
+		addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)
+
+		restore
+		
+		*	Distribution of food expenditure
+		graph twoway (kdensity avg_foodexp_pc if year==10) (kdensity avg_foodexp_pc if year==10 & cvlass_sample==1), ///
+				title (Distribution of Avg.food expenditure per capita)	///
+				subtitle(Entire sample and regression sample)	///
+				note(note: Top 1% of weight is winsorized)	///
+				legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))
+				
+		graph twoway (kdensity rho1_avg_foodexp_pc_thrifty) , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Thrifty Food Plan) name(thrifty, replace)
+
+		graph twoway (kdensity rho1_avg_foodexp_pc_low)	 , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Low Food Plan) name(low, replace)
+				
+		graph twoway (kdensity rho1_avg_foodexp_pc_moderate) , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Moderate Food Plan) name(moderate, replace)
+				
+		graph twoway (kdensity rho1_avg_foodexp_pc_liberal) , ///
+				title (Distribution of Resilience Score)	///
+				subtitle(Liberal Food Plan) name(liberal, replace)
+				
+		graph close
+
+		graph combine thrifty	low	moderate	liberal
+		*/
+
+	/*			
+	local numvars : list sizeof `statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
+					`familyvars'	`eduvars'	`foodvars'	`childvars'
+	macro list numvars
 	*/
