@@ -595,13 +595,13 @@
 		
 		
 		
-		*	Food price
+		*	Food expenditure
 		tempfile temp
 		save	`temp'
 
 		*	clean food price data
 		import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("food_cost_month") firstrow clear
-		recode year (2012=2013)	(2014=2015) (2016=2017) /*(2014=9) (2016=10)*/
+		replace	year=year+1
 		
 		*	calculate adult expenditure by average male and female
 			foreach	plan	in	thrifty low moderate liberal	{
@@ -627,7 +627,7 @@
 			*	Monthly food expenditure is calculated by the (# of children * children cost) + (# of adult * adult cost)
 			foreach	plan	in	thrifty low moderate liberal	{
 				
-				foreach	year	in	2013	2015	2017	{
+				foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 				
 					*	Unadjusted
 					gen	double	foodexp_W_`plan'`year'	=	((num_child_fam`year'*child_`plan'`year')	+	((num_FU_fam`year'-num_child_fam`year')*adult_`plan'`year'))*12
@@ -642,9 +642,9 @@
 					*	Divide by the number of families to get the threshold value(W) per capita
 					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'/num_FU_fam`year'
 					
-					*	Get the average value per capita
+					*	Get the average value per capita (SL: This variable would no longer needed as of June 14, 2020)
 					sort	fam_ID_1999
-					if	inlist(`year',2015,2017)	{
+					if	!inlist(`year',1999)	{
 						local	prevyear=`year'-2
 						gen	avg_foodexp_W_`plan'`year'	=	(foodexp_W_`plan'`year'+foodexp_W_`plan'`prevyear')/2
 					}
@@ -676,6 +676,7 @@
 			lab	var	fs_scale_fam_rescale`year'	"Food Securiy Score (Scale), rescaled"
 			
 		}
+		
 		
 		/*
 		*	School Completion (Disabled - no longer recodees nonresponses as missing)
