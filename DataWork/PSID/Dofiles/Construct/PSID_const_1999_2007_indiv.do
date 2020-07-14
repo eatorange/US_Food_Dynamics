@@ -322,27 +322,6 @@
 				
 				label	values	resp_consist*	yesno
 		
-	*	Income & expenditures (food, child, cloth, health, etc.) & wealth
-	
-		*	Winsorize family income and expenditures at top 1%
-		foreach	year	in	1997	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
-			winsor total_income_fam`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(total_income_fam_wins`year') p(0.01) 
-			if	`year'!=1997	{
-				winsor food_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(food_exp_total_wins`year') p(0.01) 
-				winsor child_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(child_exp_total_wins`year') p(0.01)
-				winsor edu_exp_total`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(edu_exp_total_wins`year') p(0.01)	
-				winsor health_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(health_exp_total_wins`year') p(0.01)
-				winsor house_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(house_exp_total_wins`year') p(0.01)
-				winsor property_tax`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(property_tax_wins`year') p(0.01)
-				winsor transport_exp`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(transport_exp_wins`year') p(0.01)
-				*winsor other_debts`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(other_debts_wins`year') p(0.01)
-				winsor wealth_total`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(wealth_total_wins`year') p(0.01)
-			}
-			if	inrange(`year',2005,2017)	{
-				winsor cloth_exp_total`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(cloth_exp_total_wins`year') p(0.01)
-			}
-		}
-		
 	*	Federal Poverty Line
 	
 		*	1998 HHS Poverty Guideline (https://aspe.hhs.gov/1998-hhs-poverty-guidelines)
@@ -519,37 +498,37 @@
 		
 		*	Income &  expenditure & wealth & tax per capita
 			
-			foreach	year	in	1997	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+			foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 					
 					*	Income per capita
-					gen	income_pc`year'	=	total_income_fam_wins`year'/num_FU_fam`year'
+					gen	income_pc`year'	=	total_income_fam`year'/num_FU_fam`year'
 					label	variable	income_pc`year'	"Family income per capita, `year'"
 					
 					*	Expenditures, tax, debt and wealth per capita
-					if	`year'!=1997	{
-						gen	food_exp_pc`year'			=	food_exp_total_wins`year'/num_FU_fam`year'
-						gen	child_exp_pc`year'			=	child_exp_total_wins`year'/num_FU_fam`year'
-						gen	edu_exp_pc`year'			=	edu_exp_total_wins`year'/num_FU_fam`year'
-						gen	health_exp_pc`year'			=	health_exp_total_wins`year'/num_FU_fam`year'
-						gen	house_exp_pc`year'			=	house_exp_total_wins`year'/num_FU_fam`year'
-						gen	property_tax_pc`year'		=	property_tax_wins`year'/num_FU_fam`year'
-						gen	transport_exp_pc`year'		=	transport_exp_wins`year'/num_FU_fam`year'
-						*gen	other_debts_pc`year'		=	other_debts_wins`year'/num_FU_fam`year'
-						gen	wealth_pc`year'				=	wealth_total_wins`year'/num_FU_fam`year'
-						
-						label	variable	food_exp_pc`year'	"Food expenditure per capita, `year'"
-						label	variable	child_exp_pc`year'	"Child expenditure per capita, `year'"
-						label	variable	edu_exp_pc`year'	"Education expenditure per capita, `year'"
-						label	variable	health_exp_pc`year'	"Health expenditure per capita, `year'"
-						label	variable	house_exp_pc`year'	"House expenditure per capita, `year'"
-						label	variable	property_tax_pc`year'	"Property tax per capita, `year'"
-						label	variable	transport_exp_pc`year'	"Transportation expenditure per capita, `year'"
-						*label	variable	other_debts_pc`year'	"Other debts per capita, `year'"
-						label	variable	wealth_pc`year'			"Wealth per capita, `year'"
-					}
+					
+					gen	food_exp_pc`year'			=	food_exp_total`year'/num_FU_fam`year'
+					gen	child_exp_pc`year'			=	child_exp_total`year'/num_FU_fam`year'
+					gen	edu_exp_pc`year'			=	edu_exp_total`year'/num_FU_fam`year'
+					gen	health_exp_pc`year'			=	health_exp_total`year'/num_FU_fam`year'
+					gen	house_exp_pc`year'			=	house_exp_total`year'/num_FU_fam`year'
+					gen	property_tax_pc`year'		=	property_tax`year'/num_FU_fam`year'
+					gen	transport_exp_pc`year'		=	transport_exp`year'/num_FU_fam`year'
+					*gen	other_debts_pc`year'		=	other_debts`year'/num_FU_fam`year'
+					gen	wealth_pc`year'				=	wealth_total`year'/num_FU_fam`year'
+					
+					label	variable	food_exp_pc`year'	"Food expenditure per capita, `year'"
+					label	variable	child_exp_pc`year'	"Child expenditure per capita, `year'"
+					label	variable	edu_exp_pc`year'	"Education expenditure per capita, `year'"
+					label	variable	health_exp_pc`year'	"Health expenditure per capita, `year'"
+					label	variable	house_exp_pc`year'	"House expenditure per capita, `year'"
+					label	variable	property_tax_pc`year'	"Property tax per capita, `year'"
+					label	variable	transport_exp_pc`year'	"Transportation expenditure per capita, `year'"
+					*label	variable	other_debts_pc`year'	"Other debts per capita, `year'"
+					label	variable	wealth_pc`year'			"Wealth per capita, `year'"
+					
 					
 					if	inrange(`year',2005,2017)	{	//	Cloth
-						gen	cloth_exp_pc`year'	=	cloth_exp_total_wins`year'/num_FU_fam`year'
+						gen	cloth_exp_pc`year'	=	cloth_exp_total`year'/num_FU_fam`year'
 						label	variable	cloth_exp_pc`year'	"Cloth expenditure per capita, `year'"
 					}
 					
@@ -577,7 +556,29 @@
 						}
 					}
 			}
+		
+	
+		*	Winsorize family income and expenditures per capita at top 1%
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			
+			winsor income_pc`year' 			if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(income_pc_wins`year') p(0.01) 
+			winsor food_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(food_exp_pc_wins`year') p(0.01) 
+			winsor child_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(child_exp_pc_wins`year') p(0.01)
+			winsor edu_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(edu_exp_pc_wins`year') p(0.01)	
+			winsor health_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(health_exp_pc_wins`year') p(0.01)
+			winsor house_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(house_exp_pc_wins`year') p(0.01)
+			winsor property_tax_pc`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(property_tax_pc_wins`year') p(0.01)
+			winsor transport_exp_pc`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(transport_exp_pc_wins`year') p(0.01)
+			*winsor other_debts`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(other_debts_wins`year') p(0.01)
+			winsor wealth_pc`year' 			if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(wealth_pc_wins`year') p(0.01)
+			
+			if	inrange(`year',2005,2017)	{
+				winsor cloth_exp_pc`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(cloth_exp_pc_wins`year') p(0.01)
+			}
+		}
+		
+		
+		
 		*	Employed status (simplified)
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			gen		emp_HH_simple`year'	=.
