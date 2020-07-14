@@ -179,6 +179,10 @@
 		merge	m:1	x11101ll	using	`Ind', assert(2 3) keep(3) keepusing(ER31996 ER31997) nogen
 		
 	*	Keep relevant variables and observations
+				
+		*	Drop outliers with strange pattern
+		drop	if	x11102_1999==10015	//	This Family has outliers (food expenditure in 2009) as well as strange flutation in health expenditure (2007), thus needs to be dropped (* It attrits in 2011 anway)
+		
 		
 		*	Keep	relevant sample
 		*	We need to decide what families to track (so we have only 1 obs per family in baseyear)
@@ -186,6 +190,7 @@
 		*keep	if	fam_comp_nochange_99_03==1	//	Families with no member change during 1999-2003
 		*keep	if	fam_comp_samehead_99_03==1	//	Families with same household during 1999-2003
 		*keep	if	fam_comp_samehead_99_03==1	//	Families with same household during 1999-2003
+
 		
 		*	Drop individual level variables
 		drop	x11101ll weight_long_ind* weight_cross_ind* respondent???? relat_to_head* age_ind* edu_years????	relat_to_current_head*	
@@ -525,7 +530,11 @@
 		local	run_rf_step2	1
 		local	run_rf_step3	1
 	
+	*	Validation
+	local	run_valication	0
 	
+	*	Association
+	local	run_association	0
 	
 	*	OLS
 	if	`run_ols'==1	{
@@ -957,7 +966,7 @@
 	
 				
 	*	Validation	
-	{
+	if	`run_validation'==1	{
 		*	Check the ratio of food security category for each year 
 	
 	foreach	year	in	9	10	{
@@ -1341,7 +1350,8 @@
 		*/
 	}
 	
-	
+	*	Association
+	if	`run_association'==1	{
 	*	Check the association among the factors in the two indicators (USDA, RS)
 		
 		local	depvar		fs_scale_fam_rescale
@@ -1357,9 +1367,10 @@
 		
 		*	USDA (rescaled)
 		svy: regress	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
+	}
 	
 	exit
-
+	
 
 								
 /* Junk Code */
