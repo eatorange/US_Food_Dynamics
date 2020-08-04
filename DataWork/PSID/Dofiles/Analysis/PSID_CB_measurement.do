@@ -96,7 +96,7 @@
 			replace	marital_status_cat`year'=0	if	inrange(marital_status_fam`year',2,5)
 			replace	marital_status_cat`year'=.n	if	inrange(marital_status_fam`year',8,9)
 			
-			label variable	marital_status_cat`year'	"Marital Status of Head, `year'"
+			label variable	marital_status_cat`year'	"Head Married, `year'"
 		}
 		label	define	marital_status_cat	1	"Married"	0	"Not Married"
 		label	values	marital_status_cat*	marital_status_cat
@@ -221,7 +221,7 @@
 		
 	*	Re-shape dataset
 
-		*	Retrieve the list time-series variables
+		*	Retrieve the list of time-series variables
 		qui	ds	*	//	All variables
 		local	allvar	`r(varlist)'
 
@@ -241,6 +241,7 @@
 
 		
 		reshape	long	`allrelevars_uniq',	i(fam_ID_1999)	j(year)
+		
 						
 		*	Label variables after reshape
 		label	var	year				"Year"
@@ -255,9 +256,9 @@
 		label	var	gender_head_fam		"Gender of Household Head"
 		label	var	edu_years_head_fam	"Years of Education"
 		label	var	state_resid_fam		"State of Residence"
-		label 	var	fs_raw_fam 			"Food Security Score (Raw)"
-		label 	var	fs_scale_fam 		"Food Security Score (Scale)"
-		label	var	fs_scale_fam_rescale	"Food Security Score (Scale)-rescaled"
+		label 	var	fs_raw_fam 			"Food Security Raw Score"
+		label 	var	fs_scale_fam 		"Food Security Scale Score"
+		label	var	fs_scale_fam_rescale	"Food Security Scale Score (USDA)-rescaled"
 		label	var	fs_cat_fam 			"Food Security Category"
 		label	var	food_stamp_used_2yr	"Received Food Stamp (2 years ago)"
 		label	var	food_stamp_used_1yr "Received Food Stamp (1 year ago)"
@@ -269,19 +270,19 @@
 		label	var	marital_status_cat	"Marital Status of Head"
 		label	var	child_in_FU_cat		"Household has a child"
 		label	var	age_head_cat 		"Age of Household Head (category)"
-		label	var	total_income_fam_wins	"Total Household Income (winsorized)"
+		label	var	total_income_fam	"Total Household Income"
 		label	var	hs_completed_head		"HH completed high school/GED"
 		label	var	college_completed	"HH has college degree"
 		label	var	respondent_BMI		"Respondent's Body Mass Index"
-		label	var	income_pc			"Family income per capita"
-		label	var	food_exp_pc			"Food expenditure per capita"
+		label	var	income_pc			"Family income per capita (thousands)"
+		label	var	food_exp_pc			"Food expenditure per capita (thousands)"
 		label	var	avg_income_pc		"Average income over two years per capita"
 		label	var	avg_foodexp_pc		"Average food expenditure over two years per capita"
 		
 		label	var	splitoff_indicator		"Splitoff indicator"
 		label	var	num_split_fam		"# of splits"
 		label	var	main_fam_ID		"Family ID"
-		label	var	food_exp_total_wins		"Total food expenditure"
+		label	var	food_exp_total		"Total food expenditure"
 		label	var	height_feet		"Respondent height (feet)"
 		label	var	height_inch		"Respondent height (inch)"
 		label	var	height_meter		"Respondent height (meters)"
@@ -306,16 +307,16 @@
 		label	var	college_yrs_spouse		"Yrs in collge (spouse)"
 		label	var	edu_years_spouse		"Yrs schooling (spouse)"
 		label	var	hs_completed_spouse		"HS degree (spouse)"
-		label	var	child_exp_total_wins		"Annual child expenditure"
-		label	var	cloth_exp_total_wins		"Annual cloth expenditure"
+		label	var	child_exp_total		"Annual child expenditure"
+		*label	var	cloth_exp_total		"Annual cloth expenditure"
 		label	var	sup_outside_FU		"Support from outside family"
-		label	var	edu_exp_total_wins		"Annual education expenditure"
-		label	var	health_exp_total_wins	"Annual health expenditure"
-		label	var	house_exp_total_wins		"Annual housing expenditure"
+		label	var	edu_exp_total		"Annual education expenditure"
+		label	var	health_exp_total	"Annual health expenditure"
+		label	var	house_exp_total		"Annual housing expenditure"
 		label	var	tax_item_deduct		"Itemized tax deduction"
 
-		label	var	property_tax_wins		"Property tax ($)"
-		label	var	transport_exp_wins		"Annual transport expenditure"
+		label	var	property_tax		"Property tax ($)"
+		label	var	transport_exp		"Annual transport expenditure"
 
 		label	var	couple_status		"Coupling status"
 		label	var	head_status		"New head"
@@ -336,19 +337,19 @@
 		label	var	annuities_IRA		"Annuities_IRA"
 		label	var	veteran_head	"Veteran (head)"
 		label	var	veteran_spouse	"Veteran (spouse)"
-		label	var	wealth_total_wins	"Total wealth"
+		label	var	wealth_total	"Total wealth"
 		label	var	emp_status_head	"Employement status (head)"
 		label	var	emp_status_spouse	"Employement status(spouse)"
 		label	var	alcohol_spouse	"Drink alcohol (spouse)"
 		*label	var	relat_to_current_head	"Veteran (head)"
-		label	var	child_exp_pc		"Annual child expenditure (pc)"
-		label	var	edu_exp_pc		"Annual education expenditure (pc)"
-		label	var	health_exp_pc		"Annual health expenditure (pc)"
-		label	var	house_exp_pc		"Annual house expenditure (pc)"
-		label	var	property_tax_pc		"Property tax (pc)"
-		label	var	transport_exp_pc	"Annual transportation expenditure (pc)"
-		label	var	wealth_pc		"Wealth (pc)"
-		label	var	cloth_exp_pc		"Annual cloth expenditure (pc)"
+		label	var	child_exp_pc		"Annual child expenditure (pc) (thousands)"
+		label	var	edu_exp_pc		"Annual education expenditure (pc) (thousands)"
+		label	var	health_exp_pc		"Annual health expenditure (pc) (thousands)"
+		label	var	house_exp_pc		"Annual house expenditure (pc) (thousands)"
+		label	var	property_tax_pc		"Property tax (pc) (thousands)"
+		label	var	transport_exp_pc	"Annual transportation expenditure (pc) (thousands)"
+		label	var	wealth_pc		"Wealth (pc) (thousands)"
+		*label	var	cloth_exp_pc		"Annual cloth expenditure (pc)"
 		label	var	avg_childexp_pc		"Avg child expenditure (pc)"
 		label	var	avg_eduexp_pc		"Avg education expenditure (pc)"
 		label	var	avg_healthexp_pc		"Avg health expenditure (pc)"
@@ -356,8 +357,8 @@
 		label	var	avg_proptax_pc		"Avg property expenditure (pc)"
 		label	var	avg_transexp_pc		"Avg transportation expenditure (pc)"
 		label	var	avg_wealth_pc		"Avg wealth (pc)"
-		label	var	emp_HH_simple		"Employed status (simplified, head)"
-		label	var	emp_spouse_simple		"Employed status (simplified, spouse)"
+		label	var	emp_HH_simple		"Employed status (simple) (head)"
+		label	var	emp_spouse_simple		"Employed status (simple) (spouse)"
 		label	var	fs_cat_MS		"Marginal food secure"
 		label	var	fs_cat_IS		"Food insecure"
 		label	var	fs_cat_VLS		"Very Low food secure"
@@ -368,13 +369,13 @@
 		label	var	other_debts			"Other debts"
 		label	var	fs_cat_fam_simp		"Food Security Category (binary)"
 
-		label	var	cloth_exp_total_wins		"Other debts"
+		*label	var	cloth_exp_total		"Total cloth expenditure"
 		
 		label	var	FPL_		"Federal Poverty Line"
 		label	var	FPL_cat		"Federal Poverty Line category"
 			      
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
-				house_exp_total	property_tax	transport_exp	wealth_total	cloth_exp_total
+				house_exp_total	property_tax	transport_exp	wealth_total	/*cloth_exp_total*/
 		
 		
 	*	Recode N/A & nonrespones reponses of "some" variables
@@ -517,24 +518,19 @@
 	local	run_ols	1
 	
 	*	LASSO
-	local	run_lasso	1
+	local	run_lasso	0
 		local	run_lasso_step1	1
-		local	run_lasso_step2	1
-		local	run_lasso_step3	1
+		local	run_lasso_step2	0
+		local	run_lasso_step3	0
 		
 	*	Random Forest
-	local	run_rf	1	
+	local	run_rf	0	
 		local	tune_iter	0	//	Tuning iteration
 		local	tune_numvars	0	//	Tuning numvars
 		local	run_rf_step1	1
 		local	run_rf_step2	1
 		local	run_rf_step3	1
 	
-	*	Validation
-	local	run_valication	0
-	
-	*	Association
-	local	run_association	0
 	
 	*	OLS
 	if	`run_ols'==1	{
@@ -584,7 +580,7 @@
 			*	Generate resilience score. 
 			*	Should include in-sample as well as out-of-sample to validate its OOS performance
 			gen rho1_foodexp_pc_`plan'_ols = gammaptail(alpha1_foodexp_pc_ols, foodexp_W_`plan'/beta1_foodexp_pc_ols)	/*if	(lasso_step1_sample==1)	&	(lasso_step2_sample==1)*/	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
-			label	var	rho1_foodexp_pc_`plan'_ols "Resilience score (OLS), `plan' plan"
+			label	var	rho1_foodexp_pc_`plan'_ols "Resilience score (OLS) (`plan' plan)"
 		}
 		
 		local	depvar	rho1_foodexp_pc_thrifty_ols
@@ -670,6 +666,7 @@
 		if	`run_lasso_step2'==1	{
 		
 			local	depvar	e1_foodexp_sq_lasso
+			
 			*	LASSO
 			**	As of 2020/5/20, the following cvlasso not only takes too much time, but neither lopt nor lse work - lopt (ln(lambda)=20.78) gives too many variables, and lse (ln(lambda)=24.32) reduces everything.
 			**	Therefore, I run regular lasso using "lasso2" and the lambda value in between (ln(lambda)=22.7)
@@ -964,36 +961,67 @@
 	}	//	Random Forest
 	
 	
+	
+	
+	*	Validation
+	local	run_validation	0
+		local	CB_cat	1		//	Generate FS category variables from CB measure
+		local	valid_others	0	//	rank correlation, figure, etc.
+	
+	*	Association
+	local	run_association	1	
 				
 	*	Validation	
 	if	`run_validation'==1	{
-		*	Check the ratio of food security category for each year 
-	
-	foreach	year	in	9	10	{
 		
-		cap	mat	drop	fs_`year'_freq	fs_`year'_ratio
-		qui	tab	fs_cat_fam_simp if year==`year',	matcell(fs_`year'_freq)
-		mat	define	fs_`year'_ratio	=	fs_`year'_freq	/	r(N)
-		local	prop_insecure_`year'	=	round(fs_`year'_ratio[1,1]*1000)
-		mat	drop	fs_`year'_freq	fs_`year'_ratio
-	}
-	
-
-	foreach	type	in	ols	ls	rf	{
-		foreach	plan	in	thrifty /*low moderate liberal*/	{
-			
-			gen		rho1_`plan'_IS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')
-			gen		rho1_`plan'_HS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')
-			
-			foreach	year	in	9	10	{
-			
-				xtile `plan'_pctile_`type'_`year' = rho1_foodexp_pc_`plan'_`type' if !mi(rho1_foodexp_pc_`plan'_`type')	&	year==`year', nq(1000)
-					
-				replace	rho1_`plan'_IS_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',1,`prop_insecure_`year'')	&	year==`year'	//	Food insecure
-				replace	rho1_`plan'_HS_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',`prop_insecure_`year''+1,1000)	&	year==`year'	//	Highly secure
+		if	`CB_cat'==1	{
+		
+			*	Check the ratio of food security category for each year
+			foreach	year	in	1	2	3	9	10	{
+				
+				cap	mat	drop	fs_`year'_freq	fs_`year'_ratio
+				qui	tab	fs_cat_fam_simp if year==`year',	matcell(fs_`year'_freq)
+				mat	define	fs_`year'_ratio	=	fs_`year'_freq	/	r(N)
+				local	prop_insecure_`year'	=	round(fs_`year'_ratio[1,1]*1000)
+				mat list fs_`year'_ratio
+				di "proportion is `prop_insecure_`year''"
+				mat	drop	fs_`year'_freq	fs_`year'_ratio	
 			}
-		}
-	}
+			
+			*	For the years when the PSID data is NOT available, use the ratio of food inseure people from the USDA annual report
+			
+			local	prop_insecure_4	=	110	// 2005: 11.0% are food insecure
+			local	prop_insecure_5	=	111	// 2007: 11.1% are food insecure
+			local	prop_insecure_6	=	147	// 2009: 14.7% are food insecure
+			local	prop_insecure_7	=	149	// 2011: 14.9% are food insecure
+			local	prop_insecure_8	=	143	// 2013: 14.3% are food insecure
+		
+			*	Categorize food security status based on the CB score.
+			foreach	type	in	ols	/*ls	rf*/	{
+				foreach	plan	in	thrifty /*low moderate liberal*/	{
+					
+					gen		rho1_`plan'_IS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Food insecure
+					gen		rho1_`plan'_HS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Highly secure
+					
+					/*	Since we are currently using the USDA FS status as an external threshold for FS/FI categorization using CB measure,
+						, we cannot categorize when there is no data of the USDA status unless we use other external source. */
+					*replace	rho1_`plan'_IS_`type'=.	if	!inlist(year,2,3,9,10)
+					*replace	rho1_`plan'_HS_`type'=.	if	!inlist(year,2,3,9,10)
+					
+					foreach	year	in	2	3	4	5	6	7	8	9	10	{
+					
+						xtile `plan'_pctile_`type'_`year' = rho1_foodexp_pc_`plan'_`type' if !mi(rho1_foodexp_pc_`plan'_`type')	&	year==`year', nq(1000)
+							
+						replace	rho1_`plan'_IS_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',1,`prop_insecure_`year'')	&	year==`year'	//	Food insecure
+						replace	rho1_`plan'_HS_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',`prop_insecure_`year''+1,1000)	&	year==`year'	//	Highly secure
+					}
+					
+					label	var	rho1_`plan'_IS_`type'	"Food Insecure (CB) (Thrifty)"
+					label	var	rho1_`plan'_HS_`type'	"Highly Food secure (CB) (Thrifty)"
+					
+				}	//	plan
+			}	//	type
+		}	//	CB_cat
 
 	*svy: tab rho1_thrifty_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls), cell
 	*svy: tab rho1_low_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_low_ls), cell
@@ -1005,374 +1033,702 @@
 	*svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==2, cell
 	*svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==3, cell
 	
+	if	`valid_others'==1	{
 	
-	*	Summary Statistics of Indicies
-	summ	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	///
-			if	inrange(year,9,10)
-	
-	*	Spearman's rank correlation
-	spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	///
-				if	inrange(year,9,10),	stats(rho obs p)
-	
-	*	Kolmogorov–Smirnov (between LASSO and RF)
+		*	Summary Statistics of Indicies
+		summ	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	///
+				if	inlist(year,2,3,9,10)
 		
-		*	Prepare dataset
-		*	K-S test cannot compare distributions from different variables, thus we need to create 1 variable that has all indicators
-		expand	3
-		loc	var	indicator_group
-		bys	fam_ID_1999	year:	gen	`var'	=	_n
-		label	define	`var'	1	"Rasch"	2	"RS (LASSO)"	3	"RS (R.Forest)", replace
-		label	values	`var'	`var'
-		lab	var	`var'	"Indicator Group"
+		*	Spearman's rank correlation
 			
-		foreach	plan	in	thrifty	low	moderate	liberal	{
-
-			loc	generate_indicator	1
-			if	`generate_indicator'==1	{
+			*	Pooled
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if inlist(year,2,3,9,10),	stats(rho obs p)
 			
-				gen		indicator_`plan'	=	.n
-				replace	indicator_`plan'	=	fs_scale_fam_rescale			if	inlist(1,in_sample,out_of_sample)	&	indicator_group==1	//	USDA FS (rescaled)
-				replace	indicator_`plan'	=	rho1_foodexp_pc_`plan'_ls	if	inlist(1,in_sample,out_of_sample)	&	indicator_group==2	//	RS (LASSO)
-				replace	indicator_`plan'	=	rho1_foodexp_pc_`plan'_rf	if	inlist(1,in_sample,out_of_sample)	&	indicator_group==3	//	RS (Random Forest)
-				lab	var	indicator_`plan'	"Indicators (USDA score or Resilence score)"
+			*	By year
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==2,	stats(rho obs p)
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==3,	stats(rho obs p)
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==9,	stats(rho obs p)
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==10, stats(rho obs p)
+		
+		*	Kolmogorov–Smirnov (between LASSO and RF)
 			
-				*	Conduct K-S test
-				di	"K-S Test, `plan' food plan"
-				ksmirnov	indicator_`plan'	if	inrange(year,9,10)	&	inlist(indicator_group,1,2), by(indicator_group)	//	USDA FS vs RS(LASSO)
-				ksmirnov	indicator_`plan'	if	inrange(year,9,10)	&	inlist(indicator_group,1,3), by(indicator_group)	//	USDA FS vs RS(Random Forest)
-				ksmirnov	indicator_`plan'	if	inrange(year,9,10)	&	inlist(indicator_group,2,3), by(indicator_group)	//	RS(LASSO) vs RS(Random Forest)
+			*	Prepare dataset
+			*	K-S test cannot compare distributions from different variables, thus we need to create 1 variable that has all indicators
+			expand	3
+			loc	var	indicator_group
+			bys	fam_ID_1999	year:	gen	`var'	=	_n
+			label	define	`var'	1	"Rasch"	2	"RS (LASSO)"	3	"RS (R.Forest)", replace
+			label	values	`var'	`var'
+			lab	var	`var'	"Indicator Group"
 				
-			}	//	gen_dinciator
-			
-			*	Distribution (K-density)
-			graph twoway 	(kdensity fs_scale_fam_rescale	if	inrange(year,9,10))	///
-							(kdensity rho1_foodexp_pc_`plan'_ls	if	inrange(year,9,10))	///
-							(kdensity rho1_foodexp_pc_`plan'_rf	if	inrange(year,9,10)),	///
-							title (Distribution of Indicators)	///
-							subtitle(USDA food security score and resilience score)	///
-							note(note: "constructed from in-sample(2015) and out-of-sample(2017)" "RS cut-off is generated based on `plan' food plan")	///
-							legend(lab (1 "USDA measure (rescaled)") lab(2 "RS (LASSO)") lab(3 "RS (R.Forest)")	rows(1))
-							
-			graph	export	"${PSID_outRaw}/Indicator_Distribution_`plan'.png", replace
-			
-		}	//	plan
-		
-		graph twoway 	(kdensity rho1_foodexp_pc_thrifty_ols	if	inrange(year,9,10)),	///
-						title (Distribution of OLS Indicator)	///
-						note(note: "constructed from in-sample(2015) and out-of-sample(2017)" "RS cut-off is generated based on thrifty food plan")	///
-						legend(lab (1 "RS (OLS)") rows(1))
+			foreach	plan	in	thrifty	low	moderate	liberal	{
 
-		drop	indicator_group indicator_thrifty indicator_low indicator_moderate indicator_liberal
-		duplicates drop
+				loc	generate_indicator	1
+				if	`generate_indicator'==1	{
+				
+					gen		indicator_`plan'	=	.n
+					replace	indicator_`plan'	=	fs_scale_fam_rescale			if	inlist(1,in_sample,out_of_sample)	&	indicator_group==1	//	USDA FS (rescaled)
+					replace	indicator_`plan'	=	rho1_foodexp_pc_`plan'_ls	if	inlist(1,in_sample,out_of_sample)	&	indicator_group==2	//	RS (LASSO)
+					replace	indicator_`plan'	=	rho1_foodexp_pc_`plan'_rf	if	inlist(1,in_sample,out_of_sample)	&	indicator_group==3	//	RS (Random Forest)
+					lab	var	indicator_`plan'	"Indicators (USDA score or Resilence score)"
+				
+					*	Conduct K-S test
+					di	"K-S Test, `plan' food plan"
+					ksmirnov	indicator_`plan'	if	inrange(year,9,10)	&	inlist(indicator_group,1,2), by(indicator_group)	//	USDA FS vs RS(LASSO)
+					ksmirnov	indicator_`plan'	if	inrange(year,9,10)	&	inlist(indicator_group,1,3), by(indicator_group)	//	USDA FS vs RS(Random Forest)
+					ksmirnov	indicator_`plan'	if	inrange(year,9,10)	&	inlist(indicator_group,2,3), by(indicator_group)	//	RS(LASSO) vs RS(Random Forest)
+					
+				}	//	gen_dinciator
+				
+				*	Distribution (K-density)
+				graph twoway 	(kdensity fs_scale_fam_rescale	if	inrange(year,9,10))	///
+								(kdensity rho1_foodexp_pc_`plan'_ls	if	inrange(year,9,10))	///
+								(kdensity rho1_foodexp_pc_`plan'_rf	if	inrange(year,9,10)),	///
+								title (Distribution of Indicators)	///
+								subtitle(USDA food security score and resilience score)	///
+								note(note: "constructed from in-sample(2015) and out-of-sample(2017)" "RS cut-off is generated based on `plan' food plan")	///
+								legend(lab (1 "USDA measure (rescaled)") lab(2 "RS (LASSO)") lab(3 "RS (R.Forest)")	rows(1))
+								
+				graph	export	"${PSID_outRaw}/Indicator_Distribution_`plan'.png", replace
+				
+			}	//	plan
+			
+			graph twoway 	(kdensity rho1_foodexp_pc_thrifty_ols	if	inrange(year,9,10)),	///
+							title (Distribution of OLS Indicator)	///
+							note(note: "constructed from in-sample(2015) and out-of-sample(2017)" "RS cut-off is generated based on thrifty food plan")	///
+							legend(lab (1 "RS (OLS)") rows(1))
+
+			drop	indicator_group indicator_thrifty indicator_low indicator_moderate indicator_liberal
+			duplicates drop
+			
+			*	Scatterplot
+				*	Compare resilience status in 2015 (in-sample) and USDA food security score in 2017 (out-of-sample)
+				*	To do this, we need the threshold resilience score for being food secure in 2015 
+				sort rho1_foodexp_pc_thrifty_ols
+				br rho1_foodexp_pc_thrifty_ols rho1_thrifty_HS_ols if year==9
+				
+				sort rho1_foodexp_pc_thrifty_ls
+				br rho1_foodexp_pc_thrifty_ls rho1_thrifty_HS_ls if year==9
+				
+				sort rho1_foodexp_pc_thrifty_rf
+				br rho1_foodexp_pc_thrifty_rf rho1_thrifty_HS_rf if year==9
+				*	As of 2020/5/20, threshold scores are 0.4200(OLS), 0.4523(LASSO), 0.3377(R.Forest)
+				
+				*	Validation Result
+				sort	fam_ID_1999	year
+				label	define	valid_result	1	"Classified as food secure"	///
+												2	"Mis-Classified as food secure"	///
+												3	"Mis-Classified as food insecure"	///
+												4	"Classified as food insecure"
+				
+				foreach	type	in	ols	ls	rf	{
+					gen		valid_result_`type'	=	.
+					replace	valid_result_`type'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale==1
+					replace	valid_result_`type'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale!=1
+					replace	valid_result_`type'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale==1
+					replace	valid_result_`type'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale!=1
+					label	var	valid_result_`type'	"Validation Result, `type'"
+				}
+				label	values	valid_result_*	valid_result
+				
+				gen		valid_result_USDA	=	1	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp==1
+				replace	valid_result_USDA	=	2	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp!=1
+				replace	valid_result_USDA	=	3	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp==1
+				replace	valid_result_USDA	=	4	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp!=1
+				
+				sort	fam_ID_1999	year
+				
+				*	USDA
+					
+					*	All sample
+					tab	valid_result_USDA	if	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==4, msymbol(square)),	///
+									xline(1)	yline(1)	xtitle(USDA measure 2015)	ytitle(USDA Fmeasure 2017)	///
+									title(Food Security in 2015 vs Food Security in 2017)	name(USDA_all, replace)	///
+									legend(lab (1 "Classified as food secure(76%)") lab(2 "Mis-Classified as food secure(6%)") lab(3 "Mis-Classified as food insecure(8%)")	lab(4 "Classified as food insecure(11%)")	rows(2))	///
+									subtitle(Threshold determined by HFSSM)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_USDA_all.png", replace
+					graph	close
+					
+					*	SEO, Immigrants (low incomde households)
+					tab	valid_result_USDA	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==1	&	inlist(sample_source,2,3), msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==4	&	inlist(sample_source,2,3), msymbol(square)),	///
+									xline(1)	yline(1)	xtitle(USDA measure 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(USDA_lowinc, replace)	///
+									legend(lab (1 "Classified as food secure(57%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(23%)")	rows(2))	///
+									subtitle(Threshold determined by HFSSM Low income HH)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_USDA_lowinc.png", replace
+					graph	close
+				
+				*	OLS
+			
+					*	All sample
+					tab	valid_result_ols	if	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4, msymbol(square)),	///
+									xline(0.4200)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017) name(OLS_all, replace)	///
+									legend(lab (1 "Classified as food secure(73%)") lab(2 "Mis-Classified as food secure(8%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(9%)")	rows(2))	///
+									subtitle(Threshold determined by OLS)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_OLS_all.png", replace
+					graph	close
+					
+					*	SEO, Immigrants (low incomde households)
+					tab	valid_result_ols	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1	&	inlist(sample_source,2,3), msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4	&	inlist(sample_source,2,3), msymbol(square)),	///
+									xline(0.4200)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017) name(OLS_lowinc, replace)	///
+									legend(lab (1 "Classified as food secure(49%)") lab(2 "Mis-Classified as food secure(14%)") lab(3 "Mis-Classified as food insecure(19%)")	lab(4 "Classified as food insecure(17%)")	rows(2))	///
+									subtitle(Threshold determined by OLS Low income HH)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_OLS_lowinc.png", replace
+					graph	close
+					
+				*	LASSO
+					
+					*	All sample
+					tab	valid_result_ls	if	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4, msymbol(square)),	///
+									xline(0.4523)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_all, replace)	///
+									legend(lab (1 "Classified as food secure(73%)") lab(2 "Mis-Classified as food secure(8%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(8%)")	rows(2))	///
+									subtitle(Threshold determined by LASSO)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_all.png", replace
+					graph	close
+					
+					*	SEO, Immigrants (low incomde households)
+					tab	valid_result_ls	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1	&	inlist(sample_source,2,3), msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4	&	inlist(sample_source,2,3), msymbol(square)),	///
+									xline(0.4523)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_lowinc, replace)	///
+									legend(lab (1 "Classified as food secure(47%)") lab(2 "Mis-Classified as food secure(14%)") lab(3 "Mis-Classified as food insecure(22%)")	lab(4 "Classified as food insecure(16%)")	rows(2))	///
+									subtitle(Threshold determined by LASSO Low income HH)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_lowinc.png", replace
+					graph	close
+				
+				*	Random Forest
+					
+					*	All sample
+					tab	valid_result_rf	if	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4, msymbol(square)),	///
+									xline(0.3377)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(RF_all, replace)	///
+									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
+									subtitle(Threshold determined by RF)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_RF_all.png", replace
+					graph	close
+					
+					*	SEO, Immigrants (low incomde households)
+					tab	valid_result_rf	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1	&	inlist(sample_source,2,3), msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4	&	inlist(sample_source,2,3), msymbol(square)),	///
+									xline(0.3377)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(RF_lowinc, replace)	///
+									legend(lab (1 "Classified as food secure(49%)") lab(2 "Mis-Classified as food secure(15%)") lab(3 "Mis-Classified as food insecure(20%)")	lab(4 "Classified as food insecure(16%)")	rows(2))	///
+									subtitle(Threshold determined by RF Low income HH)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_RF_lowinc.png", replace
+					graph	close
+					
+		*	Predictive Power Plot (Combined, for presentation?)		
+		{
+					*	USDA
+					
+					*	All sample
+					tab	valid_result_USDA	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==4, msymbol(square)),	///
+									xline(1)	yline(1)	xtitle(2015 Indicator)	ytitle(USDA measure 2017)	///
+									title(Food Security in 2015 vs Food Security in 2017)	name(USDA_all, replace)	///
+									legend(lab (1 "Classified as food secure") lab(2 "Mis-Classified as food secure") lab(3 "Mis-Classified as food insecure")	lab(4 "Classified as food insecure")	rows(2))	///
+									subtitle(USDA Measure)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_USDA_all.png", replace
+					graph	close
+					
+				
+				*	GLM
+			
+					*	All sample
+					tab	valid_result_ols	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4, msymbol(square)),	///
+									xline(0.4200)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017) name(GLM_all, replace)	///
+									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
+									subtitle(C&B by GLM)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_GLM_all.png", replace
+					graph	close
+					
+					
+				*	LASSO
+					
+					*	All sample
+					tab	valid_result_ls	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4, msymbol(square)),	///
+									xline(0.4523)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_all, replace)	///
+									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
+									subtitle(C&B by LASSO)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_all.png", replace
+					graph	close
+					
+				
+				*	Random Forest
+					
+					*	All sample
+					tab	valid_result_rf	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4, msymbol(square)),	///
+									xline(0.3377)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(RF_all, replace)	///
+									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
+									subtitle(C&B by RF)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_RF_all.png", replace
+					graph	close
+					
+
+			 grc1leg2		USDA_all	GLM_all	LASSO_all	RF_all,	legendfrom(USDA_all)	 xtob1title	ytol1title 	maintotoptitle 
+		}
+					
+			
+		*	Out-of-sample wellbeing predictive accuracy of resilience measures (RMSE)
+		*	Bivariate regression of USDA food security score on the previous score (USDA, CB scores under different construction methods)
 		
-		*	Scatterplot
-			*	Compare resilience status in 2015 (in-sample) and USDA food security score in 2017 (out-of-sample)
-			*	To do this, we need the threshold resilience score for being food secure in 2015 
-			sort rho1_foodexp_pc_thrifty_ols
-			br rho1_foodexp_pc_thrifty_ols rho1_thrifty_HS_ols if year==9
-			
-			sort rho1_foodexp_pc_thrifty_ls
-			br rho1_foodexp_pc_thrifty_ls rho1_thrifty_HS_ls if year==9
-			
-			sort rho1_foodexp_pc_thrifty_rf
-			br rho1_foodexp_pc_thrifty_rf rho1_thrifty_HS_rf if year==9
-			*	As of 2020/5/20, threshold scores are 0.4200(OLS), 0.4523(LASSO), 0.3377(R.Forest)
-			
-			*	Validation Result
-			sort	fam_ID_1999	year
-			label	define	valid_result	1	"Classified as food secure"	///
-											2	"Mis-Classified as food secure"	///
-											3	"Mis-Classified as food insecure"	///
-											4	"Classified as food insecure"
-			
-			foreach	type	in	ols	ls	rf	{
-				gen		valid_result_`type'	=	.
-				replace	valid_result_`type'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale==1
-				replace	valid_result_`type'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale!=1
-				replace	valid_result_`type'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale==1
-				replace	valid_result_`type'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale!=1
-				label	var	valid_result_`type'	"Validation Result, `type'"
-			}
-			label	values	valid_result_*	valid_result
-			
-			gen		valid_result_USDA	=	1	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp==1
-			replace	valid_result_USDA	=	2	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp!=1
-			replace	valid_result_USDA	=	3	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp==1
-			replace	valid_result_USDA	=	4	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp!=1
-			
-			sort	fam_ID_1999	year
+			*	Mean of the outcome
+			qui	summarize	fs_scale_fam_rescale	if	inrange(year,10,10)
+			scalar	USDA_mean	=	r(mean)
 			
 			*	USDA
 				
 				*	All sample
-				tab	valid_result_USDA	if	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==4, msymbol(square)),	///
-								xline(1)	yline(1)	xtitle(USDA measure 2015)	ytitle(USDA Fmeasure 2017)	///
-								title(Food Security in 2015 vs Food Security in 2017)	name(USDA_all, replace)	///
-								legend(lab (1 "Classified as food secure(76%)") lab(2 "Mis-Classified as food secure(6%)") lab(3 "Mis-Classified as food insecure(8%)")	lab(4 "Classified as food insecure(11%)")	rows(2))	///
-								subtitle(Threshold determined by HFSSM)
+				qui	reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	inrange(year,10,10)
+				local	USDA_rmse_all			=	e(rmse)
+				local	USDA_rmse_all_bymean	=	e(rmse)	/	USDA_mean
 				
-				graph	export	"${PSID_outRaw}/OOB_prediction_USDA_all.png", replace
-				graph	close
+				*	SEO & Imm
+				qui	reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	inrange(year,10,10)	&	inrange(sample_source,2,3)
+				local	USDA_rmse_sub			=	e(rmse)
+				local	USDA_rmse_sub_bymean	=	e(rmse)	/	USDA_mean
 				
-				*	SEO, Immigrants (low incomde households)
-				tab	valid_result_USDA	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==1	&	inlist(sample_source,2,3), msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_rf==4	&	inlist(sample_source,2,3), msymbol(square)),	///
-								xline(1)	yline(1)	xtitle(USDA measure 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017)	name(USDA_lowinc, replace)	///
-								legend(lab (1 "Classified as food secure(57%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(23%)")	rows(2))	///
-								subtitle(Threshold determined by HFSSM Low income HH)
+			*	C&B scores
+			foreach	type	in	ols	ls	rf	{
 				
-				graph	export	"${PSID_outRaw}/OOB_prediction_USDA_lowinc.png", replace
-				graph	close
+				*	All sample
+				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	inrange(year,10,10)
+				local	`type'_rmse_all	=	e(rmse)
+				local	`type'_rmse_all_bymean	=	e(rmse)	/	USDA_mean
+				
+				*	Sub sample
+				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	inrange(year,10,10)	&	inrange(sample_source,2,3)
+				local	`type'_rmse_sub	=	e(rmse)
+				local	`type'_rmse_sub_bymean	=	e(rmse)	/	USDA_mean
+				
+				
+			}
 			
-			*	OLS
-		
-				*	All sample
-				tab	valid_result_ols	if	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4, msymbol(square)),	///
-								xline(0.4200)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017) name(OLS_all, replace)	///
-								legend(lab (1 "Classified as food secure(73%)") lab(2 "Mis-Classified as food secure(8%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(9%)")	rows(2))	///
-								subtitle(Threshold determined by OLS)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_OLS_all.png", replace
-				graph	close
-				
-				*	SEO, Immigrants (low incomde households)
-				tab	valid_result_ols	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1	&	inlist(sample_source,2,3), msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4	&	inlist(sample_source,2,3), msymbol(square)),	///
-								xline(0.4200)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017) name(OLS_lowinc, replace)	///
-								legend(lab (1 "Classified as food secure(49%)") lab(2 "Mis-Classified as food secure(14%)") lab(3 "Mis-Classified as food insecure(19%)")	lab(4 "Classified as food insecure(17%)")	rows(2))	///
-								subtitle(Threshold determined by OLS Low income HH)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_OLS_lowinc.png", replace
-				graph	close
-				
-			*	LASSO
-				
-				*	All sample
-				tab	valid_result_ls	if	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4, msymbol(square)),	///
-								xline(0.4523)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_all, replace)	///
-								legend(lab (1 "Classified as food secure(73%)") lab(2 "Mis-Classified as food secure(8%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(8%)")	rows(2))	///
-								subtitle(Threshold determined by LASSO)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_all.png", replace
-				graph	close
-				
-				*	SEO, Immigrants (low incomde households)
-				tab	valid_result_ls	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1	&	inlist(sample_source,2,3), msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4	&	inlist(sample_source,2,3), msymbol(square)),	///
-								xline(0.4523)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_lowinc, replace)	///
-								legend(lab (1 "Classified as food secure(47%)") lab(2 "Mis-Classified as food secure(14%)") lab(3 "Mis-Classified as food insecure(22%)")	lab(4 "Classified as food insecure(16%)")	rows(2))	///
-								subtitle(Threshold determined by LASSO Low income HH)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_lowinc.png", replace
-				graph	close
-			
-			*	Random Forest
-				
-				*	All sample
-				tab	valid_result_rf	if	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4, msymbol(square)),	///
-								xline(0.3377)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017)	name(RF_all, replace)	///
-								legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-								subtitle(Threshold determined by RF)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_RF_all.png", replace
-				graph	close
-				
-				*	SEO, Immigrants (low incomde households)
-				tab	valid_result_rf	if	inlist(sample_source,2,3)	&	inrange(year,9,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1	&	inlist(sample_source,2,3), msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2	&	inlist(sample_source,2,3), msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3	&	inlist(sample_source,2,3), msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4	&	inlist(sample_source,2,3), msymbol(square)),	///
-								xline(0.3377)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017)	name(RF_lowinc, replace)	///
-								legend(lab (1 "Classified as food secure(49%)") lab(2 "Mis-Classified as food secure(15%)") lab(3 "Mis-Classified as food insecure(20%)")	lab(4 "Classified as food insecure(16%)")	rows(2))	///
-								subtitle(Threshold determined by RF Low income HH)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_RF_lowinc.png", replace
-				graph	close
-				
-	*	Predictive Power Plot (Combined, for presentation?)		
-	{
-				*	USDA
-				
-				*	All sample
-				tab	valid_result_USDA	if	inrange(year,10,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==4, msymbol(square)),	///
-								xline(1)	yline(1)	xtitle(2015 Indicator)	ytitle(USDA measure 2017)	///
-								title(Food Security in 2015 vs Food Security in 2017)	name(USDA_all, replace)	///
-								legend(lab (1 "Classified as food secure") lab(2 "Mis-Classified as food secure") lab(3 "Mis-Classified as food insecure")	lab(4 "Classified as food insecure")	rows(2))	///
-								subtitle(USDA Measure)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_USDA_all.png", replace
-				graph	close
-				
-			
-			*	GLM
-		
-				*	All sample
-				tab	valid_result_ols	if	inrange(year,10,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4, msymbol(square)),	///
-								xline(0.4200)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017) name(GLM_all, replace)	///
-								legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-								subtitle(C&B by GLM)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_GLM_all.png", replace
-				graph	close
-				
-				
-			*	LASSO
-				
-				*	All sample
-				tab	valid_result_ls	if	inrange(year,10,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4, msymbol(square)),	///
-								xline(0.4523)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_all, replace)	///
-								legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-								subtitle(C&B by LASSO)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_all.png", replace
-				graph	close
-				
-			
-			*	Random Forest
-				
-				*	All sample
-				tab	valid_result_rf	if	inrange(year,10,10)
-				graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1, msymbol(circle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2, msymbol(diamond))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3, msymbol(triangle))	///
-								(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4, msymbol(square)),	///
-								xline(0.3377)	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-								title(Resilience in 2015 vs Food Security in 2017)	name(RF_all, replace)	///
-								legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-								subtitle(C&B by RF)
-				
-				graph	export	"${PSID_outRaw}/OOB_prediction_RF_all.png", replace
-				graph	close
-				
+			*	Divide RMSE by mean outcome
+			*	if	greater than 0.5, it is not good for prediction. If less than 0.2, then it is good for predion.
 
-		 grc1leg2		USDA_all	GLM_all	LASSO_all	RF_all,	legendfrom(USDA_all)	 xtob1title	ytol1title 	maintotoptitle 
-	}
-				
-		
-	*	Out-of-sample wellbeing predictive accuracy of resilience measures (RMSE)
-	*	Bivariate regression of USDA food security score on the previous score (USDA, CB scores under different construction methods)
-	
-		*	Mean of the outcome
-		qui	summarize	fs_scale_fam_rescale	if	inrange(year,10,10)
-		scalar	USDA_mean	=	r(mean)
-		
-		*	USDA
-			
-			*	All sample
-			qui	reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	inrange(year,10,10)
-			local	USDA_rmse_all			=	e(rmse)
-			local	USDA_rmse_all_bymean	=	e(rmse)	/	USDA_mean
-			
-			*	SEO & Imm
-			qui	reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	inrange(year,10,10)	&	inrange(sample_source,2,3)
-			local	USDA_rmse_sub			=	e(rmse)
-			local	USDA_rmse_sub_bymean	=	e(rmse)	/	USDA_mean
-			
-		*	C&B scores
-		foreach	type	in	ols	ls	rf	{
-			
-			*	All sample
-			qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	inrange(year,10,10)
-			local	`type'_rmse_all	=	e(rmse)
-			local	`type'_rmse_all_bymean	=	e(rmse)	/	USDA_mean
-			
-			*	Sub sample
-			qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	inrange(year,10,10)	&	inrange(sample_source,2,3)
-			local	`type'_rmse_sub	=	e(rmse)
-			local	`type'_rmse_sub_bymean	=	e(rmse)	/	USDA_mean
-			
-			
-		}
-		
-		*	Divide RMSE by mean outcome
-		*	if	greater than 0.5, it is not good for prediction. If less than 0.2, then it is good for predion.
+			cap	mat	drop	rmse_all	rmse_eval_all	rmse_all	rmse_sub	rmse_eval_sub	rmse_eval_table
+			mat	define		rmse_all		=	`USDA_rmse_all'	\	`ols_rmse_all'	\	`ls_rmse_all'	\	`rf_rmse_all'
+			mat	define		rmse_eval_all	=	`USDA_rmse_all_bymean'	\	`ols_rmse_all_bymean'	\	`ls_rmse_all_bymean'	\	`rf_rmse_all_bymean'
+			mat	define		rmse_sub		=	`USDA_rmse_sub'	\	`ols_rmse_sub'	\	`ls_rmse_sub'	\	`rf_rmse_sub'
+			mat	define		rmse_eval_sub	=	`USDA_rmse_sub_bymean'	\	`ols_rmse_sub_bymean'	\	`ls_rmse_sub_bymean'	\	`rf_rmse_sub_bymean'
 
-		cap	mat	drop	rmse_all	rmse_eval_all	rmse_all	rmse_sub	rmse_eval_sub	rmse_eval_table
-		mat	define		rmse_all		=	`USDA_rmse_all'	\	`ols_rmse_all'	\	`ls_rmse_all'	\	`rf_rmse_all'
-		mat	define		rmse_eval_all	=	`USDA_rmse_all_bymean'	\	`ols_rmse_all_bymean'	\	`ls_rmse_all_bymean'	\	`rf_rmse_all_bymean'
-		mat	define		rmse_sub		=	`USDA_rmse_sub'	\	`ols_rmse_sub'	\	`ls_rmse_sub'	\	`rf_rmse_sub'
-		mat	define		rmse_eval_sub	=	`USDA_rmse_sub_bymean'	\	`ols_rmse_sub_bymean'	\	`ls_rmse_sub_bymean'	\	`rf_rmse_sub_bymean'
-
-		mat	define	rmse_eval_table	=	rmse_all,	rmse_eval_all,	rmse_sub,	rmse_eval_sub
-		mat	list	rmse_eval_table
-		
-		/*
-		reg	fs_scale_fam_rescale	l.rho1_avg_foodexp_pc_thrifty_ols	if	inrange(year,9,10)	//	OLS
-		reg	fs_scale_fam_rescale	l.rho1_avg_foodexp_pc_thrifty_ls	if	inrange(year,9,10)	//	LASSO
-		reg	fs_scale_fam_rescale	l.rho1_avg_foodexp_pc_thrifty_rf	if	inrange(year,9,10)	//	Random Forest
-		*/
-	}
+			mat	define	rmse_eval_table	=	rmse_all,	rmse_eval_all,	rmse_sub,	rmse_eval_sub
+			mat	list	rmse_eval_table
+			
+			/*
+			reg	fs_scale_fam_rescale	l.rho1_avg_foodexp_pc_thrifty_ols	if	inrange(year,9,10)	//	OLS
+			reg	fs_scale_fam_rescale	l.rho1_avg_foodexp_pc_thrifty_ls	if	inrange(year,9,10)	//	LASSO
+			reg	fs_scale_fam_rescale	l.rho1_avg_foodexp_pc_thrifty_rf	if	inrange(year,9,10)	//	Random Forest
+			*/
+			
+		}	// valid_others
+	}	//	validation
 	
 	*	Association
 	if	`run_association'==1	{
 	*	Check the association among the factors in the two indicators (USDA, RS)
 		
-		local	depvar		fs_scale_fam_rescale
-		local	statevars	lag_food_exp_pc_1
-		local	healthvars	phys_disab_head
-		local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	ib2.marital_status_fam	ib1.gender_head_fam	ib0.state_resid_fam	
-		local	econvars	income_pc	income_pc_sq	wealth_pc	wealth_pc_sq
-		local	empvars		emp_HH_simple
-		local	familyvars	num_FU_fam num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
-		local	eduvars		attend_college_head college_yrs_head	
-		local	foodvars	food_stamp_used_1yr	WIC_received_last	
-		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
+		/*
+		*	Take log of income & expenditure variables
+		foreach	moneyvars	in	food_exp_pc	income_pc	{
+			gen	ln_`moneyvars'	=	log(`moneyvars')
+		}
+		gen		ln_income_pc_sq	=	(ln_income_pc)^2
+		label	var	ln_food_exp_pc	"ln(food expenditure per capita)"
+		label	var	ln_income_pc	"ln(income per capita)"
+		label	var	ln_income_pc_sq	"ln(income per capita) squared"
+		*/
 		
-		*	USDA (rescaled)
-		svy: regress	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
-	}
-	
-	exit
-	
+		local	depvar		fs_scale_fam_rescale
+		local	healthvars	phys_disab_head
+		local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	marital_status_cat	ib1.gender_head_fam	
+		local	econvars	c.income_pc	c.income_pc_sq	/*wealth_pc	wealth_pc_sq*/
+		local	empvars		emp_HH_simple
+		local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
+		local	eduvars		/*attend_college_head*/ c.edu_years_head_fam	
+		local	foodvars	food_stamp_used_1yr	WIC_received_last
+		local	regionvars	ib0.state_resid_fam	
+		*local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
+		
+		summ	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars' if in_sample==1 & year==10
+		
+		cap	drop	post_recession
+		gen		post_recession	=	0
+		replace	post_recession=1	if	inrange(year,7,10)	//	Wave 2011 to 2017
+				
+		*** Note: Stata recommends using "subpop" option instead of "if" option, as the variance estimator from the latter "does  not  accurately  measurethe  sample-to-sample  variability  of  the  subpopulation  estimates  for  the  survey  design  that  was  used to collect the data."
+		*** However, for some reason Stata does often not allow to use "subpop" option with "glm" command, so I will use "if" option for now.
+		
+		
+		*	USDA (rescaled, continuous)
+				
+			*	Pooled
+			local	depvar		fs_scale_fam_rescale
+				
+				*	OLS
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	USDA_cont_pooled_OLS
+				
+				*	GLS
+				svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars',	///
+							family(gamma)	link(log)
+				est	store	USDA_cont_pooled_GLS
+			
+						
+			*	By Pre- and Post- Great Recession
+			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+									i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+			est	store	USDA_cont_prepost
+			contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+			
+			
+			*	By Year
+			foreach	year	in	1	2	3	9	10	{
+				
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+				*svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year', family(gamma)	link(log)	
+				est	store	USDA_cont_year`year'
+				
+			}
 
-								
+		*	CB score (thrift, continuous)
+		
+			*	Pooled
+			local	depvar		rho1_foodexp_pc_thrifty_ols
+			
+				*	OLS
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est store CB_cont_pooled_OLS
+				
+				*	GLS
+				svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars', family(gamma)	link(log)
+				est store CB_cont_pooled_GLS
+			
+			*	By Pre- and Post- Great Recession
+			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+									i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+			est	store	CB_cont_prepost
+			contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+			mat	CB_cont_prepost_pval=r(p)'
+			
+			*	By year
+			forvalues	year=2/10	{
+				
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+				*svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year', family(gamma)	link(log)
+				est store CB_cont_year`year'
+				
+			}
+		
+
+		*	USDA (simplified category, binary)
+		local	depvar		fs_cat_fam_simp
+			
+			* LPM (GLM using binominal family distribution & logit link function gives identical results to logit regression. Could check theoretically later why.)
+				
+				*	Pooled
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	USDA_bin_LPM_pooled
+				
+				*	By Pre- and Post- Great Recession
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	USDA_bin_LPM_prepost
+				contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				mat	USDA_bin_prepost_pval=r(p)'
+				
+				*	By year
+				foreach	year	in	1	2	3	9	10	{
+				
+					svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est	store	USDA_bin_LPM_year`year'
+				
+				}
+			
+			*	Logit
+				
+				*	Pooled
+				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est store 	USDA_bin_logit_pooled	
+				
+				*	By Pre- and Post- Great Recession
+				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	USDA_bin_logit_prepost
+				*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				*mat	USDA_bin_prepost_pval=r(p)'
+				
+				*	By year
+				foreach	year	in	1	2	3	9	10	{
+					
+					svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est store 	USDA_bin_logit_year`year'
+					
+				}
+			
+		
+		*	CB (binary category)
+		local	depvar		rho1_thrifty_HS_ols
+		
+			* LPM
+				
+				*	Pooled
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	CB_bin_LPM_pooled
+			
+				*	By Pre- and Post- Great Recession
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	CB_bin_LPM_prepost
+				*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				*mat	CB_bin_LPM_prepost_pval=r(p)'
+				
+				*	By year
+				foreach	year	in	2	3	4	5	6	7	8	9	10	{
+				
+					svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est	store	CB_bin_LPM_year`year'
+				
+				}
+				
+			* Logit
+				
+				*	Pooled
+				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	CB_bin_logit_pooled
+				
+				*	By Pre- and Post- Great Recession
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	CB_bin_logit_prepost
+				*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				*mat	CB_bin_logit_prepost_pval=r(p)'
+			
+				*	By year
+				foreach	year	in	2	3	4	5	6	7	8	9	10	{
+				
+					svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est	store	CB_bin_logit_year`year'
+				
+				}
+			
+			
+		*	Output 
+		
+			*	Pooled
+			esttab	USDA_cont_pooled_OLS	CB_cont_pooled_OLS	USDA_cont_pooled_GLS	CB_cont_pooled_GLS	///
+					USDA_bin_LPM_pooled CB_bin_LPM_pooled	USDA_bin_logit_pooled	CB_bin_logit_pooled	using "${PSID_outRaw}/USDA_CB_pooled.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Food Security Status-Pooled) replace
+					
+			*	By Year
+			
+				*	USDA (continuous)
+					
+					*	Default
+					esttab	USDA_cont_year1	USDA_cont_year2	USDA_cont_year3	USDA_cont_year9	USDA_cont_year10		using "${PSID_outRaw}/USDA_cont_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
+					
+					*	Pre- and Post- Great Recession
+					esttab	USDA_cont_prepost		using "${PSID_outRaw}/USDA_cont_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
+					
+					*	No star for significance
+					esttab	USDA_cont_year1	USDA_cont_year2	USDA_cont_year3	USDA_cont_year9	USDA_cont_year10		using "${PSID_outRaw}/USDA_cont_years_nostar.csv", ///
+					cells(b(fmt(a3))) /*stats(N r2)*/ label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
+					
+				
+				*	CB (continuous)
+					
+					*	Default
+					esttab	CB_cont_year2	CB_cont_year3	CB_cont_year4	CB_cont_year5	CB_cont_year6	CB_cont_year7	CB_cont_year8	CB_cont_year9	CB_cont_year10	///
+					using "${PSID_outRaw}/CB_cont_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
+					
+					*	Pre- and Post- Recession
+					esttab	CB_cont_prepost		using "${PSID_outRaw}/CB_cont_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
+					
+					*	No-star
+					esttab	CB_cont_year2	CB_cont_year3	CB_cont_year4	CB_cont_year5	CB_cont_year6	CB_cont_year7	CB_cont_year8	CB_cont_year9	CB_cont_year10	///
+					using "${PSID_outRaw}/CB_cont_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
+					
+				*	USDA (binary-LPM)
+					
+					*	Default
+					esttab	USDA_bin_LPM_year1	USDA_bin_LPM_year2	USDA_bin_LPM_year3	USDA_bin_LPM_year9	USDA_bin_LPM_year10		using "${PSID_outRaw}/USDA_bin_LPM_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	Pre- and Post-
+					esttab	USDA_bin_LPM_prepost		using "${PSID_outRaw}/USDA_bin_LPM_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No-star
+					esttab	USDA_bin_LPM_year1	USDA_bin_LPM_year2	USDA_bin_LPM_year3	USDA_bin_LPM_year9	USDA_bin_LPM_year10		using "${PSID_outRaw}/USDA_bin_LPM_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					
+				*	USDA (binary-logit)
+					
+					*	Default
+					esttab	USDA_bin_logit_year1	USDA_bin_logit_year2	USDA_bin_logit_year3	USDA_bin_logit_year9	USDA_bin_logit_year10	///
+					using "${PSID_outRaw}/USDA_bin_logit_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-Logit) replace
+					
+					*	Pre- and Post-
+					esttab	USDA_bin_logit_prepost		using "${PSID_outRaw}/USDA_bin_logit_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No-star
+					esttab	USDA_bin_logit_year1	USDA_bin_logit_year2	USDA_bin_logit_year3	USDA_bin_logit_year9	USDA_bin_logit_year10	///
+					using "${PSID_outRaw}/USDA_bin_logit_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+				
+				*	CB (binary-LPM)
+					
+					*	Default
+					esttab	CB_bin_LPM_year2	CB_bin_LPM_year3	CB_bin_LPM_year4	CB_bin_LPM_year5	CB_bin_LPM_year6	///
+							CB_bin_LPM_year7	CB_bin_LPM_year8	CB_bin_LPM_year9	CB_bin_LPM_year10	///
+					using "${PSID_outRaw}/CB_bin_LPM_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-LPM) replace
+					
+					*	Pre- and Post-
+					esttab	CB_bin_LPM_prepost		using "${PSID_outRaw}/CB_bin_LPM_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No star
+					esttab	CB_bin_LPM_year2	CB_bin_LPM_year3	CB_bin_LPM_year4	CB_bin_LPM_year5	CB_bin_LPM_year6	///
+							CB_bin_LPM_year7	CB_bin_LPM_year8	CB_bin_LPM_year9	CB_bin_LPM_year10	///
+					using "${PSID_outRaw}/CB_bin_LPM_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-LPM) replace
+					
+				*	CB (binary-logit)
+					
+					*	Default
+					esttab	CB_bin_logit_year2	CB_bin_logit_year3	CB_bin_logit_year4	CB_bin_logit_year5	CB_bin_logit_year6	///
+							CB_bin_logit_year7	CB_bin_logit_year8	CB_bin_logit_year9	CB_bin_logit_year10	///
+					using "${PSID_outRaw}/CB_bin_logit_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-Logit) replace
+					
+					*	Pre- and Post-
+					esttab	CB_bin_logit_prepost		using "${PSID_outRaw}/CB_bin_logit_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No star
+					esttab	CB_bin_logit_year2	CB_bin_logit_year3	CB_bin_logit_year4	CB_bin_logit_year5	CB_bin_logit_year6	///
+							CB_bin_logit_year7	CB_bin_logit_year8	CB_bin_logit_year9	CB_bin_logit_year10	///
+					using "${PSID_outRaw}/CB_bin_logit_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-Logit) replace
+					
+				
+	}
+				
+				
+	*	Graphs
+	
+		*	Effect of non-employment
+		
+			*	fam_ID_1999==33 (No longer employed in 2009) 
+			twoway	function y=gammaden(7.842407,0.6806434,0,x), range(0 10)	lpattern(solid)	||	///	//	2007 (pre-loss)
+					function y=gammaden(5.639921,0.7594346,0,x), range(0 10)	lpattern(dash)	||	///	//	2009 (job-loss)
+					function y=gammaden(7.422701,0.4153742,0,x), range(0 10)	lpattern(dot)	||	///	//	2011 (2 years after job-loss)
+					function y=gammaden(7.672119,0.3827603,0,x), range(0 10)	lpattern(dashdot)	||	///	//	2013 (4 years after job-loss)
+					function y=gammaden(8.372554,0.487376,0,x), range(0 10)		lpattern(shortdash)		///	//	2015 (6 years after job-loss)
+					legend(lab (1 "2007(6.24)") lab(2 "2009(3.64)") lab(3 "2011(2.34)") lab(4 "2013(4.16)") lab(5 "2015(5.2)"))	///
+					title(The Effect of Job-Loss on C&B PDF)	subtitle(Job Loss in 2009)	///
+					xtitle(food expenditure per capita (thousands))	///
+					note(Female-headed household. Job loss in 2009 but re-employed since 2011.)
+			graph	export	"${PSID_outRaw}/effect_of_job_loss_on_CB_pdf.png", replace
+			graph	close
+			
+			
+		*	Effect of non-married
+			
+			*	fam_ID_1999=3496 (no longer married in 2007)
+			twoway	function y=gammaden(7.061182,0.530853,0,x), range(0 10)	lpattern(solid)	||	///	//	2007 (pre-chock)
+					function y=gammaden(8.30407,0.6948747,0,x), range(0 10)	lpattern(dash)	||	///	//	2009 (marriage-shock)
+					function y=gammaden(7.236261,0.4517315,0,x), range(0 10)	lpattern(dot)	||	///	//	2011 (2 years after marriage-shock)
+					function y=gammaden(4.702001,0.8223391,0,x), range(0 10)	lpattern(dashdot)	||	///	//	2013 (4 years after marriage-shock)
+					function y=gammaden(9.6309,0.6496494,0,x), range(0 10)		lpattern(shortdash)		///	//	2015 (6 years after marriage-shock)
+					legend(lab (1 "2005(3.21)") lab(2 "2007(4.68)") lab(3 "2009(2.6)") lab(4 "2011(2.6)") lab(5 "2013(5.2)"))	///
+					title(The Effect of Marriage Shock on C&B PDF)	subtitle(Marriage shock in 2007)	///
+					xtitle(food expenditure per capita (thousands))	///
+					note(Male-headed household. No longer married in 2007 and remained since then.)
+			graph	export	"${PSID_outRaw}/effect_of_marriage_shock_on_CB_pdf.png", replace
+			graph	close
+
+
+
+
+
+
+
+
+	
 /* Junk Code */
 /* The following codes are old codes used when outcome variable are non-negative discrete variables (FS score) */		
 
