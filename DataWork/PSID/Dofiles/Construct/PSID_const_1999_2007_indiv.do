@@ -558,25 +558,22 @@
 			}
 		
 	
-		*	Winsorize family income and expenditures per capita at top 1%
+		*	Winsorize family income and expenditures per capita at top 1%, and scale it to thousand-dollars via division
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			
-			winsor income_pc`year' 			if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(income_pc_wins`year') p(0.01) 
-			winsor food_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(food_exp_pc_wins`year') p(0.01) 
-			winsor child_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(child_exp_pc_wins`year') p(0.01)
-			winsor edu_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(edu_exp_pc_wins`year') p(0.01)	
-			winsor health_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(health_exp_pc_wins`year') p(0.01)
-			winsor house_exp_pc`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(house_exp_pc_wins`year') p(0.01)
-			winsor property_tax_pc`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(property_tax_pc_wins`year') p(0.01)
-			winsor transport_exp_pc`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(transport_exp_pc_wins`year') p(0.01)
-			*winsor other_debts`year' 		if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(other_debts_wins`year') p(0.01)
-			winsor wealth_pc`year' 			if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(wealth_pc_wins`year') p(0.01)
-			
-			if	inrange(`year',2005,2017)	{
-				winsor cloth_exp_pc`year' 	if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(cloth_exp_pc_wins`year') p(0.01)
-			}
-		}
-		
+			foreach	var	in	income_pc	food_exp_pc	child_exp_pc	edu_exp_pc	health_exp_pc	house_exp_pc	property_tax_pc	transport_exp_pc	/*other_debts*/	wealth_pc	{
+				
+				*	Winsorize top 1% 
+				winsor `var'`year' 			if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(`var'_wins`year') p(0.01) highonly
+				
+				*	Keep winsorized variables only
+				drop	`var'`year'
+				rename	`var'_wins`year'		`var'`year'
+				
+				*	Scale to thousand-dollars
+				replace	`var'`year'	=	`var'`year'/1000
+			}	//	var	
+		}	//	year
 		
 		
 		*	Employed status (simplified)
@@ -642,6 +639,9 @@
 					
 					*	Divide by the number of families to get the threshold value(W) per capita
 					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'/num_FU_fam`year'
+					
+					*	Scale it to thousand-dollars
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'/1000
 					
 					*	Get the average value per capita (SL: This variable would no longer needed as of June 14, 2020)
 					sort	fam_ID_1999
