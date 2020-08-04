@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	0
+	local	retrieve_vars	1
 	local	clean_vars		1
 	
 	
@@ -240,6 +240,13 @@
 			*	Food security score (scale)
 			psid use || fs_scale_fam	[99]ER14331T [01]ER18470T [03]ER21735T [15]ER60798 [17]ER66846	///
 								using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+								
+			foreach	year	in	1999	2001	2003	2015	2017	{
+			    gen	double	fs_scale_fam`year'_temp	=	round(fs_scale_fam`year',0.01)
+				drop	fs_scale_fam`year'
+				rename	fs_scale_fam`year'_temp	fs_scale_fam`year'
+				label	var	fs_scale_fam`year'	"HH Food Security Scale Score"
+			}
 			
 			tempfile	fs_scale_fam
 			save		`fs_scale_fam'
