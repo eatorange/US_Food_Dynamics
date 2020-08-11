@@ -206,7 +206,7 @@
 		loc	samplingvars	sample_source	ER31996	ER31997
 		loc	demovars		age_head*	age_spouse*	race_head*	ethnicity*	race_spouse*		marital_status*	gender_head_fam*	state_resid_fam*
 		loc	familyvars		num_FU_fam*	num_child_fam*	family_comp_change*	child_in_FU*	fam_comp_nochange_99_03	fam_comp_samehead_99_03	fam_comp_samehead_99_17	child_daycare*
-		loc	socioeconvars	edu_years_head_fam*	FPL*	grade_comp*	college_completed*	hs_completed*	total_income_fam*	income_pc*		avg_income_pc*	avg_foodexp_pc*
+		loc	socioeconvars	grade_comp_head_fam*	FPL*	grade_comp*	college_completed*	hs_completed*	total_income_fam*	income_pc*		avg_income_pc*	avg_foodexp_pc*
 		loc	expenditurevars	food_exp*	
 		loc	foodvars		fs_raw*	fs_scale*	fs_cat*	food_stamp_used*	child_meal_assist*	WIC_received*	meal_together*
 		loc	healthvars		height_meter*	weight_kg*	respondent_BMI*	
@@ -254,7 +254,7 @@
 		label	var	num_FU_fam			"# of Family members"
 		label	var	num_child_fam		"# of Children"
 		label	var	gender_head_fam		"Gender of Household Head"
-		label	var	edu_years_head_fam	"Years of Education"
+		label	var	grade_comp_head_fam	"Grades completed(head)"
 		label	var	state_resid_fam		"State of Residence"
 		label 	var	fs_raw_fam 			"Food Security Raw Score"
 		label 	var	fs_scale_fam 		"Food Security Scale Score"
@@ -305,7 +305,7 @@
 		label	var	edu_in_US_spouse		"Education in the U.S. (spouse)"
 		label	var	college_yrs_head		"Yrs in collge (head)"
 		label	var	college_yrs_spouse		"Yrs in collge (spouse)"
-		label	var	edu_years_spouse		"Yrs schooling (spouse)"
+		label	var	grade_comp_spouse		"Grades completed (spouse)"
 		label	var	hs_completed_spouse		"HS degree (spouse)"
 		label	var	child_exp_total		"Annual child expenditure"
 		*label	var	cloth_exp_total		"Annual cloth expenditure"
@@ -473,12 +473,12 @@
 			
 			*	Male education
 			foreach	var	in	hs_completed_head	college_completed	other_degree_head	{
-				gen	`var'_interact	=	`var'*edu_years_head_fam
+				gen	`var'_interact	=	`var'*grade_comp_head_fam
 			}
 		
 			*	Female education
 			foreach	var	in	hs_completed_spouse	college_comp_spouse	other_degree_spouse	{
-				gen	`var'_interact	=	`var'*edu_years_spouse
+				gen	`var'_interact	=	`var'*grade_comp_spouse
 			}	
 	
 	sort	fam_ID_1999 year,	stable
@@ -491,7 +491,7 @@
 					/*foodexp_pc*/	income_pc	wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head	retire_plan_spouse	annuities_IRA	///
 					emp_HH_simple	emp_spouse_simple	///
 					num_FU_fam	num_child_fam	family_comp_change	couple_status	head_status	spouse_new	///
-					edu_years_head_fam	edu_years_spouse	attend_college_head	attend_college_spouse	college_yrs_head	college_yrs_spouse	///
+					grade_comp_head_fam	grade_comp_spouse	attend_college_head	attend_college_spouse	college_yrs_head	college_yrs_spouse	///
 					hs_completed_head	hs_completed_spouse	college_completed	college_comp_spouse	other_degree_head	other_degree_spouse					///
 					food_stamp_used_1yr	child_meal_assist	WIC_received_last	meal_together	elderly_meal	child_daycare_any	child_daycare_FSP	child_daycare_snack	///
 					if	in_sample==1, compact
@@ -543,7 +543,7 @@
 		local	econvars	income_pc	income_pc_sq	wealth_pc	wealth_pc_sq
 		local	empvars		emp_HH_simple
 		local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status
-		local	eduvars		attend_college_head college_yrs_head (hs_completed_head	college_completed	other_degree_head)##c.edu_years_head_fam	
+		local	eduvars		attend_college_head college_yrs_head (hs_completed_head	college_completed	other_degree_head)##c.grade_comp_head_fam	
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
 		
@@ -601,9 +601,9 @@
 		local	empvars		emp_HH_simple	emp_spouse_simple
 		local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	couple_status_enum1-couple_status_enum4
 		local	eduvars		attend_college_head attend_college_spouse	college_yrs_head college_yrs_spouse	///
-							hs_completed_head	college_completed	other_degree_head	edu_years_head_fam	///
+							hs_completed_head	college_completed	other_degree_head	grade_comp_head_fam	///
 							hs_completed_head_interact college_completed_interact other_degree_head_interact	///
-							hs_completed_spouse	college_comp_spouse	other_degree_spouse	edu_years_spouse	///
+							hs_completed_spouse	college_comp_spouse	other_degree_spouse	grade_comp_spouse	///
 							hs_completed_spouse_interact college_comp_spouse_interact other_degree_spouse_interact
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
 		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
@@ -779,9 +779,9 @@
 		local	empvars		emp_HH_simple	emp_spouse_simple
 		local	familyvars	num_FU_fam num_child_fam	family_comp_change_enum1-family_comp_change_enum9	couple_status_enum1-couple_status_enum5	head_status spouse_new
 		local	eduvars		attend_college_head attend_college_spouse	college_yrs_head college_yrs_spouse	///
-							hs_completed_head	college_completed	other_degree_head	edu_years_head_fam	///
+							hs_completed_head	college_completed	other_degree_head	grade_comp_head_fam	///
 							hs_completed_head_interact college_completed_interact other_degree_head_interact	///
-							hs_completed_spouse	college_comp_spouse	other_degree_spouse	edu_years_spouse	///
+							hs_completed_spouse	college_comp_spouse	other_degree_spouse	grade_comp_spouse	///
 							hs_completed_spouse_interact college_comp_spouse_interact other_degree_spouse_interact
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
 		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
@@ -964,7 +964,7 @@
 	
 	
 	*	Validation
-	local	run_validation	0
+	local	run_validation	1
 		local	CB_cat	1		//	Generate FS category variables from CB measure
 		local	valid_others	0	//	rank correlation, figure, etc.
 	
@@ -976,6 +976,8 @@
 		
 		if	`CB_cat'==1	{
 		
+			
+			/*	// We no longer calculate CB threshold value from the PSID data. We use annual USDA report below.
 			*	Check the ratio of food security category for each year
 			foreach	year	in	1	2	3	9	10	{
 				
@@ -987,14 +989,21 @@
 				di "proportion is `prop_insecure_`year''"
 				mat	drop	fs_`year'_freq	fs_`year'_ratio	
 			}
+			*/
 			
-			*	For the years when the PSID data is NOT available, use the ratio of food inseure people from the USDA annual report
+			*	For food security threshold value, we use the ratio from the annual USDA reports.
+			*	(https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-us/readings/#reports)
 			
-			local	prop_insecure_4	=	110	// 2005: 11.0% are food insecure
-			local	prop_insecure_5	=	111	// 2007: 11.1% are food insecure
-			local	prop_insecure_6	=	147	// 2009: 14.7% are food insecure
-			local	prop_insecure_7	=	149	// 2011: 14.9% are food insecure
-			local	prop_insecure_8	=	143	// 2013: 14.3% are food insecure
+			local	prop_insecure_1		=	101	// 1999: 10.1% are food insecure
+			local	prop_insecure_2		=	107	// 2001: 10.7% are food insecure
+			local	prop_insecure_3		=	112	// 2003: 11.2% are food insecure
+			local	prop_insecure_4		=	110	// 2005: 11.0% are food insecure
+			local	prop_insecure_5		=	111	// 2007: 11.1% are food insecure
+			local	prop_insecure_6		=	147	// 2009: 14.7% are food insecure
+			local	prop_insecure_7		=	149	// 2011: 14.9% are food insecure
+			local	prop_insecure_8		=	143	// 2013: 14.3% are food insecure
+			local	prop_insecure_9		=	127	// 2015: 12.7% are food insecure
+			local	prop_insecure_10	=	118	// 2017: 11.8% are food insecure
 		
 			*	Categorize food security status based on the CB score.
 			foreach	type	in	ols	/*ls	rf*/	{
@@ -1405,11 +1414,11 @@
 		
 		local	depvar		fs_scale_fam_rescale
 		local	healthvars	phys_disab_head
-		local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	marital_status_cat	ib1.gender_head_fam	
+		local	demovars	age_head_fam	age_head_fam_sq	ib1.race_head_cat	marital_status_cat	ib1.gender_head_fam	
 		local	econvars	c.income_pc	c.income_pc_sq	/*wealth_pc	wealth_pc_sq*/
 		local	empvars		emp_HH_simple
 		local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
-		local	eduvars		/*attend_college_head*/ c.edu_years_head_fam	
+		local	eduvars		/*attend_college_head*/ ib1.grade_comp_cat	
 		local	foodvars	food_stamp_used_1yr	WIC_received_last
 		local	regionvars	ib0.state_resid_fam	
 		*local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
@@ -1418,7 +1427,7 @@
 		
 		cap	drop	post_recession
 		gen		post_recession	=	0
-		replace	post_recession=1	if	inrange(year,7,10)	//	Wave 2011 to 2017
+		replace	post_recession=1	if	inrange(year,6,10)	//	Wave 2009 to 2017
 				
 		*** Note: Stata recommends using "subpop" option instead of "if" option, as the variance estimator from the latter "does  not  accurately  measurethe  sample-to-sample  variability  of  the  subpopulation  estimates  for  the  survey  design  that  was  used to collect the data."
 		*** However, for some reason Stata does often not allow to use "subpop" option with "glm" command, so I will use "if" option for now.
@@ -1721,9 +1730,37 @@
 			graph	export	"${PSID_outRaw}/effect_of_marriage_shock_on_CB_pdf.png", replace
 			graph	close
 
-
-
-
+		
+		*	Time trend of CB score by year & sample group.
+		
+			cap	drop	year2
+			gen year2 = (year*2)+1997
+			
+			tsset	fam_ID_1999 year2, delta(2)
+			
+			cap	drop	avg_cb_weighted
+			cap	drop	avg_cb_weighted_sample
+			gen	double avg_cb_weighted=.
+			gen	double avg_cb_weighted_sample=.
+			forval	year=2001(2)2017	{
+				
+				* Pooled over the sample
+				svy: mean rho1_foodexp_pc_thrifty_ols if year2==`year'	
+				replace	avg_cb_weighted=e(b)[1,1]	if	year2==`year'
+				
+				* By sample
+				forval	sampleno=1/3	{
+					svy: mean rho1_foodexp_pc_thrifty_ols 		if year2==`year'	&	sample_source==`sampleno'
+					replace	avg_cb_weighted_sample=e(b)[1,1]	if	year2==`year'	&	sample_source==`sampleno'
+				}
+			}
+			
+			twoway	(tsline avg_cb_weighted)	///
+					(tsline avg_cb_weighted_sample if sample_source==1)	///
+					(tsline avg_cb_weighted_sample if sample_source==2)	///
+					(tsline avg_cb_weighted_sample if sample_source==3),	///
+					legend(lab (1 "Overall") lab(2 "SRC") lab(3 "SEO") lab(4 "Immigrants Regresher"))	///
+					title(The change of CB score over time)	subtitle(from 2001 to 2017)
 
 
 
@@ -1734,7 +1771,7 @@
 
 /*
 	*	Declare list of variables
-	local	demovars	c.age_head_fam##c.age_head_fam i.race_head_cat gender_head_fam	ib1.marital_status_cat	edu_years_head_fam
+	local	demovars	c.age_head_fam##c.age_head_fam i.race_head_cat gender_head_fam	ib1.marital_status_cat	grade_comp_head_fam
 	local	econvars	total_income_fam_wins
 	local	famvars		num_FU_fam	num_child_fam
 	local	foodvars	food_stamp_used_1yr	child_meal_assist	WIC_received_last*
@@ -1823,7 +1860,7 @@
 		
 		*	Common controls
 		local	demovars	c.age_head_fam##c.age_head_fam i.race_head_cat gender_head_fam	ib1.marital_status_cat	
-		local	eduvars		edu_years_head_fam	c.edu_years_head_fam#hs_completed c.edu_years_head_fam#college_completed
+		local	eduvars		grade_comp_head_fam	c.grade_comp_head_fam#hs_completed c.grade_comp_head_fam#college_completed
 		local	econvars	/*total_income_fam_wins*/	avg_income_pc	c.avg_income_pc#c.avg_income_pc
 		local	famvars		num_FU_fam	num_child_fam
 		local	foodvars	food_stamp_used_1yr	child_meal_assist	WIC_received_last*
@@ -1962,7 +1999,7 @@
 		*	Summary statistics
 		eststo drop	Total SRC	SEO	Imm
 
-		local	sumvars	age_head_fam num_FU_fam num_child_fam edu_years_head_fam alcohol_head smoke_head	fs_scale_fam food_stamp_used_1yr 	///
+		local	sumvars	age_head_fam num_FU_fam num_child_fam grade_comp_head_fam alcohol_head smoke_head	fs_scale_fam food_stamp_used_1yr 	///
 						income_pc food_exp_pc edu_exp_pc health_exp_pc	///
 
 		preserve

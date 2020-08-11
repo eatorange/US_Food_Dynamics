@@ -217,11 +217,11 @@
 			save		`gender_head_fam'
 			
 			*	Grades Househould head completed (fam)
-			psid use || edu_years_head_fam /*[75]V4093 [76]V4684 [77]V5608 [78]V6157 [79]V6754 [80]V7387 [81]V8039 [82]V8663 [83]V9349 [84]V10996 [91]V20198 [92]V21504 [93]V23333 [94]ER4158 [95]ER6998 [96]ER9249 [97]ER12222*/ [99]ER16516 [01]ER20457 [03]ER24148 [05]ER28047 [07]ER41037 [09]ER46981 [11]ER52405 [13]ER58223 [15]ER65459 [17]ER71538	///
+			psid use || grade_comp_head_fam /*[75]V4093 [76]V4684 [77]V5608 [78]V6157 [79]V6754 [80]V7387 [81]V8039 [82]V8663 [83]V9349 [84]V10996 [91]V20198 [92]V21504 [93]V23333 [94]ER4158 [95]ER6998 [96]ER9249 [97]ER12222*/ [99]ER16516 [01]ER20457 [03]ER24148 [05]ER28047 [07]ER41037 [09]ER46981 [11]ER52405 [13]ER58223 [15]ER65459 [17]ER71538	///
 								using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
 			
-			tempfile	edu_years_head_fam
-			save		`edu_years_head_fam'
+			tempfile	grade_comp_head_fam
+			save		`grade_comp_head_fam'
 			
 			*	State of Residence (fam)
 			psid use || state_resid_fam [68]V93 [69]V537 /*[70]V1103 [71]V1803 [72]V2403 [73]V3003 [74]V3403 [75]V3803 [76]V4303 [77]V5203 [78]V5703 [79]V6303 [80]V6903 [81]V7503 [82]V8203 [83]V8803 [84]V10003 [85]V11103 [86]V12503 [87]V13703 [88]V14803 [89]V16303 [90]V17703 [91]V19003 [92]V20303 [93]V21603 [94]ER4156 [95]ER6996 [96]ER9247*/ [97]ER12221 [99]ER13004 [01]ER17004 [03]ER21003 [05]ER25003 [07]ER36003 [09]ER42003 [11]ER47303 [13]ER53003 [15]ER60003 [17]ER66003	///
@@ -356,12 +356,20 @@
 			tempfile	hs_completed_head
 			save		`hs_completed_head'
 			
-			*	Finished college
+			*	Finished college (Head)
 			psid use || college_completed	[99]ER15952 [01]ER20013 [03]ER23450 [05]ER27417 [07]ER40589 [09]ER46567 [11]ER51928 [13]ER57684 [15]ER64836 [17]ER70908	///
 								using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
 			
 			tempfile	college_completed
 			save		`college_completed'
+			
+			*	Highest college degree completed (Head)
+			psid use || college_degree_type	[99]ER15953 [01]ER20014 [03]ER23451 [05]ER27418 [07]ER40590 [09]ER46568 [11]ER51929 [13]ER57685 [15]ER64837 [17]ER70909	///
+								using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+			
+			tempfile	college_degree_type
+			save		`college_degree_type'
+					
 			
 		*	# of days/week eat meal together
 			psid use || meal_together /*[68]V174 [69]V638 [70]V1380 [71]V2092 [72]V2693 [88]V15760 [89]V17295 [90]V18699 [91]V19999 [92]V21299 [93]V23158 [94]ER3057 [95]ER6056 [96]ER8153*/ [97]ER11047 [99]ER14231 [01]ER18361 [03]ER21627 [05]ER25624 [07]ER36629 [09]ER42648 [11]ER47966 [13]ER53678 [15]ER60693 [17]ER66740	///
@@ -482,11 +490,11 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		save		`college_yrs_spouse'
 
 		*	Grades Househould head's spouse completed (fam)
-		psid use || edu_years_spouse /*[75]V4102 [76]V4695 [77]V5567 [78]V6116 [79]V6713 [80]V7346 [81]V7998 [82]V8622 [83]V9308 [84]V10955 [91]V20199 [92]V21505 [93]V23334 [94]ER4159 [95]ER6999 [96]ER9250*/ [97]ER12223 [99]ER16517 [01]ER20458 [03]ER24149 [05]ER28048 [07]ER41038 [09]ER46982 [11]ER52406 [13]ER58224 [15]ER65460 [17]ER71539	///
+		psid use || grade_comp_spouse /*[75]V4102 [76]V4695 [77]V5567 [78]V6116 [79]V6713 [80]V7346 [81]V7998 [82]V8622 [83]V9308 [84]V10955 [91]V20199 [92]V21505 [93]V23334 [94]ER4159 [95]ER6999 [96]ER9250*/ [97]ER12223 [99]ER16517 [01]ER20458 [03]ER24149 [05]ER28048 [07]ER41038 [09]ER46982 [11]ER52406 [13]ER58224 [15]ER65460 [17]ER71539	///
 									using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
 				
-		tempfile	edu_years_spouse
-		save		`edu_years_spouse'
+		tempfile	grade_comp_spouse
+		save		`grade_comp_spouse'
 				
 *	Finished high school or GED (Spouse)
 		psid use || hs_completed_spouse	/*[85]V12300 [86]V13503 [87]V14550 [88]V16024 [89]V17421 [90]V18752 [91]V20052 [92]V21358 [93]V23215 [94]ER3887 [95]ER6757 [96]ER9003*/ [97]ER11766 [99]ER15845 [01]ER19906 [03]ER23343 [05]ER27306 [07]ER40481 [09]ER46458 [11]ER51819 [13]ER57559 [15]ER64682 [17]ER70755	///
@@ -751,7 +759,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `num_FU_fam', keepusing(num_FU_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `num_child_fam', keepusing(num_child_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `gender_head_fam', keepusing(gender_head_fam*) nogen assert(3)
-		merge 1:1 x11101ll using `edu_years_head_fam', keepusing(edu_years_head_fam*) nogen assert(3)
+		merge 1:1 x11101ll using `grade_comp_head_fam', keepusing(grade_comp_head_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `state_resid_fam', keepusing(state_resid_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `fs_raw_fam', keepusing(fs_raw_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `fs_scale_fam', keepusing(fs_scale_fam*) nogen assert(3)
@@ -771,6 +779,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `weight_kg', keepusing(weight_kg*) nogen assert(3)
 		merge 1:1 x11101ll using `hs_completed_head', keepusing(hs_completed_head*) nogen assert(3)
 		merge 1:1 x11101ll using `college_completed', keepusing(college_completed*) nogen assert(3)
+		merge 1:1 x11101ll using `college_degree_type', keepusing(college_degree_type*) nogen assert(3)
 		merge 1:1 x11101ll using `meal_together', keepusing(meal_together*) nogen assert(3)
 		merge 1:1 x11101ll using `child_daycare_any', keepusing(child_daycare_any*) nogen assert(3)
 		merge 1:1 x11101ll using `child_daycare_FSP', keepusing(child_daycare_FSP*) nogen assert(3)
@@ -788,7 +797,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `edu_in_US_spouse', keepusing(edu_in_US_spouse*) nogen assert(3)
 		merge 1:1 x11101ll using `college_yrs_head', keepusing(college_yrs_head*) nogen assert(3)
 		merge 1:1 x11101ll using `college_yrs_spouse', keepusing(college_yrs_spouse*) nogen assert(3)
-		merge 1:1 x11101ll using `edu_years_spouse', keepusing(edu_years_spouse*) nogen assert(3)
+		merge 1:1 x11101ll using `grade_comp_spouse', keepusing(grade_comp_spouse*) nogen assert(3)
 		merge 1:1 x11101ll using `hs_completed_spouse', keepusing(hs_completed_spouse*) nogen assert(3)
 		merge 1:1 x11101ll using `child_exp_total', keepusing(child_exp_total*) nogen assert(3)
 		merge 1:1 x11101ll using `cloth_exp_total', keepusing(cloth_exp_total*) nogen assert(3)
@@ -897,7 +906,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 			
 			
 			*	Grade completed of household head (fam)
-			qui ds edu_years_head_fam1999-edu_years_head_fam2017 edu_years_spouse1997-edu_years_spouse2017
+			qui ds grade_comp_head_fam1999-grade_comp_head_fam2017 grade_comp_spouse1997-grade_comp_spouse2017
 			foreach	var	in	`r(varlist)'	{
 				replace	`var'=.n	if	`var'==99	//	Recode it as they are continuous variables
 			}
@@ -1118,7 +1127,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		*	Years of education - continuous (head), ordered categorical (spouse)
 		**	Recode nonresponses as missing
 		**	For spouse, need to be careful in treating "0".
-			qui	ds	edu_years_head_fam* edu_years_spouse*
+			qui	ds	grade_comp_head_fam* grade_comp_spouse*
 			recode	`r(varlist)'	(99=.n)
 			
 		*	Support from the outside FU	-	YNDR
