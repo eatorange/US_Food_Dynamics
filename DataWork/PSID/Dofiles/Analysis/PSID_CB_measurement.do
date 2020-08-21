@@ -124,10 +124,16 @@
 			replace	age_head_cat`year'=.	if	mi(age_head_fam`year')
 			
 			label	var	age_head_cat`year'	"Age of Household Head (category), `year'"
+			
+			gen		non_working_age`year'	=0	if	inrange(age_head_fam`year',16,64)
+			replace	non_working_age`year'	=1	if	!mi(age_head_fam`year')	&	!inrange(age_head_fam`year',16,64)
 		}
 		label	define	age_head_cat	1	"16-24"	2	"25-34"	3	"35-44"	///
 										4	"45-54"	5	"55-64"	6	"65 and older"
 		label	values	age_head_cat*	age_head_cat
+		
+		label	define	non_working_age	0 "Working age (16-64)"	1	"Outside working age (65 or older)"
+		label	values	non_working_age*	non_working_age
 		
 		*	Recode gender
 		forval	year=1999(2)2017	{
@@ -278,7 +284,6 @@
 		label	var	food_exp_pc			"Food expenditure per capita (thousands)"
 		label	var	avg_income_pc		"Average income over two years per capita"
 		label	var	avg_foodexp_pc		"Average food expenditure over two years per capita"
-		
 		label	var	splitoff_indicator		"Splitoff indicator"
 		label	var	num_split_fam		"# of splits"
 		label	var	main_fam_ID		"Family ID"
@@ -368,6 +373,7 @@
 		label	var	accum_splitoff		"Accumulated splitoff"
 		label	var	other_debts			"Other debts"
 		label	var	fs_cat_fam_simp		"Food Security Category (binary)"
+		label	var	non_working_age		"Ouside working age"
 
 		*label	var	cloth_exp_total		"Total cloth expenditure"
 		
@@ -969,7 +975,9 @@
 		local	valid_others	0	//	rank correlation, figure, etc.
 	
 	*	Association
-	local	run_association	1	
+	local	model_check	0	//	varying LHS
+	local	specification_check	0	//	varying RHS
+	
 				
 	*	Validation	
 	if	`run_validation'==1	{
@@ -1398,7 +1406,7 @@
 	}	//	validation
 	
 	*	Association
-	if	`run_association'==1	{
+		if	`model_check'==1	{
 	*	Check the association among the factors in the two indicators (USDA, RS)
 		
 		/*
@@ -1695,7 +1703,140 @@
 					
 				
 	}
+	
+		if	`specification_check'==1	{
+		
+		tsset	fam_ID_1999 year, delta(1)
+		
+		local	depvar		rho1_foodexp_pc_thrifty_ols
+		local	lagdepvar	l.`depvar'
+		local	healthvars	phys_disab_head
+		local	demovars	c.age_head_fam##c.age_head_fam /*age_head_fam_sq*/	ib1.gender_head_fam	ib1.race_head_cat	marital_status_cat
+		local	econvars	c.income_pc	c.income_pc_sq	/*wealth_pc	wealth_pc_sq*/
+		local	empvars		emp_HH_simple
+		local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
+		local	eduvars		/*attend_college_head*/ ib2.grade_comp_cat	
+		local	foodvars	food_stamp_used_1yr	WIC_received_last
+		local	regionvars	ib0.state_resid_fam	
+		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house
+		local	interactvars	(c.income_pc	c.income_pc_sq)#ib1.gender_head_fam	///
+								(c.income_pc	c.income_pc_sq)#non_working_age	///
+								ib1.gender_head_fam#non_working_age	///
+								(c.income_pc	c.income_pc_sq)#ib1.gender_head_fam#non_working_age	///
+								(c.age_head_fam	c.age_head_fam_sq)#ib2.grade_comp_cat	///
+								no_longer_employed#non_working_age	no_longer_married#ib1.gender_head_fam	no_longer_own_house#non_working_age
+		*local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
+		
+		*	OLS
+			
+			*	Without interaction	&	shocks
+			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	/*`interactvars'*/	`regionvars'
+			*svy: meglm `depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+			est	store	Prob_FI_benchmark
+		
+		
+			*	With interaction	&	shocks
+			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`shockvars'	`interactvars'	`regionvars'
+			*svy: meglm `depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+			est	store	Prob_FI_interact
+			
+				*	Prediction
+				predict fv,xb
+				twoway qfitci fv income_pc, title(Expected Pr(FS) over income)
+				twoway qfitci fv age_head_fam, title(Expected Pr(FS) over age)
+								
+				twoway lpolyci fv income_pc if income_pc>0, title(Expected Pr(FS) over income)
+				twoway lpolyci fv age_head_fam, title(Expected Pr(FS) over age)
 				
+					*	By year
+					cap	drop	year2
+					gen year2 = (year*2)+1997
+					
+					forval	year=1999(2)2017	{
+						qui	twoway lpolyci fv income_pc if income_pc>0	&	year2==`year', title(Expected Pr(FS) over income in `year')
+						graph	export	"${PSID_outRaw}/Fitted_lpoly_income_`year'.png", replace
+						graph	close	
+						
+						qui	twoway lpolyci fv age_head_fam if year2==`year', title(Expected Pr(FS) over age in `year')
+						graph	export	"${PSID_outRaw}/Fitted_lpoly_age_`year'.png", replace
+						graph	close
+					}
+					
+					*	In a single graph
+					twoway	(lpoly fv income_pc if income_pc>0	&	year2==1999)	(lpoly fv income_pc if income_pc>0	&	year2==2001)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2003)	(lpoly fv income_pc if income_pc>0	&	year2==2005)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2007)	(lpoly fv income_pc if income_pc>0	&	year2==2009)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2011)	(lpoly fv income_pc if income_pc>0	&	year2==2013)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2015)	(lpoly fv income_pc if income_pc>0	&	year2==2017),	///
+							legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
+							title(Expected Pr(FS) over income by year)
+					graph	export	"${PSID_outRaw}/Fitted_lpoly_income_all_year.png", replace
+					graph	close
+					
+					twoway	(lpoly fv age_head_fam if year2==1999)	(lpoly fv age_head_fam if year2==2001)	///
+							(lpoly fv age_head_fam if year2==2003)	(lpoly fv age_head_fam if year2==2005)	///
+							(lpoly fv age_head_fam if year2==2007)	(lpoly fv age_head_fam if year2==2009)	///
+							(lpoly fv age_head_fam if year2==2011)	(lpoly fv age_head_fam if year2==2013)	///
+							(lpoly fv age_head_fam if year2==2015)	(lpoly fv age_head_fam if year2==2017),	///
+							legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
+							title(Expected Pr(FS) over age by year)
+					graph	export	"${PSID_outRaw}/Fitted_lpoly_age_all_year.png", replace
+					graph	close
+					
+				
+				*	Compute the marginal effect of some covariates over the range of values.
+				*margins, dydx(age_head_fam) over(age_head_fam)
+				*marginsplot, title(Marginal Effect of Age with 95% CI)
+				
+				cap	drop	income_pc_cat
+				gen	income_pc_cat=0	if	income_pc<0
+				forvalues	i=0(10)150	{
+					local	income_min=`i'
+					local	income_max=(`i'+10)
+					replace	income_pc_cat	=	`i'	if	inrange(income_pc,`income_min',`income_max')
+				}
+				
+				margins, dydx(income_pc) over(income_pc_cat)
+				marginsplot, title(Marginal Effect of per capita income with 95% CI) xtitle(per capita income group)
+			
+			
+			esttab	Prob_FI_benchmark	Prob_FI_interact	using "${PSID_outRaw}/Prob_FI_pooled.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Prob(food insecure)-Pooled) replace
+		
+		*	Test stationary
+		
+			*	Chris' suggestion
+				
+				*	Use pooled data with time FE to estimate conditional mean, and check whether there are serial correlation
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`interactvars'	`regionvars'	i.year
+				
+				cap	drop	resid_withtimeFE
+				predict	resid_withtimeFE, residual
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, fe
+				est	store	resid_autocorr_nocluster
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, vce(cluster fam_ID_1999) fe
+				est	store	resid_autocorr_cluster
+				
+				esttab	resid_autocorr_nocluster	resid_autocorr_cluster	using "${PSID_outRaw}/resid_autocorr.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
+				
+				*	Suppose there is autocorrelation, then ad lagged dep var on RHS
+				svy: reg	`depvar'	c.`lagdepvar'##c.`lagdepvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`interactvars'	`regionvars'	i.year
+				
+				cap	drop	resid_withtimeFE
+				predict	resid_withtimeFE, residual
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, fe
+				est	store	resid_atcr_lag_nocluster
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, vce(cluster fam_ID_1999) fe
+				est	store	resid_atcr_lag_cluster
+				
+				esttab	resid_atcr_lag_nocluster	resid_atcr_lag_cluster	using "${PSID_outRaw}/resid_lagdep_autocorr.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
+	}
 				
 	*	Graphs
 	
@@ -1755,15 +1896,35 @@
 				}
 			}
 			
-			twoway	(tsline avg_cb_weighted)	///
-					(tsline avg_cb_weighted_sample if sample_source==1)	///
-					(tsline avg_cb_weighted_sample if sample_source==2)	///
-					(tsline avg_cb_weighted_sample if sample_source==3),	///
+			cap	drop	HH_insecure_ratio
+			gen		HH_insecure_ratio	=	0.101	if	year2==	1999
+			replace	HH_insecure_ratio	=	0.107	if	year2==	2001
+			replace	HH_insecure_ratio	=	0.112	if	year2==	2003
+			replace	HH_insecure_ratio	=	0.110	if	year2==	2005
+			replace	HH_insecure_ratio	=	0.111	if	year2==	2007
+			replace	HH_insecure_ratio	=	0.147	if	year2==	2009
+			replace	HH_insecure_ratio	=	0.149	if	year2==	2011
+			replace	HH_insecure_ratio	=	0.143	if	year2==	2013
+			replace	HH_insecure_ratio	=	0.127	if	year2==	2015
+			replace	HH_insecure_ratio	=	0.118	if	year2==	2017
+			lab	var	HH_insecure_ratio	"Ratio of FI households"
+			
+			tsset	fam_ID_1999 year2, delta(2)
+			twoway	(tsline avg_cb_weighted,	yaxis(1) lpattern(solid))	///
+					(tsline avg_cb_weighted_sample if sample_source==1,	yaxis(1) lpattern(dash))	///
+					(tsline avg_cb_weighted_sample if sample_source==2,	yaxis(1) lpattern(dot))	///
+					(tsline avg_cb_weighted_sample if sample_source==3,	yaxis(1)	lpattern(dash_dot))	///
+					(tsline HH_insecure_ratio,	yaxis(2) lpattern(shortdash)),	///
 					legend(lab (1 "Overall") lab(2 "SRC") lab(3 "SEO") lab(4 "Immigrants Regresher"))	///
-					title(The change of CB score over time)	subtitle(from 2001 to 2017)
+					title(Probability of being food secure)	subtitle(from 2001 to 2017)
 
 
-
+			tsset	fam_ID_1999	year
+			keep	if	fam_ID_1999==1
+			drop	if	mi(rho1_foodexp_pc_thrifty_ols)
+			
+			dfuller	rho1_foodexp_pc_thrifty_ols
+			dfgls	rho1_foodexp_pc_thrifty_ols, maxlag(4)
 
 	
 /* Junk Code */
