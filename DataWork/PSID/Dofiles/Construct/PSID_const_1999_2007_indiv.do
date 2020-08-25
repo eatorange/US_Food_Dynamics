@@ -348,6 +348,46 @@
 		scalar	FPL_mult_AL_2003	=	3850
 		scalar	FPL_mult_HA_2003	=	3540
 		
+		*	2004 HHS Poverty Guideline (https://aspe.hhs.gov/2004-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2005	=	9310
+		scalar	FPL_base_AL_2005	=	11630
+		scalar	FPL_base_HA_2005	=	10700
+		scalar	FPL_mult_48_2005	=	3180
+		scalar	FPL_mult_AL_2005	=	3980
+		scalar	FPL_mult_HA_2005	=	3660
+		
+		*	2006 HHS Poverty Guideline (https://aspe.hhs.gov/2006-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2007	=	9800
+		scalar	FPL_base_AL_2007	=	12250
+		scalar	FPL_base_HA_2007	=	11270
+		scalar	FPL_mult_48_2007	=	3400
+		scalar	FPL_mult_AL_2007	=	4250
+		scalar	FPL_mult_HA_2007	=	3910
+		
+		*	2008 HHS Poverty Guideline (https://aspe.hhs.gov/2008-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2009	=	10400
+		scalar	FPL_base_AL_2009	=	13000
+		scalar	FPL_base_HA_2009	=	11960
+		scalar	FPL_mult_48_2009	=	3600
+		scalar	FPL_mult_AL_2009	=	4500
+		scalar	FPL_mult_HA_2009	=	4140
+		
+		*	2010 HHS Poverty Guideline (https://aspe.hhs.gov/2010-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2011	=	10830
+		scalar	FPL_base_AL_2011	=	13530
+		scalar	FPL_base_HA_2011	=	12460
+		scalar	FPL_mult_48_2011	=	3740
+		scalar	FPL_mult_AL_2011	=	4680
+		scalar	FPL_mult_HA_2011	=	4300
+		
+		*	2012 HHS Poverty Guideline (https://aspe.hhs.gov/2012-hhs-poverty-guidelines)
+		scalar	FPL_base_48_2013	=	11170
+		scalar	FPL_base_AL_2013	=	13970
+		scalar	FPL_base_HA_2013	=	12860
+		scalar	FPL_mult_48_2013	=	3960
+		scalar	FPL_mult_AL_2013	=	4950
+		scalar	FPL_mult_HA_2013	=	4550
+		
 		*	2014 HHS Poverty Guideline (https://aspe.hhs.gov/2014-hhs-poverty-guidelines)
 		scalar	FPL_base_48_2015	=	11670
 		scalar	FPL_base_AL_2015	=	14580
@@ -356,7 +396,7 @@
 		scalar	FPL_mult_AL_2015	=	5080
 		scalar	FPL_mult_HA_2015	=	4670
 		
-		*	2016 HHS Poverty Guideline (https://aspe.hhs.gov/2014-hhs-poverty-guidelines)
+		*	2016 HHS Poverty Guideline (https://aspe.hhs.gov/2016-hhs-poverty-guidelines)
 		*	2016 Line has complicated design
 		scalar	FPL_base_48_2017	=	11880
 		scalar	FPL_base_AL_2017	=	14850	//	11,880 * 1.25 (AL scaling factor)
@@ -377,7 +417,7 @@
 		*	Calculate FPL
 
 			*	1999-2003, 2015
-			foreach	year	in	1999	2001	2003	2015	{
+			forval	year=1999(2)2015	{
 				gen 	FPL_`year'	=	FPL_base_48_`year'	+	(num_FU_fam`year'-1)*FPL_mult_48_`year'	if	inrange(state_resid_fam`year',1,49)
 				replace	FPL_`year'	=	FPL_base_AL_`year'	+	(num_FU_fam`year'-1)*FPL_mult_AL_`year'	if	state_resid_fam`year'==50
 				replace	FPL_`year'	=	FPL_base_HA_`year'	+	(num_FU_fam`year'-1)*FPL_mult_HA_`year'	if	state_resid_fam`year'==51
@@ -409,19 +449,34 @@
 				
 				label	var	FPL_2017	"Federal Poverty Line, 2017"
 				
-			*	FPL Category
-			foreach	year	in	1999	2001	2003	2015	2017	{
+			*	FPL variables
+			forval	year=1999(2)2017	{
+				
+				*	Income to Poverty Ratio
+				gen		income_to_poverty`year'	=	total_income_fam`year'/FPL_`year'
+				lab	var	income_to_poverty`year'	"Income to Poverty Ratio, `year'"
+				
+				*	FPL category
 				*gen		FPL_cat`year'=.
-				*replace	FPL_cat`year'=1	if	total_income_fam`year'<FPL_`year'
-				generate	FPL_cat`year'=1	if	total_income_fam`year'<FPL_`year'
-				replace		FPL_cat`year'=2	if	inrange(total_income_fam`year',FPL_`year',2*FPL_`year')
-				replace		FPL_cat`year'=3	if	total_income_fam`year'>=2*FPL_`year'
-				replace		FPL_cat`year'=.	if	mi(FPL_`year')
-				label	var	FPL_cat`year'	"Income Category(FPL), `year'"
+				*replace	FPL_cat`year'=1		if	total_income_fam`year'<FPL_`year'
+				generate	income_to_poverty_cat`year'=1		if	income_to_poverty`year' <1
+				replace		income_to_poverty_cat`year'=2		if	inrange(income_to_poverty`year',1,2)
+				replace		income_to_poverty_cat`year'=3		if	inrange(income_to_poverty`year',2,3)
+				replace		income_to_poverty_cat`year'=4		if	inrange(income_to_poverty`year',3,4)
+				replace		income_to_poverty_cat`year'=5		if	inrange(income_to_poverty`year',4,5)
+				replace		income_to_poverty_cat`year'=6		if	inrange(income_to_poverty`year',5,6)
+				replace		income_to_poverty_cat`year'=7		if	inrange(income_to_poverty`year',6,7)
+				replace		income_to_poverty_cat`year'=8		if	inrange(income_to_poverty`year',7,8)
+				replace		income_to_poverty_cat`year'=9		if	inrange(income_to_poverty`year',8,9)
+				replace		income_to_poverty_cat`year'=10	if	inrange(income_to_poverty`year',9,10)
+				replace		income_to_poverty_cat`year'=11	if	income_to_poverty`year'>10
+				replace		income_to_poverty_cat`year'=.	if	mi(FPL_`year')
+				label	var	income_to_poverty_cat`year'	"Income to Poverty Category, `year'"
 			}
 			
-			label	define	income_cat_FPL	1	"<100% FPL"	2	"100%~200% FPL"	3	">200% FPL"	0	"Inappropriate"
-			label	values	FPL_cat*	income_cat_FPL
+			label	define	income_cat_FPL	1	"<1.0"		2	"1.0~2.0"	3	"2.0~3.0"	4	"3.0~4.0"	5	"4.0~5.0"	6	"5.0~6.0"	///
+											7	"6.0~7.0"	8	"7.0~8.0"	9	"8.0~9.0"	10	"9.0~10.0"	11	"10.0"		0	"Inappropriate"
+			label	values	income_to_poverty_cat*	income_cat_FPL
 		
 		
 		*	Education	(category)
@@ -465,6 +520,15 @@
 			replace	child_meal_assist`year'	=1	if	inrange(child_meal_assist`year',1,3)	//	Received either breakfast or lunch
 		}
 		label values	child_meal_assist*	YNDRI
+		
+		
+		*	Retirement age
+		forval	year=1999(2)2017	{
+			cap	drop	retire_age`year'
+			gen	retire_age`year'	=	age_head_fam`year'	-	(`year'-retire_year_head`year')	///
+				if	emp_status_head`year'==4	&	inrange(retire_year_head`year',1910,`year')	&	inrange(age_head_fam`year',1,120)	&	`year'>=retire_year_head`year'
+			lab	var	retire_age`year' "Retirement age in `year'"
+		}
 		
 		*	Body Mass Index (BMI)
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
