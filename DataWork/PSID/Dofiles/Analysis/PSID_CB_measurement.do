@@ -374,14 +374,11 @@
 		label	var	other_debts			"Other debts"
 		label	var	fs_cat_fam_simp		"Food Security Category (binary)"
 		label	var	non_working_age		"Ouside working age"
-		label	var	retire_year_head	"Year of retirement"
-		label	var	retire_year_head	"Age when retired"
 
 		*label	var	cloth_exp_total		"Total cloth expenditure"
 		
 		label	var	FPL_		"Federal Poverty Line"
-		label	var	income_to_poverty		"Income to Poverty Ratio"
-		label	var	income_to_poverty_cat		"Income to Poverty Ratio (category)"
+		label	var	FPL_cat		"Federal Poverty Line category"
 			      
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
 				house_exp_total	property_tax	transport_exp	wealth_total	/*cloth_exp_total*/
@@ -416,9 +413,6 @@
 	*	Define the data as survey data and time-series data
 	svyset	ER31997 [pweight=weight_long_fam], strata(ER31996)	singleunit(scaled)
 	xtset fam_ID_1999 year,	delta(1)
-	
-	cap	drop	year2
-	gen year2 = (year*2)+1997	//	actual year
 	
 	*	Recode nonresponses (dk, refuse, inappropriate) as "negative"
 	label	define	yes1no0	0	"No"	1	"Yes"
@@ -464,13 +458,6 @@
 		gen		`var'=0
 		replace	`var'=1	if	inlist(housing_status,5,8)	&	l.housing_status==1	//	
 		label	var	`var'	"No longer owns house"
-		
-		*	Household head became physically disabled
-		local	var	became_disabled
-		gen		`var'=0
-		replace	`var'=1	if	phys_disab_head==1	&	l.phys_disab_head==0	//	
-		label	var	`var'	"Became disabled"	
-		
 	
 	*	Create additional variables, as "rforest" does accept none of the interaction, factor variable and time series variable
 
@@ -522,46 +509,6 @@
 	keep	if	inlist(1,in_sample,out_of_sample)	
 	sort	fam_ID_1999	year
 	
-	*	Construct new survey weight variables to apply complex survey design into the panel data analyses
-	*	This weight construction is based on the following reference
-			*	Heeringa, Steven G., Brady T. West, and Patricia A. Berglund. 2010. “Advanced Topics in the Analysis of Survey Data.” In Applied Survey Data Analysis, Boca Raton, FL: Chapman & Hall/CRC. (example 12.3.4)
-	
-		*	Base weight
-		local	var	weight_long_fam_base
-		gen	`var'	=	weight_long_fam	if	year==1	//	Base weight is the weight of the first year
-		bys	fam_ID_1999:	egen temp	=	max(`var')
-		replace	`var'	=	temp
-		drop	temp
-		lab	var	`var'	"Base weight of the household (longitudinal family weight in 1999)"
-		
-		*	Level 1 weight (weight for repeated measurement)
-		local	var	weight_l1
-		gen	`var'	=	weight_long_fam	/	weight_long_fam_base	//	Level 1 weight = wave_speific weight / base weight
-		lab	var	`var'	"Level 1 weight"
-		
-		*	Re-scale level 1 weight (using "Method 1" of Rabe-Hesketh and Skrondal (2006))
-		gen		weight_l1_sq	=	(weight_l1)^2
-		egen	sum_weight_l1_sq	=	sum(weight_l1_sq), by(fam_ID_1999)
-		egen	sum_weight_l1	=	sum(weight_l1), by(fam_ID_1999)
-		gen		weight_l1_r	=	weight_l1	*	(sum_weight_l1)	/	(sum_weight_l1_sq)
-		
-		*	Create a unique PSU identifier to be used as a new PSU
-		gen		newsecu	=	(ER31996*100)	+	ER31997	
-		
-		*	Create two new variables "weight_multi1" and "weight_multi2" from the two newly constructed weight variables above.
-		*	This step is required if we want to use "gllamm" command, Generalized Linear Latent and Mixed Model
-		gen	weight_multi1	=	weight_long_fam_base
-		gen	weight_multi2	=	weight_l1_r
-		
-		*	For an alternative approach, multiply two weights to be used as a new survey weight
-		gen	weight_multi12	=	weight_multi1*weight_multi2
-		
-		*	To use an alternative approach, change the new surveydata setting as following
-		svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
-		
-			
-	
-	
 	*	Save data
 	tempfile	data_prep
 	save		`data_prep'
@@ -589,8 +536,7 @@
 		local	run_rf_step1	1
 		local	run_rf_step2	1
 		local	run_rf_step3	1
-	*svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
-	*svyset	ER31997 [pweight=weight_long_fam], strata(ER31996)	singleunit(scaled)
+	
 	
 	*	OLS
 	if	`run_ols'==1	{
@@ -605,13 +551,12 @@
 		local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status
 		local	eduvars		attend_college_head college_yrs_head (hs_completed_head	college_completed	other_degree_head)##c.grade_comp_head_fam	
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
-		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
 		
 		
 		*	Step 1
 		*svy: reg	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	if	in_sample==1
 		svy: glm 	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	if	in_sample==1, family(gamma)	link(log)
-	
 		est	sto	ols_step1
 					
 		gen	ols_step1_sample=1	if	e(sample)==1
@@ -668,7 +613,7 @@
 							hs_completed_spouse_interact college_comp_spouse_interact other_degree_spouse_interact
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
 		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
-		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
 	
 		
 		*	Step 1
@@ -683,11 +628,8 @@
 			**	Therefore, once it is executed and found lambda, then we run regular lasso using "lasso2"
 			**	If there's major change in specification, cvlasso must be executed
 			
-			set	seed	20200505
-			
-			
+			/*
 			*	LASSO with K-fold cross validation
-			** As of Aug 21, 2020, the estimated lambda with lse is 2016.775 (lse).
 			cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
 				`familyvars'	`eduvars'	`foodvars'	`childvars'		if	in_sample==1,	///
 				/*lopt*/ lse	seed(20200505)	 /*rolling	h(1) fe	prestd 	postres	ols*/	plotcv 
@@ -695,18 +637,17 @@
 			
 			*cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
 			cvlasso, postresult lse
+			*/
 			
 			
-			/*
-			
-			local	lambdaval=exp(14.7)	//	14.7 is before 2020/8/21
-			*local	lambdaval=exp(7.6)	//	7.6	=	ln(2016.775), the lse value from cvlasso
+			set	seed	20200505
+			local	lambdaval=exp(14.7)
 			lasso2	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
 							`familyvars'	`eduvars'	`foodvars'	`childvars'	`changevars'	if	in_sample==1,	///
 						ols lambda(`lambdaval') 
 			est	store	lasso_step1_manual
 			lasso2, postresults
-			*/
+			
 			
 			gen	lasso_step1_sample=1	if	e(sample)==1		
 
@@ -1026,11 +967,18 @@
 	}	//	Random Forest
 	
 	
+	
+	
 	*	Validation
 	local	run_validation	1
 		local	CB_cat	1		//	Generate FS category variables from CB measure
 		local	valid_others	0	//	rank correlation, figure, etc.
-
+	
+	*	Association
+	local	model_check	0	//	varying LHS
+	local	specification_check	0	//	varying RHS
+	
+				
 	*	Validation	
 	if	`run_validation'==1	{
 		
@@ -1136,7 +1084,7 @@
 				if	`generate_indicator'==1	{
 				
 					gen		indicator_`plan'	=	.n
-					replace	indicator_`plan'	=	fs_scale_fam_rescale		if	inlist(1,in_sample,out_of_sample)	&	indicator_group==1	//	USDA FS (rescaled)
+					replace	indicator_`plan'	=	fs_scale_fam_rescale			if	inlist(1,in_sample,out_of_sample)	&	indicator_group==1	//	USDA FS (rescaled)
 					replace	indicator_`plan'	=	rho1_foodexp_pc_`plan'_ls	if	inlist(1,in_sample,out_of_sample)	&	indicator_group==2	//	RS (LASSO)
 					replace	indicator_`plan'	=	rho1_foodexp_pc_`plan'_rf	if	inlist(1,in_sample,out_of_sample)	&	indicator_group==3	//	RS (Random Forest)
 					lab	var	indicator_`plan'	"Indicators (USDA score or Resilence score)"
@@ -1456,769 +1404,440 @@
 			
 		}	// valid_others
 	}	//	validation
-		
-		
+	
 	*	Association
-	local	model_check	0	//	varying LHS
-	local	specification_check	1	//	varying RHS
-		local	prep_spec	1
-		local	spec_analysis	1
-		local	stationary_check	0
-	
-				
-	*	Association
-	if	`model_check'==1	{
-*	Check the association among the factors in the two indicators (USDA, RS)
-	
-	/*
-	*	Take log of income & expenditure variables
-	foreach	moneyvars	in	food_exp_pc	income_pc	{
-		gen	ln_`moneyvars'	=	log(`moneyvars')
-	}
-	gen		ln_income_pc_sq	=	(ln_income_pc)^2
-	label	var	ln_food_exp_pc	"ln(food expenditure per capita)"
-	label	var	ln_income_pc	"ln(income per capita)"
-	label	var	ln_income_pc_sq	"ln(income per capita) squared"
-	*/
-	
-	local	depvar		fs_scale_fam_rescale
-	local	healthvars	phys_disab_head
-	local	demovars	age_head_fam	age_head_fam_sq	ib1.race_head_cat	marital_status_cat	ib1.gender_head_fam	
-	local	econvars	c.income_pc	c.income_pc_sq	/*wealth_pc	wealth_pc_sq*/
-	local	empvars		emp_HH_simple
-	local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
-	local	eduvars		/*attend_college_head*/ ib1.grade_comp_cat	
-	local	foodvars	food_stamp_used_1yr	WIC_received_last
-	local	regionvars	ib0.state_resid_fam	
-	*local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
-	
-	summ	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars' if in_sample==1 & year==10
-	
-	cap	drop	post_recession
-	gen		post_recession	=	0
-	replace	post_recession=1	if	inrange(year,6,10)	//	Wave 2009 to 2017
-			
-	*** Note: Stata recommends using "subpop" option instead of "if" option, as the variance estimator from the latter "does  not  accurately  measurethe  sample-to-sample  variability  of  the  subpopulation  estimates  for  the  survey  design  that  was  used to collect the data."
-	*** However, for some reason Stata does often not allow to use "subpop" option with "glm" command, so I will use "if" option for now.
-	
-	
-	*	USDA (rescaled, continuous)
-			
-		*	Pooled
+		if	`model_check'==1	{
+	*	Check the association among the factors in the two indicators (USDA, RS)
+		
+		/*
+		*	Take log of income & expenditure variables
+		foreach	moneyvars	in	food_exp_pc	income_pc	{
+			gen	ln_`moneyvars'	=	log(`moneyvars')
+		}
+		gen		ln_income_pc_sq	=	(ln_income_pc)^2
+		label	var	ln_food_exp_pc	"ln(food expenditure per capita)"
+		label	var	ln_income_pc	"ln(income per capita)"
+		label	var	ln_income_pc_sq	"ln(income per capita) squared"
+		*/
+		
 		local	depvar		fs_scale_fam_rescale
-			
-			*	OLS
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
-			est	store	USDA_cont_pooled_OLS
-			
-			*	GLS
-			svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars',	///
-						family(gamma)	link(log)
-			est	store	USDA_cont_pooled_GLS
+		local	healthvars	phys_disab_head
+		local	demovars	age_head_fam	age_head_fam_sq	ib1.race_head_cat	marital_status_cat	ib1.gender_head_fam	
+		local	econvars	c.income_pc	c.income_pc_sq	/*wealth_pc	wealth_pc_sq*/
+		local	empvars		emp_HH_simple
+		local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
+		local	eduvars		/*attend_college_head*/ ib1.grade_comp_cat	
+		local	foodvars	food_stamp_used_1yr	WIC_received_last
+		local	regionvars	ib0.state_resid_fam	
+		*local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
 		
-					
-		*	By Pre- and Post- Great Recession
-		svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
-								i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
-		est	store	USDA_cont_prepost
-		contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+		summ	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars' if in_sample==1 & year==10
+		
+		cap	drop	post_recession
+		gen		post_recession	=	0
+		replace	post_recession=1	if	inrange(year,6,10)	//	Wave 2009 to 2017
+				
+		*** Note: Stata recommends using "subpop" option instead of "if" option, as the variance estimator from the latter "does  not  accurately  measurethe  sample-to-sample  variability  of  the  subpopulation  estimates  for  the  survey  design  that  was  used to collect the data."
+		*** However, for some reason Stata does often not allow to use "subpop" option with "glm" command, so I will use "if" option for now.
 		
 		
-		*	By Year
-		foreach	year	in	1	2	3	9	10	{
-			
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
-			*svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year', family(gamma)	link(log)	
-			est	store	USDA_cont_year`year'
-			
-		}
-
-	*	CB score (thrift, continuous)
-	
-		*	Pooled
-		local	depvar		rho1_foodexp_pc_thrifty_ols
-		
-			*	OLS
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
-			est store CB_cont_pooled_OLS
-			
-			*	GLS
-			svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars', family(gamma)	link(log)
-			est store CB_cont_pooled_GLS
-		
-		*	By Pre- and Post- Great Recession
-		svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
-								i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
-		est	store	CB_cont_prepost
-		contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
-		mat	CB_cont_prepost_pval=r(p)'
-		
-		*	By year
-		forvalues	year=2/10	{
-			
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
-			*svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year', family(gamma)	link(log)
-			est store CB_cont_year`year'
-			
-		}
-	
-
-	*	USDA (simplified category, binary)
-	local	depvar		fs_cat_fam_simp
-		
-		* LPM (GLM using binominal family distribution & logit link function gives identical results to logit regression. Could check theoretically later why.)
-			
+		*	USDA (rescaled, continuous)
+				
 			*	Pooled
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
-			est	store	USDA_bin_LPM_pooled
+			local	depvar		fs_scale_fam_rescale
+				
+				*	OLS
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	USDA_cont_pooled_OLS
+				
+				*	GLS
+				svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars',	///
+							family(gamma)	link(log)
+				est	store	USDA_cont_pooled_GLS
 			
+						
 			*	By Pre- and Post- Great Recession
 			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
 									i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
-			est	store	USDA_bin_LPM_prepost
+			est	store	USDA_cont_prepost
 			contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
-			mat	USDA_bin_prepost_pval=r(p)'
 			
-			*	By year
-			foreach	year	in	1	2	3	9	10	{
 			
-				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
-				est	store	USDA_bin_LPM_year`year'
-			
-			}
-		
-		*	Logit
-			
-			*	Pooled
-			svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
-			est store 	USDA_bin_logit_pooled	
-			
-			*	By Pre- and Post- Great Recession
-			svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
-									i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
-			est	store	USDA_bin_logit_prepost
-			*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
-			*mat	USDA_bin_prepost_pval=r(p)'
-			
-			*	By year
+			*	By Year
 			foreach	year	in	1	2	3	9	10	{
 				
-				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
-				est store 	USDA_bin_logit_year`year'
-				
-			}
-		
-	
-	*	CB (binary category)
-	local	depvar		rho1_thrifty_HS_ols
-	
-		* LPM
-			
-			*	Pooled
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
-			est	store	CB_bin_LPM_pooled
-		
-			*	By Pre- and Post- Great Recession
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
-									i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
-			est	store	CB_bin_LPM_prepost
-			*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
-			*mat	CB_bin_LPM_prepost_pval=r(p)'
-			
-			*	By year
-			foreach	year	in	2	3	4	5	6	7	8	9	10	{
-			
 				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
-				est	store	CB_bin_LPM_year`year'
-			
+				*svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year', family(gamma)	link(log)	
+				est	store	USDA_cont_year`year'
+				
 			}
-			
-		* Logit
-			
-			*	Pooled
-			svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
-			est	store	CB_bin_logit_pooled
-			
-			*	By Pre- and Post- Great Recession
-			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
-									i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
-			est	store	CB_bin_logit_prepost
-			*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
-			*mat	CB_bin_logit_prepost_pval=r(p)'
-		
-			*	By year
-			foreach	year	in	2	3	4	5	6	7	8	9	10	{
-			
-				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
-				est	store	CB_bin_logit_year`year'
-			
-			}
-		
-		
-	*	Output 
-	
-		*	Pooled
-		esttab	USDA_cont_pooled_OLS	CB_cont_pooled_OLS	USDA_cont_pooled_GLS	CB_cont_pooled_GLS	///
-				USDA_bin_LPM_pooled CB_bin_LPM_pooled	USDA_bin_logit_pooled	CB_bin_logit_pooled	using "${PSID_outRaw}/USDA_CB_pooled.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Food Security Status-Pooled) replace
-				
-		*	By Year
-		
-			*	USDA (continuous)
-				
-				*	Default
-				esttab	USDA_cont_year1	USDA_cont_year2	USDA_cont_year3	USDA_cont_year9	USDA_cont_year10		using "${PSID_outRaw}/USDA_cont_years.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
-				
-				*	Pre- and Post- Great Recession
-				esttab	USDA_cont_prepost		using "${PSID_outRaw}/USDA_cont_prepost.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
-				
-				*	No star for significance
-				esttab	USDA_cont_year1	USDA_cont_year2	USDA_cont_year3	USDA_cont_year9	USDA_cont_year10		using "${PSID_outRaw}/USDA_cont_years_nostar.csv", ///
-				cells(b(fmt(a3))) /*stats(N r2)*/ label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
-				
-			
-			*	CB (continuous)
-				
-				*	Default
-				esttab	CB_cont_year2	CB_cont_year3	CB_cont_year4	CB_cont_year5	CB_cont_year6	CB_cont_year7	CB_cont_year8	CB_cont_year9	CB_cont_year10	///
-				using "${PSID_outRaw}/CB_cont_years.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
-				
-				*	Pre- and Post- Recession
-				esttab	CB_cont_prepost		using "${PSID_outRaw}/CB_cont_prepost.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
-				
-				*	No-star
-				esttab	CB_cont_year2	CB_cont_year3	CB_cont_year4	CB_cont_year5	CB_cont_year6	CB_cont_year7	CB_cont_year8	CB_cont_year9	CB_cont_year10	///
-				using "${PSID_outRaw}/CB_cont_years_nostar.csv", ///
-				cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
-				
-			*	USDA (binary-LPM)
-				
-				*	Default
-				esttab	USDA_bin_LPM_year1	USDA_bin_LPM_year2	USDA_bin_LPM_year3	USDA_bin_LPM_year9	USDA_bin_LPM_year10		using "${PSID_outRaw}/USDA_bin_LPM_years.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
-				
-				*	Pre- and Post-
-				esttab	USDA_bin_LPM_prepost		using "${PSID_outRaw}/USDA_bin_LPM_prepost.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
-				
-				*	No-star
-				esttab	USDA_bin_LPM_year1	USDA_bin_LPM_year2	USDA_bin_LPM_year3	USDA_bin_LPM_year9	USDA_bin_LPM_year10		using "${PSID_outRaw}/USDA_bin_LPM_years_nostar.csv", ///
-				cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
-				
-				
-			*	USDA (binary-logit)
-				
-				*	Default
-				esttab	USDA_bin_logit_year1	USDA_bin_logit_year2	USDA_bin_logit_year3	USDA_bin_logit_year9	USDA_bin_logit_year10	///
-				using "${PSID_outRaw}/USDA_bin_logit_years.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-Logit) replace
-				
-				*	Pre- and Post-
-				esttab	USDA_bin_logit_prepost		using "${PSID_outRaw}/USDA_bin_logit_prepost.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
-				
-				*	No-star
-				esttab	USDA_bin_logit_year1	USDA_bin_logit_year2	USDA_bin_logit_year3	USDA_bin_logit_year9	USDA_bin_logit_year10	///
-				using "${PSID_outRaw}/USDA_bin_logit_years_nostar.csv", ///
-				cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
-			
-			*	CB (binary-LPM)
-				
-				*	Default
-				esttab	CB_bin_LPM_year2	CB_bin_LPM_year3	CB_bin_LPM_year4	CB_bin_LPM_year5	CB_bin_LPM_year6	///
-						CB_bin_LPM_year7	CB_bin_LPM_year8	CB_bin_LPM_year9	CB_bin_LPM_year10	///
-				using "${PSID_outRaw}/CB_bin_LPM_years.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-LPM) replace
-				
-				*	Pre- and Post-
-				esttab	CB_bin_LPM_prepost		using "${PSID_outRaw}/CB_bin_LPM_prepost.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
-				
-				*	No star
-				esttab	CB_bin_LPM_year2	CB_bin_LPM_year3	CB_bin_LPM_year4	CB_bin_LPM_year5	CB_bin_LPM_year6	///
-						CB_bin_LPM_year7	CB_bin_LPM_year8	CB_bin_LPM_year9	CB_bin_LPM_year10	///
-				using "${PSID_outRaw}/CB_bin_LPM_years_nostar.csv", ///
-				cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-LPM) replace
-				
-			*	CB (binary-logit)
-				
-				*	Default
-				esttab	CB_bin_logit_year2	CB_bin_logit_year3	CB_bin_logit_year4	CB_bin_logit_year5	CB_bin_logit_year6	///
-						CB_bin_logit_year7	CB_bin_logit_year8	CB_bin_logit_year9	CB_bin_logit_year10	///
-				using "${PSID_outRaw}/CB_bin_logit_years.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-Logit) replace
-				
-				*	Pre- and Post-
-				esttab	CB_bin_logit_prepost		using "${PSID_outRaw}/CB_bin_logit_prepost.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
-				
-				*	No star
-				esttab	CB_bin_logit_year2	CB_bin_logit_year3	CB_bin_logit_year4	CB_bin_logit_year5	CB_bin_logit_year6	///
-						CB_bin_logit_year7	CB_bin_logit_year8	CB_bin_logit_year9	CB_bin_logit_year10	///
-				using "${PSID_outRaw}/CB_bin_logit_years_nostar.csv", ///
-				cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-Logit) replace
-				
-			
-}
 
-	*	Specification check
-	if	`specification_check'==1	{
-	
-		*	Preparation
-		if	`prep_spec'==1	{
+		*	CB score (thrift, continuous)
 		
-			cap	drop	income_pc_orig
-			cap	drop	invhyp_age
-			cap	drop	asinh_income
-			cap	drop	ln_income_pc
-			cap	drop	income_cubic
-			cap	drop	fv
-			gen	income_pc_orig	=	income_pc*1000
-			gen	invhyp_age	=	asinh(age_head_fam)
-			gen	asinh_income	=	asinh(income_pc*1000)
-			gen	ln_income_pc	=	ln(income_pc*1000)
-			gen	income_cubic	=	(income_pc)^3
-			
-			*	U.S. Life expentancy for male and female (Source: United Nations Population Division)
-			
-				*	Male
-				scalar	life_exp_male_1999	=	73.9
-				scalar	life_exp_male_2001	=	74.3
-				scalar	life_exp_male_2003	=	74.5
-				scalar	life_exp_male_2005	=	75
-				scalar	life_exp_male_2007	=	75.5
-				scalar	life_exp_male_2009	=	76
-				scalar	life_exp_male_2011	=	76.3
-				scalar	life_exp_male_2013	=	76.4
-				scalar	life_exp_male_2015	=	76.3
-				scalar	life_exp_male_2017	=	76.1
-				
-				*	Female
-				scalar	life_exp_female_1999	=	79.4
-				scalar	life_exp_female_2001	=	79.5
-				scalar	life_exp_female_2003	=	79.7
-				scalar	life_exp_female_2005	=	80.1
-				scalar	life_exp_female_2007	=	80.6
-				scalar	life_exp_female_2009	=	80.9
-				scalar	life_exp_female_2011	=	81.1
-				scalar	life_exp_female_2013	=	81.2
-				scalar	life_exp_female_2015	=	81.2
-				scalar	life_exp_female_2017	=	81.1
-			
-											
-			
-			tsset	fam_ID_1999 year, delta(1)
-			
+			*	Pooled
 			local	depvar		rho1_foodexp_pc_thrifty_ols
-			*local	lagdepvar	l.`depvar'
-			local	healthvars	phys_disab_head
-			local	demovars	c.age_head_fam##c.age_head_fam	gender_head_fam_enum1	ib1.race_head_cat	marital_status_cat
-			local	econvars	c.ln_income_pc	/*wealth_pc	wealth_pc_sq*/
-			local	empvars		emp_HH_simple
-			local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
-			local	eduvars		/*attend_college_head*/ ib2.grade_comp_cat	
-			local	foodvars	food_stamp_used_1yr	WIC_received_last
-			local	regionvars	ib0.state_resid_fam	
-			local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-			local	interactvars	c.ln_income_pc#c.gender_head_fam_enum1	///
-									c.ln_income_pc#c.non_working_age	///
-									c.gender_head_fam_enum1#c.non_working_age	///
-									c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age	///
-									c.no_longer_married#c.gender_head_fam_enum1
-	
-	}	
-
-		*	Specification analysis		
-		if	`spec_analysis'==1	{
 			
-			*	OLS
-			
-				*	Without interaction	&	shocks
-				svy: reg	`depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`shockvars'		`regionvars'
-				*svy: meglm `depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`regionvars'
-				est	store	Prob_FI_benchmark
-			
-			
-				*	With interaction	&	shocks
-				svy: reg	`depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`shockvars'	`interactvars'	`regionvars'
-				*svy: meglm `depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`regionvars'
-				est	store	Prob_FI_interact
+				*	OLS
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est store CB_cont_pooled_OLS
 				
-				esttab	Prob_FI_benchmark	Prob_FI_interact	using "${PSID_outRaw}/Prob_FI_pooled.csv", ///
-						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Prob(food insecure)-Pooled) replace
-	
-				*	Joint Hypothesis test of variables
+				*	GLS
+				svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars', family(gamma)	link(log)
+				est store CB_cont_pooled_GLS
+			
+			*	By Pre- and Post- Great Recession
+			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+									i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+			est	store	CB_cont_prepost
+			contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+			mat	CB_cont_prepost_pval=r(p)'
+			
+			*	By year
+			forvalues	year=2/10	{
 				
-					*	age and its interaction terms (whether age matters)
-					test	c.age_head_fam c.age_head_fam#c.age_head_fam
-					
-					*	gender and its interaction terms (whether gender matters)
-					test	gender_head_fam_enum1	c.ln_income_pc#c.gender_head_fam_enum1	c.gender_head_fam_enum1#c.non_working_age	c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age
-					
-					*	income and its interaction terms (wheter income matters)
-					test	c.ln_income_pc	c.ln_income_pc#c.gender_head_fam_enum1	c.ln_income_pc#c.non_working_age	c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age
-					
-					*	# of FU and # of children (jointly) (whether family size matters)
-					test	c.num_FU_fam c.num_child_fam
-					
-					*	All terms interacting with outside workinge age (whether being non-working age matters)
-					test	c.ln_income_pc#c.non_working_age	c.gender_head_fam_enum1#c.non_working_age	c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age
-					
-					*	No longer married and its interaction term (wheter being no longer married matters)
-					test	no_longer_married	c.no_longer_married#c.gender_head_fam_enum1
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+				*svy: glm	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year', family(gamma)	link(log)
+				est store CB_cont_year`year'
+				
+			}
 		
-					*	Whether all the interaction terms are jointly significant (whether all interaction terms matters)
-					test	`interactvars'
-				
-				*	Marginal Effect
-					
-					
-					*	Income
-						
-						*	By income group
-						est	restore	Prob_FI_interact
-						margins,	dydx(c.ln_income_pc)	over(income_to_poverty_cat)
-						marginsplot, title(Semi-elasticity of Pr(FS) w.r.t. income with 95% CI) xtitle(Income-to-Poverty Ratio)	///
-										note(1% change in income increases Pr(FS) by y-var percentage point)
-						graph	export	"${PSID_outRaw}/ME_income_bygroup.png", replace
-						graph	close
-						
-						*	By income group, around poverty threshold
-						cap	drop	income_to_poverty_lowtail
-						gen	income_to_poverty_lowtail=.	if	!inrange(income_to_poverty,0,3)
-						forval	i=0.1(0.1)3.1	{
-							
-							local	minval	=	`i'-0.1
-							local	maxval	=	`i'
-							replace	income_to_poverty_lowtail	=	`maxval'*100	if	inrange(income_to_poverty,`minval',`maxval')
-						}
-						est	restore	Prob_FI_interact
-						margins,	dydx(c.ln_income_pc)	over(income_to_poverty_lowtail)
-						marginsplot, title(Semi-elasticity of Pr(FS) w.r.t. income with 95% CI) xtitle(% of income to FPL)	///
-										note(1% change in income increases Pr(FS) by y-var percentage point)
-						graph	export	"${PSID_outRaw}/ME_income_lowtail.png", replace
-						graph	close
-						
-						*	By year
-						forvalues	year=2001(2)2017	{						
-							est	restore	Prob_FI_interact
-							margins,	dydx(c.ln_income_pc)	subpop(if year2==`year')	over(income_to_poverty_lowtail) post
-							est store SE_`year'
-							marginsplot,	title(Semi-elasticity of Pr(FS) over income in `year')
-							graph	export	"${PSID_outRaw}/ME_income_lowtail_`year'.png", replace
-							graph	close	
-							
-						}
-						coefplot SE_2001 SE_2007	SE_2011	SE_2017	, noci lwidth(*1) connect(l) vertical	xlabel(0(2)30)	xline(10)	///
-							xtitle (Income-to-Poverty Ratio)	ytitle(Semi-elasticity of Pr(FS) w.r.t. income)	title (Intertemporal change of Semi-elasticity of Pr(FS))
-						graph	export	"${PSID_outRaw}/ME_income_lowtail_byyear.png", replace
-						graph	close
-						
-					*	Elasticity over (thrifty) food plan
-					
-						*	No control, by year
-						est	restore	Prob_FI_interact
-						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
-						margins, eyex(foodexp_W_thrifty) over(year2) post
-						est	store	eyex_foodplan_nocon_year
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by year)
-						
-						*	Control (age, income), by year
-						est	restore	Prob_FI_interact
-						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
-						margins, eyex(foodexp_W_thrifty) over(year2) post
-						est	store	eyex_foodplan_con_year
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by year)
-						
-						*	Graph
-						coefplot eyex_foodplan_nocon_year	eyex_foodplan_con_year, lwidth(*1) connect(l) vertical	xlabel(1(1)9)	///
-							xtitle (Survey Wave)	ytitle(Pr(FS))	title (Elasticity of Pr(FS) over Food Plan by year)	///
-							legend(lab (2 "No controls") lab(4 "Controls") rows(1))	///
-							note(Controls include age and income)
-						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_year.png", replace
-						graph	close
-						
-						*	No control, by income group
-						est	restore	Prob_FI_interact
-						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
-						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_cat) post
-						est	store	eyex_foodplan_nocon_IPL
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
-						
-						*	Control (age, income), by income group
-						est	restore	Prob_FI_interact
-						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
-						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_cat) post
-						est	store	eyex_foodplan_con_IPL
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
-						
-						*	Graph
-						coefplot eyex_foodplan_nocon_IPL	eyex_foodplan_con_IPL, lwidth(*1) connect(l) vertical	xlabel(1(1)11)	///
-							xtitle (Income to Poverty Ratio)	ytitle(Pr(FS))	title (Elasticity of Pr(FS) over Food Plan by IPL)	///
-							legend(lab (2 "No controls") lab(4 "Controls") rows(1))	///
-							note(Controls include age and income)
-						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPL.png", replace
-						graph	close
-						
-						*	No control, low income group
-						est	restore	Prob_FI_interact
-						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
-						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_lowtail) post
-						est	store	eyex_foodplan_nocon_IPLlow
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
-						
-						*	Control (age, income), low income group
-						est	restore	Prob_FI_interact
-						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
-						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_lowtail) post
-						est	store	eyex_foodplan_con_IPLlow
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
-						
-						*	Graph
-						coefplot eyex_foodplan_nocon_IPLlow	eyex_foodplan_con_IPLlow, lwidth(*1) connect(l) vertical	xlabel(0(5)30)	///
-							xtitle (Income to Poverty Ratio*10)	ytitle(Pr(FS))	title (Elasticity of Pr(FS) over Food Plan by IPL)	///
-							legend(lab (1 "No controls") lab(2 "Controls") rows(1))	noci	///
-							note(Controls include age and income)
-						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPLlow.png", replace
-						graph	close
-					
-					/*
-					*	Overall (AME)
-					est	restore	Prob_FI_interact
-					local	nonlinear_terms	c.age_head_fam	gender_head_fam_enum1	c.ln_income_pc	c.non_working_age	c.no_longer_married
-					eststo	ME_overall: margins,	dydx(`nonlinear_terms'	)	post	//	age, gender and ln(income). Income will be semi-elasticity
-					est	restore	Prob_FI_interact
-					eststo	ME_overall_atmeans: margins,	dydx(`nonlinear_terms')	atmeans post	//	age, gender and ln(income). Income will be semi-elasticity
-					esttab	ME_overall	ME_overall_atmeans	using "${PSID_outRaw}/ME_overall.csv", ///
-						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels /*drop(_cons)*/	title(Marginal Effect_overall) replace
-						
-					est	restore	Prob_FI_interact	
-					eststo	ME_AME2:	margins,	expression((1/exp(ln_income_pc))*(_b[ln_income_pc]+_b[c.ln_income_pc#c.gender_head_fam_enum1]*gender_head_fam_enum1+_b[c.ln_income_pc#c.non_working_age]*non_working_age)+_b[c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age]*gender_head_fam_enum1*non_working_age)	post	//	1st-derivative w.r.t. per capita income
-					
-					*/
-					
-					*	Prediction
-					est	restore	Prob_FI_interact
-					predict fv,xb
-					
-						*	Over the age, using the deviation from the life expectancy
-						cap	drop	dev_from_lifeexp
-						gen		dev_from_lifeexp=.
-						forvalues	year=1999(2)2017	{
-							replace	dev_from_lifeexp	=	age_head_fam-life_exp_male_`year'	if	gender_head_fam_enum1==0	&	year2==`year'
-							replace	dev_from_lifeexp	=	age_head_fam-life_exp_female_`year'	if	gender_head_fam_enum1==1	&	year2==`year'
-						}
-						label	variable	dev_from_lifeexp	"Deviation from the life expectancy by year and gender"
-						
-						twoway	(lpolyci fv dev_from_lifeexp	if	gender_head_fam_enum1==0)	///
-								(lpolyci fv dev_from_lifeexp	if	gender_head_fam_enum1==1),	///
-								title(Fitted Pr(FS) over the age)	note(Life Expectancy are 73.9(male) and 79.4(female) in 1999 and 76.1(male) and 81.1(female) in 2017) ///
-								legend(lab (2 "Male") lab(3 "Female") rows(1))	xtitle(Deviation from the Life Expectancy)
-						graph	export	"${PSID_outRaw}/Fitted_age_pooled.png", replace
-						graph	close
-					
-						*	By each year in a single graph
-						twoway	(lpoly fv dev_from_lifeexp if year2==1999)	(lpoly fv dev_from_lifeexp if year2==2001)	///
-								(lpoly fv dev_from_lifeexp if year2==2003)	(lpoly fv dev_from_lifeexp if year2==2005)	///
-								(lpoly fv dev_from_lifeexp if year2==2007)	(lpoly fv dev_from_lifeexp if year2==2009)	///
-								(lpoly fv dev_from_lifeexp if year2==2011)	(lpoly fv dev_from_lifeexp if year2==2013)	///
-								(lpoly fv dev_from_lifeexp if year2==2015)	(lpoly fv dev_from_lifeexp if year2==2017),	///
-								legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
-								xtitle(Deviation from the Life Expectancy)	title(Fitted Pr(FS) over the age)
-						graph	export	"${PSID_outRaw}/Fitted_age_byyear.png", replace
-						graph	close
-						
-						*	W.R.T. average retirement age
-							
-							*	Average retirement age by year
-							forval	year=1999(2)2017	{
-								summarize	retire_age	if	retire_year_head==`year'
-							}
 
-							
-							*	1999
-							summ	retire_age	if	retire_year_head==1999	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==1),	xline(`r(mean)')	legend(lab (2 "Pr(FS)"))	title(1999)	name(fv_age_retire_1999, replace)
-							
-							*	2007
-							summ	retire_age	if	retire_year_head==2007	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==5),	xline(`r(mean)')	legend(lab (2 "Pr(FS)"))	title(2007)	name(fv_age_retire_2007, replace)
-							
-							*	2013
-							summ	retire_age	if	retire_year_head==2013	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==8),	xline(`r(mean)')	legend(lab (2 "Pr(FS)"))	title(2013)	name(fv_age_retire_2013, replace)
-							
-							*	2017
-							summ	retire_age	if	retire_year_head==2017	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==10),	xline(`r(mean)')	legend(lab (2 "Pr(FS)"))	title(2017)	name(fv_age_retire_2017, replace)
-							
-							graph	combine	fv_age_retire_1999	fv_age_retire_2007	fv_age_retire_2013	fv_age_retire_2017, 	///
-									title(Predicted Pr(FI) over age) ycommon	note(vertical line is average retirement age of that year)
-							graph	export	"${PSID_outRaw}/Fitted_age_retirement.png"
-							graph	close
-							
-							
+		*	USDA (simplified category, binary)
+		local	depvar		fs_cat_fam_simp
+			
+			* LPM (GLM using binominal family distribution & logit link function gives identical results to logit regression. Could check theoretically later why.)
+				
+				*	Pooled
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	USDA_bin_LPM_pooled
+				
+				*	By Pre- and Post- Great Recession
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	USDA_bin_LPM_prepost
+				contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				mat	USDA_bin_prepost_pval=r(p)'
+				
+				*	By year
+				foreach	year	in	1	2	3	9	10	{
+				
+					svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est	store	USDA_bin_LPM_year`year'
+				
+				}
+			
+			*	Logit
+				
+				*	Pooled
+				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est store 	USDA_bin_logit_pooled	
+				
+				*	By Pre- and Post- Great Recession
+				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	USDA_bin_logit_prepost
+				*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				*mat	USDA_bin_prepost_pval=r(p)'
+				
+				*	By year
+				foreach	year	in	1	2	3	9	10	{
+					
+					svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est store 	USDA_bin_logit_year`year'
+					
+				}
+			
+		
+		*	CB (binary category)
+		local	depvar		rho1_thrifty_HS_ols
+		
+			* LPM
+				
+				*	Pooled
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	CB_bin_LPM_pooled
+			
+				*	By Pre- and Post- Great Recession
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	CB_bin_LPM_prepost
+				*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				*mat	CB_bin_LPM_prepost_pval=r(p)'
+				
+				*	By year
+				foreach	year	in	2	3	4	5	6	7	8	9	10	{
+				
+					svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est	store	CB_bin_LPM_year`year'
+				
+				}
+				
+			* Logit
+				
+				*	Pooled
+				svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+				est	store	CB_bin_logit_pooled
+				
+				*	By Pre- and Post- Great Recession
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	///
+										i.post_recession##(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars')
+				est	store	CB_bin_logit_prepost
+				*contrast	post_recession	post_recession#(`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'), overall
+				*mat	CB_bin_logit_prepost_pval=r(p)'
+			
+				*	By year
+				foreach	year	in	2	3	4	5	6	7	8	9	10	{
+				
+					svy: logit	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'	if	year==`year'
+					est	store	CB_bin_logit_year`year'
+				
+				}
+			
+			
+		*	Output 
+		
+			*	Pooled
+			esttab	USDA_cont_pooled_OLS	CB_cont_pooled_OLS	USDA_cont_pooled_GLS	CB_cont_pooled_GLS	///
+					USDA_bin_LPM_pooled CB_bin_LPM_pooled	USDA_bin_logit_pooled	CB_bin_logit_pooled	using "${PSID_outRaw}/USDA_CB_pooled.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Food Security Status-Pooled) replace
+					
+			*	By Year
+			
+				*	USDA (continuous)
+					
+					*	Default
+					esttab	USDA_cont_year1	USDA_cont_year2	USDA_cont_year3	USDA_cont_year9	USDA_cont_year10		using "${PSID_outRaw}/USDA_cont_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
+					
+					*	Pre- and Post- Great Recession
+					esttab	USDA_cont_prepost		using "${PSID_outRaw}/USDA_cont_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
+					
+					*	No star for significance
+					esttab	USDA_cont_year1	USDA_cont_year2	USDA_cont_year3	USDA_cont_year9	USDA_cont_year10		using "${PSID_outRaw}/USDA_cont_years_nostar.csv", ///
+					cells(b(fmt(a3))) /*stats(N r2)*/ label legend nobaselevels drop(_cons)	title(USDA Scale Score-continuous) replace
+					
+				
+				*	CB (continuous)
+					
+					*	Default
+					esttab	CB_cont_year2	CB_cont_year3	CB_cont_year4	CB_cont_year5	CB_cont_year6	CB_cont_year7	CB_cont_year8	CB_cont_year9	CB_cont_year10	///
+					using "${PSID_outRaw}/CB_cont_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
+					
+					*	Pre- and Post- Recession
+					esttab	CB_cont_prepost		using "${PSID_outRaw}/CB_cont_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
+					
+					*	No-star
+					esttab	CB_cont_year2	CB_cont_year3	CB_cont_year4	CB_cont_year5	CB_cont_year6	CB_cont_year7	CB_cont_year8	CB_cont_year9	CB_cont_year10	///
+					using "${PSID_outRaw}/CB_cont_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB Measure-continuous) replace
+					
+				*	USDA (binary-LPM)
+					
+					*	Default
+					esttab	USDA_bin_LPM_year1	USDA_bin_LPM_year2	USDA_bin_LPM_year3	USDA_bin_LPM_year9	USDA_bin_LPM_year10		using "${PSID_outRaw}/USDA_bin_LPM_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	Pre- and Post-
+					esttab	USDA_bin_LPM_prepost		using "${PSID_outRaw}/USDA_bin_LPM_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No-star
+					esttab	USDA_bin_LPM_year1	USDA_bin_LPM_year2	USDA_bin_LPM_year3	USDA_bin_LPM_year9	USDA_bin_LPM_year10		using "${PSID_outRaw}/USDA_bin_LPM_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					
+				*	USDA (binary-logit)
+					
+					*	Default
+					esttab	USDA_bin_logit_year1	USDA_bin_logit_year2	USDA_bin_logit_year3	USDA_bin_logit_year9	USDA_bin_logit_year10	///
+					using "${PSID_outRaw}/USDA_bin_logit_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-Logit) replace
+					
+					*	Pre- and Post-
+					esttab	USDA_bin_logit_prepost		using "${PSID_outRaw}/USDA_bin_logit_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No-star
+					esttab	USDA_bin_logit_year1	USDA_bin_logit_year2	USDA_bin_logit_year3	USDA_bin_logit_year9	USDA_bin_logit_year10	///
+					using "${PSID_outRaw}/USDA_bin_logit_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+				
+				*	CB (binary-LPM)
+					
+					*	Default
+					esttab	CB_bin_LPM_year2	CB_bin_LPM_year3	CB_bin_LPM_year4	CB_bin_LPM_year5	CB_bin_LPM_year6	///
+							CB_bin_LPM_year7	CB_bin_LPM_year8	CB_bin_LPM_year9	CB_bin_LPM_year10	///
+					using "${PSID_outRaw}/CB_bin_LPM_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-LPM) replace
+					
+					*	Pre- and Post-
+					esttab	CB_bin_LPM_prepost		using "${PSID_outRaw}/CB_bin_LPM_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No star
+					esttab	CB_bin_LPM_year2	CB_bin_LPM_year3	CB_bin_LPM_year4	CB_bin_LPM_year5	CB_bin_LPM_year6	///
+							CB_bin_LPM_year7	CB_bin_LPM_year8	CB_bin_LPM_year9	CB_bin_LPM_year10	///
+					using "${PSID_outRaw}/CB_bin_LPM_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-LPM) replace
+					
+				*	CB (binary-logit)
+					
+					*	Default
+					esttab	CB_bin_logit_year2	CB_bin_logit_year3	CB_bin_logit_year4	CB_bin_logit_year5	CB_bin_logit_year6	///
+							CB_bin_logit_year7	CB_bin_logit_year8	CB_bin_logit_year9	CB_bin_logit_year10	///
+					using "${PSID_outRaw}/CB_bin_logit_years.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-Logit) replace
+					
+					*	Pre- and Post-
+					esttab	CB_bin_logit_prepost		using "${PSID_outRaw}/CB_bin_logit_prepost.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(USDA FS Status-LPM) replace
+					
+					*	No star
+					esttab	CB_bin_logit_year2	CB_bin_logit_year3	CB_bin_logit_year4	CB_bin_logit_year5	CB_bin_logit_year6	///
+							CB_bin_logit_year7	CB_bin_logit_year8	CB_bin_logit_year9	CB_bin_logit_year10	///
+					using "${PSID_outRaw}/CB_bin_logit_years_nostar.csv", ///
+					cells(b(fmt(a3))) stats(N r2) label legend nobaselevels drop(_cons)	title(CB FS Status-Logit) replace
+					
+				
+	}
 	
-
+		if	`specification_check'==1	{
+		
+		tsset	fam_ID_1999 year, delta(1)
+		
+		local	depvar		rho1_foodexp_pc_thrifty_ols
+		local	lagdepvar	l.`depvar'
+		local	healthvars	phys_disab_head
+		local	demovars	c.age_head_fam##c.age_head_fam /*age_head_fam_sq*/	ib1.gender_head_fam	ib1.race_head_cat	marital_status_cat
+		local	econvars	c.income_pc	c.income_pc_sq	/*wealth_pc	wealth_pc_sq*/
+		local	empvars		emp_HH_simple
+		local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
+		local	eduvars		/*attend_college_head*/ ib2.grade_comp_cat	
+		local	foodvars	food_stamp_used_1yr	WIC_received_last
+		local	regionvars	ib0.state_resid_fam	
+		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house
+		local	interactvars	(c.income_pc	c.income_pc_sq)#ib1.gender_head_fam	///
+								(c.income_pc	c.income_pc_sq)#non_working_age	///
+								ib1.gender_head_fam#non_working_age	///
+								(c.income_pc	c.income_pc_sq)#ib1.gender_head_fam#non_working_age	///
+								(c.age_head_fam	c.age_head_fam_sq)#ib2.grade_comp_cat	///
+								no_longer_employed#non_working_age	no_longer_married#ib1.gender_head_fam	no_longer_own_house#non_working_age
+		*local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
+		
+		*	OLS
+			
+			*	Without interaction	&	shocks
+			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	/*`interactvars'*/	`regionvars'
+			*svy: meglm `depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+			est	store	Prob_FI_benchmark
+		
+		
+			*	With interaction	&	shocks
+			svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`shockvars'	`interactvars'	`regionvars'
+			*svy: meglm `depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars'
+			est	store	Prob_FI_interact
+			
+				*	Prediction
+				predict fv,xb
+				twoway qfitci fv income_pc, title(Expected Pr(FS) over income)
+				twoway qfitci fv age_head_fam, title(Expected Pr(FS) over age)
+								
+				twoway lpolyci fv income_pc if income_pc>0, title(Expected Pr(FS) over income)
+				twoway lpolyci fv age_head_fam, title(Expected Pr(FS) over age)
 				
+					*	By year
+					cap	drop	year2
+					gen year2 = (year*2)+1997
 					
-					twoway qfitci fv income_pc, title(Expected Pr(FS) over income)
-					twoway qfitci fv age_head_fam, title(Expected Pr(FS) over age)
-													
-					twoway lpolyci fv income_pc if income_pc>0, title(Expected Pr(FS) over income)
-					twoway lpolyci fv age_head_fam	if	gender_head_fam_enum1==1, title(Expected Pr(FS) over age)
-					twoway lpolyci fv age_head_fam	if	gender_head_fam_enum1==0, title(Expected Pr(FS) over age)
-					
-					graph	twoway	(scatter rho1_foodexp_pc_thrifty_ols income_pc if income_pc>0)		///
-									(lpolyci fv income_pc if income_pc>0, title(Expected Pr(FS) over income))
-					
-					
-						*	By year
-						cap	drop	year2
-						gen year2 = (year*2)+1997
+					forval	year=1999(2)2017	{
+						qui	twoway lpolyci fv income_pc if income_pc>0	&	year2==`year', title(Expected Pr(FS) over income in `year')
+						graph	export	"${PSID_outRaw}/Fitted_lpoly_income_`year'.png", replace
+						graph	close	
 						
-						forval	year=1999(2)2017	{
-							qui	twoway lpolyci fv income_pc if income_pc>0	&	year2==`year', title(Expected Pr(FS) over income in `year')
-							graph	export	"${PSID_outRaw}/Fitted_lpoly_income_`year'.png", replace
-							graph	close	
-							
-							qui	twoway lpolyci fv age_head_fam if year2==`year', title(Expected Pr(FS) over age in `year')
-							graph	export	"${PSID_outRaw}/Fitted_lpoly_age_`year'.png", replace
-							graph	close
-						}
-						
-						*	In a single graph
-						twoway	(lpoly fv income_pc if income_pc>0	&	year2==1999	&	income_pc<10)	(lpoly fv income_pc if income_pc>0	&	year2==2001	&	income_pc<10)	///
-								(lpoly fv income_pc if income_pc>0	&	year2==2003	&	income_pc<10)	(lpoly fv income_pc if income_pc>0	&	year2==2005	&	income_pc<10)	///
-								(lpoly fv income_pc if income_pc>0	&	year2==2007	&	income_pc<10)	(lpoly fv income_pc if income_pc>0	&	year2==2009	&	income_pc<10)	///
-								(lpoly fv income_pc if income_pc>0	&	year2==2011	&	income_pc<10)	(lpoly fv income_pc if income_pc>0	&	year2==2013	&	income_pc<10)	///
-								(lpoly fv income_pc if income_pc>0	&	year2==2015	&	income_pc<10)	(lpoly fv income_pc if income_pc>0	&	year2==2017	&	income_pc<10),	///
-								legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
-								title(Expected Pr(FS) over income by year)
-						graph	export	"${PSID_outRaw}/Fitted_lpoly_income_all_year.png", replace
+						qui	twoway lpolyci fv age_head_fam if year2==`year', title(Expected Pr(FS) over age in `year')
+						graph	export	"${PSID_outRaw}/Fitted_lpoly_age_`year'.png", replace
 						graph	close
-						
-						twoway	(lpoly fv age_head_fam if year2==1999)	(lpoly fv age_head_fam if year2==2001)	///
-								(lpoly fv age_head_fam if year2==2003)	(lpoly fv age_head_fam if year2==2005)	///
-								(lpoly fv age_head_fam if year2==2007)	(lpoly fv age_head_fam if year2==2009)	///
-								(lpoly fv age_head_fam if year2==2011)	(lpoly fv age_head_fam if year2==2013)	///
-								(lpoly fv age_head_fam if year2==2015)	(lpoly fv age_head_fam if year2==2017),	///
-								legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
-								title(Expected Pr(FS) over age by year)
-						graph	export	"${PSID_outRaw}/Fitted_lpoly_age_all_year.png", replace
-						graph	close
-	gg					
-					
-					*	Compute the marginal effect of some covariates over the range of values.
-					*margins, dydx(age_head_fam) over(age_head_fam)
-					*marginsplot, title(Marginal Effect of Age with 95% CI)
-					
-					cap	drop	income_pc_cat
-					gen	income_pc_cat=0	if	income_pc<0
-					forvalues	i=0(10)150	{
-						local	income_min=`i'
-						local	income_max=(`i'+10)
-						replace	income_pc_cat	=	`i'	if	inrange(income_pc,`income_min',`income_max')
 					}
 					
-					margins, dydx(income_pc) over(income_pc_cat)
-					marginsplot, title(Marginal Effect of per capita income with 95% CI) xtitle(per capita income group)
+					*	In a single graph
+					twoway	(lpoly fv income_pc if income_pc>0	&	year2==1999)	(lpoly fv income_pc if income_pc>0	&	year2==2001)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2003)	(lpoly fv income_pc if income_pc>0	&	year2==2005)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2007)	(lpoly fv income_pc if income_pc>0	&	year2==2009)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2011)	(lpoly fv income_pc if income_pc>0	&	year2==2013)	///
+							(lpoly fv income_pc if income_pc>0	&	year2==2015)	(lpoly fv income_pc if income_pc>0	&	year2==2017),	///
+							legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
+							title(Expected Pr(FS) over income by year)
+					graph	export	"${PSID_outRaw}/Fitted_lpoly_income_all_year.png", replace
+					graph	close
+					
+					twoway	(lpoly fv age_head_fam if year2==1999)	(lpoly fv age_head_fam if year2==2001)	///
+							(lpoly fv age_head_fam if year2==2003)	(lpoly fv age_head_fam if year2==2005)	///
+							(lpoly fv age_head_fam if year2==2007)	(lpoly fv age_head_fam if year2==2009)	///
+							(lpoly fv age_head_fam if year2==2011)	(lpoly fv age_head_fam if year2==2013)	///
+							(lpoly fv age_head_fam if year2==2015)	(lpoly fv age_head_fam if year2==2017),	///
+							legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
+							title(Expected Pr(FS) over age by year)
+					graph	export	"${PSID_outRaw}/Fitted_lpoly_age_all_year.png", replace
+					graph	close
+					
 				
+				*	Compute the marginal effect of some covariates over the range of values.
+				*margins, dydx(age_head_fam) over(age_head_fam)
+				*marginsplot, title(Marginal Effect of Age with 95% CI)
 				
+				cap	drop	income_pc_cat
+				gen	income_pc_cat=0	if	income_pc<0
+				forvalues	i=0(10)150	{
+					local	income_min=`i'
+					local	income_max=(`i'+10)
+					replace	income_pc_cat	=	`i'	if	inrange(income_pc,`income_min',`income_max')
+				}
 				
-		}
-		
-		*	Test stationary		
-		if	`stationary_check'==1	{
+				margins, dydx(income_pc) over(income_pc_cat)
+				marginsplot, title(Marginal Effect of per capita income with 95% CI) xtitle(per capita income group)
 			
+			
+			esttab	Prob_FI_benchmark	Prob_FI_interact	using "${PSID_outRaw}/Prob_FI_pooled.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Prob(food insecure)-Pooled) replace
+		
+		*	Test stationary
+		
 			*	Chris' suggestion
-					
-					*	Use pooled data with time FE to estimate conditional mean, and check whether there are serial correlation
-					svy: reg	`depvar'	/*`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`interactvars'	`shockvars'	`regionvars'*/	i.year
-					svy: reg	`depvar'	i.year
-					
-					predict temp, residual
-					reg		temp l.temp
-					est	store	nolag
-					xtreg	temp l.temp, fe
-					est	store	nolag_fe
-					xtreg	temp l.temp, vce(cluster fam_ID_1999) fe
-					est	store	nolag_fe_cl
-					
-					svy: reg	`depvar'	l.`depvar'
-					predict	temp_lag, residual
-					reg	temp_lag	l.temp_lag
-					est	store	onelag
-					xtreg	temp_lag	l.temp_lag, fe
-					est	store	onelag_fe
-					xtreg	temp_lag	l.temp_lag, vce(cluster fam_ID_1999) fe
-					est	store	onelag_fe_cl
-					
-					svy: reg	`depvar'	l.`depvar'	l2.`depvar'	
-					predict	temp_lag2, residual
-					reg	temp_lag2	l.temp_lag2
-					est	store	twolag
-					xtreg	temp_lag2	l.temp_lag2, fe
-					est	store	twolag_fe
-					xtreg	temp_lag2	l.temp_lag2, vce(cluster fam_ID_1999) fe
-					est	store	twolag_fe_cl
-					
-					svy: reg	`depvar'	l.`depvar'	l2.`depvar'		l3.`depvar'
-					predict	temp_lag3, residual
-					reg	temp_lag3	l.temp_lag3
-					est	store	threelag
-					xtreg	temp_lag3	l.temp_lag3, fe
-					est	store	threelag_fe
-					xtreg	temp_lag3	l.temp_lag3, vce(cluster fam_ID_1999) fe
-					est	store	threelag_fe_cl
-					
-					esttab	nolag	nolag_fe	nolag_fe_cl	///
-							onelag	onelag_fe	onelag_fe_cl	///	
-							twolag	twolag_fe	twolag_fe_cl	///
-							threelag	threelag_fe	threelag_fe_cl	///
-							using "${PSID_outRaw}/acr_check.csv", ///
-						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
-					
-			/*		
-					cap	drop	resid_nocov_tr
-					predict	resid_nocov_tr, residual
-					
-					xtreg	resid_withtimeFE	l.resid_withtimeFE	l2.resid_withtimeFE, fe
-					est	store	resid_autocorr_nocluster
-					
-					xtreg	resid_withtimeFE	l.resid_withtimeFE	l2.resid_withtimeFE, vce(cluster fam_ID_1999) fe
-					est	store	resid_autocorr_cluster
-					
-					*	Unit root test for panel data (Takes some time to run)
-					xtunitroot fisher	rho1_foodexp_pc_thrifty_ols,	dfuller lags(1) trend
-					
-					esttab	resid_autocorr_nocluster	resid_autocorr_cluster	using "${PSID_outRaw}/resid_autocorr.csv", ///
-						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
-					
-			
+				
+				*	Use pooled data with time FE to estimate conditional mean, and check whether there are serial correlation
+				svy: reg	`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`interactvars'	`regionvars'	i.year
+				
+				cap	drop	resid_withtimeFE
+				predict	resid_withtimeFE, residual
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, fe
+				est	store	resid_autocorr_nocluster
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, vce(cluster fam_ID_1999) fe
+				est	store	resid_autocorr_cluster
+				
+				esttab	resid_autocorr_nocluster	resid_autocorr_cluster	using "${PSID_outRaw}/resid_autocorr.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
+				
 				*	Suppose there is autocorrelation, then ad lagged dep var on RHS
-					svy: reg	`depvar'	cl.`depvar'	cl2.`depvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`shockvars'	`interactvars'	`regionvars'	i.year
-					
-					cap	drop	resid_withtimeFE
-					predict	resid_withtimeFE, residual
-					
-					xtreg	resid_withtimeFE	l.resid_withtimeFE, fe
-					est	store	resid_atcr_lag_nocluster
-					
-					xtreg	resid_withtimeFE	l.resid_withtimeFE, vce(cluster fam_ID_1999) fe
-					est	store	resid_atcr_lag_cluster
-					
-					esttab	resid_atcr_lag_nocluster	resid_atcr_lag_cluster	using "${PSID_outRaw}/resid_lagdep_autocorr.csv", ///
-						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
-			*/
-		}
-		
-}
-			
+				svy: reg	`depvar'	c.`lagdepvar'##c.`lagdepvar'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`interactvars'	`regionvars'	i.year
+				
+				cap	drop	resid_withtimeFE
+				predict	resid_withtimeFE, residual
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, fe
+				est	store	resid_atcr_lag_nocluster
+				
+				xtreg	resid_withtimeFE	l.resid_withtimeFE, vce(cluster fam_ID_1999) fe
+				est	store	resid_atcr_lag_cluster
+				
+				esttab	resid_atcr_lag_nocluster	resid_atcr_lag_cluster	using "${PSID_outRaw}/resid_lagdep_autocorr.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
+	}
+				
 	*	Graphs
 	
 		*	Effect of non-employment
