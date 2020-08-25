@@ -731,13 +731,21 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		tempfile	emp_status_head
 		save		`emp_status_head'
 		
+		
 *	Employment Status (spouse)
 		psid use || emp_status_spouse 	 	 /* [94]ER2563 [95]ER5562 [96]ER7658*/ [97]ER10563 [99]ER13717 [01]ER17786 [03]ER21373 [05]ER25362 [07]ER36367 [09]ER42392 [11]ER47705 [13]ER53411 [15]ER60426 [17]ER66439	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
 							
 		tempfile	emp_status_spouse
 		save		`emp_status_spouse'
-			
+		
+*	Retirement year (head)
+		psid use || retire_year_head 	 	[99]ER13208 [01]ER17219 [03]ER21126 [05]ER25107 [07]ER36112 [09]ER42143 [11]ER47451 [13]ER53151 [15]ER60166 [17]ER66167	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	retire_year_head
+		save		`retire_year_head'
+		
 		*	Merge individual cross-wave with family cross-wave
 		use	`weight_long_ind', clear
 		merge 1:1 x11101ll using `weight_cross_ind', keepusing(weight_cross_ind*) nogen assert(3)
@@ -832,6 +840,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `wealth_total', keepusing(wealth_total*) nogen assert(3)
 		merge 1:1 x11101ll using `emp_status_head', keepusing(emp_status_head*) nogen assert(3)
 		merge 1:1 x11101ll using `emp_status_spouse', keepusing(emp_status_spouse*) nogen assert(3)
+		merge 1:1 x11101ll using `retire_year_head', keepusing(retire_year_head*) nogen assert(3)
 		
 		qui		compress
 		save	"${PSID_dtInt}/PSID_raw_1999_2017_ind.dta", replace
