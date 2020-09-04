@@ -273,7 +273,7 @@
 		label	var	family_comp_change	"Change in Family Composition"
 		label	var	grade_comp_cat		"Highest Grade Completed"
 		label	var	race_head_cat		"Race of Household Head"
-		label	var	marital_status_cat	"Marital Status of Head"
+		label	var	marital_status_cat	"Married"
 		label	var	child_in_FU_cat		"Household has a child"
 		label	var	age_head_cat 		"Age of Household Head (category)"
 		label	var	total_income_fam	"Total Household Income"
@@ -487,6 +487,13 @@
 		foreach	var	of	local	catvars	{
 			tab	`var',	gen(`var'_enum)
 		}
+		rename	gender_head_fam_enum1	HH_female
+		label	variable	HH_female	"Gender:Female"
+		
+		rename	(race_head_cat_enum1 race_head_cat_enum2 race_head_cat_enum3)	(HH_race_white	HH_race_black	HH_race_other)
+		label	variable	HH_race_white	"Race: White"
+		label	variable	HH_race_black	"Race: Black"
+		label	variable	HH_race_other	"Race: Other"
 		
 		*	Interaction variables
 			
@@ -559,17 +566,18 @@
 		*	To use an alternative approach, change the new surveydata setting as following
 		svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
 		
-			
-	
 	
 	*	Save data
 	tempfile	data_prep
 	save		`data_prep'
+	
+	
 
 	/****************************************************************
 		SECTION 2: Construct CB measurement
 	****************************************************************/	
 	
+
 	*	We will use three methods - classic OLS, LASSO and Random Forest
 
 	
@@ -599,18 +607,19 @@
 		local	depvar		food_exp_pc
 		local	statevars	lag_food_exp_pc_1-lag_food_exp_pc_5
 		local	healthvars	phys_disab_head
-		local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	marital_status_cat	ib1.gender_head_fam	ib0.state_resid_fam	
+		local	demovars	c.age_head_fam##c.age_head_fam	ib1.race_head_cat	marital_status_cat	ib1.gender_head_fam	
 		local	econvars	income_pc	income_pc_sq	wealth_pc	wealth_pc_sq
 		local	empvars		emp_HH_simple
 		local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	ib5.couple_status
 		local	eduvars		attend_college_head college_yrs_head (hs_completed_head	college_completed	other_degree_head)##c.grade_comp_head_fam	
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	regionvars	ib0.state_resid_fam	
 		
 		
 		*	Step 1
 		*svy: reg	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	if	in_sample==1
-		svy: glm 	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	if	in_sample==1, family(gamma)	link(log)
+		svy: glm 	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	if	in_sample==1, family(gamma)	link(log)
 	
 		est	sto	ols_step1
 					
@@ -624,7 +633,7 @@
 		local	depvar	e1_foodexp_sq_ols
 		
 		*svy: glm `depvar' `statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	if	ols_step1_sample==1, family(poisson)	//	glm does not converge, thus use OLS
-		svy: reg `depvar' `statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	if	ols_step1_sample==1
+		svy: reg `depvar' `statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	if	ols_step1_sample==1
 		gen	ols_step2_sample=1	if	e(sample)==1
 		*svy:	reg `e(depvar)' `e(selected)'
 		predict	double	var1_foodexp_ols
@@ -644,8 +653,8 @@
 			label	var	rho1_foodexp_pc_`plan'_ols "Resilience score (OLS) (`plan' plan)"
 		}
 		
-		local	depvar	rho1_foodexp_pc_thrifty_ols
-		svy: reg	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	if	ols_step1_sample==1	
+		*local	depvar	rho1_foodexp_pc_thrifty_ols
+		*svy: reg	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	if	ols_step1_sample==1	
 		
 	}
 	
@@ -656,8 +665,8 @@
 		*	when "0" implies "no". Should yield the same result to the previous coding which "5" implies "no"
 		local	statevars	lag_food_exp_pc_1-lag_food_exp_pc_5	//	up to the order of 5
 		local	healthvars	/*respondent_BMI*/	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse
-		local	demovars	age_head_fam	age_head_fam_sq	race_head_cat_enum2 race_head_cat_enum3	marital_status_cat	/*marital_status_fam_enum1 marital_status_fam_enum3 marital_status_fam_enum4 marital_status_fam_enum5*/	///
-							gender_head_fam_enum1	state_resid_fam_enum2-state_resid_fam_enum52	age_spouse	age_spouse_sq	housing_status_enum1 housing_status_enum3	veteran_head veteran_spouse
+		local	demovars	age_head_fam	age_head_fam_sq	HH_race_black HH_race_other	marital_status_cat	/*marital_status_fam_enum1 marital_status_fam_enum3 marital_status_fam_enum4 marital_status_fam_enum5*/	///
+							HH_female	age_spouse	age_spouse_sq	housing_status_enum1 housing_status_enum3	veteran_head veteran_spouse
 		local	econvars	income_pc	income_pc_sq	wealth_pc	wealth_pc_sq	sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
 		local	empvars		emp_HH_simple	emp_spouse_simple
 		local	familyvars	num_FU_fam num_child_fam	ib0.family_comp_change	couple_status_enum1-couple_status_enum4
@@ -669,6 +678,7 @@
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
 		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	regionvars	state_resid_fam_enum2-state_resid_fam_enum52
 	
 		
 		*	Step 1
@@ -689,7 +699,7 @@
 			*	LASSO with K-fold cross validation
 			** As of Aug 21, 2020, the estimated lambda with lse is 2016.775 (lse).
 			cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-				`familyvars'	`eduvars'	`foodvars'	`childvars'		if	in_sample==1,	///
+				`familyvars'	`eduvars'	`foodvars'	`childvars'	`regionvars'		if	in_sample==1,	///
 				/*lopt*/ lse	seed(20200505)	 /*rolling	h(1) fe	prestd 	postres	ols*/	plotcv 
 			est	store	lasso_step1_lse
 			
@@ -702,7 +712,7 @@
 			local	lambdaval=exp(14.7)	//	14.7 is before 2020/8/21
 			*local	lambdaval=exp(7.6)	//	7.6	=	ln(2016.775), the lse value from cvlasso
 			lasso2	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-							`familyvars'	`eduvars'	`foodvars'	`childvars'	`changevars'	if	in_sample==1,	///
+							`familyvars'	`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1,	///
 						ols lambda(`lambdaval') 
 			est	store	lasso_step1_manual
 			lasso2, postresults
@@ -738,7 +748,7 @@
 			
 			/*
 			cvlasso	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-							`familyvars'	`eduvars'	`foodvars'	`childvars'	`changevars'	if	lasso_step1_sample==1,	///
+							`familyvars'	`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	if	lasso_step1_sample==1,	///
 						lopt /*lse*/	seed(20200505)	 /*rolling	h(1) fe	prestd 	postres		ols*/	plotcv
 			est	store	lasso_step2_lse			
 			*** Somehow, the lambda from lopt does not reduce dimensionality a lot, and the lambda from lse does not keep ANY RHS varaible.
@@ -752,7 +762,7 @@
 			set	seed	20205020
 			local	lambdaval=exp(23.0)
 			lasso2	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-							`familyvars'	`eduvars'	`foodvars'	`childvars'	`changevars'	if	lasso_step1_sample==1,	///
+							`familyvars'	`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	if	lasso_step1_sample==1,	///
 						ols lambda(`lambdaval') 
 			est	store	lasso_step2_manual
 			
@@ -808,7 +818,7 @@
 			set	seed	20205020
 			local	lambdaval=exp(6.5)
 			lasso2	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-							`familyvars'	`eduvars'	`foodvars'	`childvars'	if	lasso_step1_sample==1,	///
+							`familyvars'	`eduvars'	`foodvars'	`childvars'	`regionvars'	if	lasso_step1_sample==1,	///
 						ols lambda(`lambdaval') 
 			
 			est	store	lasso_step3_manual
@@ -837,8 +847,8 @@
 		*	Variable Selection
 		local	statevars	lag_food_exp_pc_1 /*-lag_avg_foodexp_pc_5*/	//	RF allows non-linearity, thus need not include higher polynomial terms
 		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse
-		local	demovars	age_head_fam	/*age_head_fam_sq*/	race_head_cat_enum1-race_head_cat_enum3	marital_status_fam_enum1-marital_status_fam_enum5	///
-							gender_head_fam_enum1-gender_head_fam_enum2	state_resid_fam_enum1-state_resid_fam_enum52	age_spouse	/*age_spouse_sq*/	///
+		local	demovars	age_head_fam	/*age_head_fam_sq*/	HH_race_white-HH_race_other	marital_status_fam_enum1-marital_status_fam_enum5	///
+							HH_female-gender_head_fam_enum2	age_spouse	/*age_spouse_sq*/	///
 							housing_status_enum1-housing_status_enum3	veteran_head veteran_spouse
 		local	econvars	income_pc	/*avg_income_pc_sq*/	wealth_pc	/*avg_wealth_pc_sq*/	sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
 		local	empvars		emp_HH_simple	emp_spouse_simple
@@ -851,6 +861,7 @@
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	meal_together	elderly_meal
 		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
+		local	regionvars	state_resid_fam_enum1-state_resid_fam_enum52
 		
 		*	Tune how large the value of iterations() need to be
 		if	`tune_iter'==1	{
@@ -862,7 +873,7 @@
 			forvalues i = 10(5)500 {
 				local j = `j' + 1
 				rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	if	in_sample==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
+									`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
 				quietly replace iter1 = `i' in `j'
 				quietly replace out_of_bag_error1 = `e(OOB_Error)' in `j'
 				predict p if	out_of_sample==1
@@ -888,7 +899,7 @@
 			forvalues i = 1(1)26 {
 				local j = `j'+ 1
 				rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-											`foodvars'	`childvars'	`changevars'	if	in_sample==1, type(reg)	seed(20200505) iterations(100) numvars(`i')
+											`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1, type(reg)	seed(20200505) iterations(100) numvars(`i')
 				quietly replace nvars = `i' in `j'
 				quietly replace oob_error = `e(OOB_Error)' in `j'
 				predict p	if	out_of_sample==1
@@ -918,7 +929,7 @@
 			
 			loc	depvar	food_exp_pc
 			rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	if	in_sample==1, type(reg)	iterations(100)	numvars(21)	seed(20200505) 
+									`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1, type(reg)	iterations(100)	numvars(21)	seed(20200505) 
 			* Variable importance plot
 			matrix importance_mean = e(importance)
 			svmat importance_mean
@@ -951,7 +962,7 @@
 			
 			loc	depvar	e1_foodexp_sq_rf
 			rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	if	in_sample==1, type(reg)	iterations(100)	numvars(21)	seed(20200505) 
+									`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1, type(reg)	iterations(100)	numvars(21)	seed(20200505) 
 			
 			* Variable importance plot
 			matrix importance_var = e(importance)
@@ -998,7 +1009,7 @@
 				keep	if	!mi(rho1_foodexp_pc_thrifty_rf)
 				loc	depvar	rho1_foodexp_pc_thrifty_rf
 				rforest	`depvar'	`statevars'		`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	///
-										`foodvars'	`childvars'	`changevars'	if	in_sample==1, type(reg)	iterations(100)	numvars(21)	seed(20200505) 
+										`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1, type(reg)	iterations(100)	numvars(21)	seed(20200505) 
 				predict	rs_rf_hat
 				
 				* Variable importance plot
@@ -1462,8 +1473,8 @@
 	local	model_check	0	//	varying LHS
 	local	specification_check	1	//	varying RHS
 		local	prep_spec	1
-		local	spec_analysis	1
-		local	stationary_check	0
+		local	spec_analysis	0
+		local	stationary_check	1
 	
 				
 	*	Association
@@ -1815,20 +1826,20 @@
 			
 			local	depvar		rho1_foodexp_pc_thrifty_ols
 			*local	lagdepvar	l.`depvar'
-			local	healthvars	phys_disab_head
-			local	demovars	c.age_head_fam##c.age_head_fam	gender_head_fam_enum1	ib1.race_head_cat	marital_status_cat
+			local	demovars	c.age_head_fam##c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat
 			local	econvars	c.ln_income_pc	/*wealth_pc	wealth_pc_sq*/
 			local	empvars		emp_HH_simple
 			local	familyvars	c.num_FU_fam c.num_child_fam	/*ib0.family_comp_change	ib5.couple_status*/
 			local	eduvars		/*attend_college_head*/ ib2.grade_comp_cat	
+			local	healthvars	phys_disab_head
 			local	foodvars	food_stamp_used_1yr	WIC_received_last
 			local	regionvars	ib0.state_resid_fam	
 			local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-			local	interactvars	c.ln_income_pc#c.gender_head_fam_enum1	///
+			local	interactvars	c.ln_income_pc#c.HH_female	///
 									c.ln_income_pc#c.non_working_age	///
-									c.gender_head_fam_enum1#c.non_working_age	///
-									c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age	///
-									c.no_longer_married#c.gender_head_fam_enum1
+									c.HH_female#c.non_working_age	///
+									c.ln_income_pc#c.HH_female#c.non_working_age	///
+									c.no_longer_married#c.HH_female
 	
 	}	
 
@@ -1841,35 +1852,39 @@
 				svy: reg	`depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`shockvars'		`regionvars'
 				*svy: meglm `depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`regionvars'
 				est	store	Prob_FI_benchmark
-			
-			
+					
 				*	With interaction	&	shocks
 				svy: reg	`depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`shockvars'	`interactvars'	`regionvars'
 				*svy: meglm `depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`regionvars'
 				est	store	Prob_FI_interact
 				
-				esttab	Prob_FI_benchmark	Prob_FI_interact	using "${PSID_outRaw}/Prob_FI_pooled.csv", ///
+				*	Auxiliary regression
+				svy: reg	`econvars'	`demovars'		`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`shockvars'	`regionvars'
+				est	store	Income_interact
+				
+				esttab	Prob_FI_benchmark	Prob_FI_interact	Income_interact	using "${PSID_outRaw}/Prob_FI_pooled.csv", ///
 						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Prob(food insecure)-Pooled) replace
-	
+
 				*	Joint Hypothesis test of variables
+				est	restore		Prob_FI_interact
 				
 					*	age and its interaction terms (whether age matters)
 					test	c.age_head_fam c.age_head_fam#c.age_head_fam
 					
 					*	gender and its interaction terms (whether gender matters)
-					test	gender_head_fam_enum1	c.ln_income_pc#c.gender_head_fam_enum1	c.gender_head_fam_enum1#c.non_working_age	c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age
+					test	HH_female	c.ln_income_pc#c.HH_female	c.HH_female#c.non_working_age	c.ln_income_pc#c.HH_female#c.non_working_age
 					
 					*	income and its interaction terms (wheter income matters)
-					test	c.ln_income_pc	c.ln_income_pc#c.gender_head_fam_enum1	c.ln_income_pc#c.non_working_age	c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age
+					test	c.ln_income_pc	c.ln_income_pc#c.HH_female	c.ln_income_pc#c.non_working_age	c.ln_income_pc#c.HH_female#c.non_working_age
 					
 					*	# of FU and # of children (jointly) (whether family size matters)
 					test	c.num_FU_fam c.num_child_fam
 					
 					*	All terms interacting with outside workinge age (whether being non-working age matters)
-					test	c.ln_income_pc#c.non_working_age	c.gender_head_fam_enum1#c.non_working_age	c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age
+					test	c.ln_income_pc#c.non_working_age	c.HH_female#c.non_working_age	c.ln_income_pc#c.HH_female#c.non_working_age
 					
 					*	No longer married and its interaction term (wheter being no longer married matters)
-					test	no_longer_married	c.no_longer_married#c.gender_head_fam_enum1
+					test	no_longer_married	c.no_longer_married#c.HH_female
 		
 					*	Whether all the interaction terms are jointly significant (whether all interaction terms matters)
 					test	`interactvars'
@@ -1946,50 +1961,50 @@
 						est	restore	Prob_FI_interact
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_cat) post
-						est	store	eyex_foodplan_nocon_IPL
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
+						est	store	eyex_foodplan_nocon_IPR
+						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPR)
 						
 						*	Control (age, income), by income group
 						est	restore	Prob_FI_interact
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_cat) post
-						est	store	eyex_foodplan_con_IPL
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
+						est	store	eyex_foodplan_con_IPR
+						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPR)
 						
 						*	Graph
-						coefplot eyex_foodplan_nocon_IPL	eyex_foodplan_con_IPL, lwidth(*1) connect(l) vertical	xlabel(1(1)11)	///
-							xtitle (Income to Poverty Ratio)	ytitle(Pr(FS))	title (Elasticity of Pr(FS) over Food Plan by IPL)	///
+						coefplot eyex_foodplan_nocon_IPR	eyex_foodplan_con_IPR, lwidth(*1) connect(l) vertical	xlabel(1(1)11)	///
+							xtitle (Income to Poverty Ratio)	ytitle(Pr(FS))	title (Elasticity of Pr(FS) over Food Plan by IPR)	///
 							legend(lab (2 "No controls") lab(4 "Controls") rows(1))	///
 							note(Controls include age and income)
-						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPL.png", replace
+						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPR.png", replace
 						graph	close
 						
 						*	No control, low income group
 						est	restore	Prob_FI_interact
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_lowtail) post
-						est	store	eyex_foodplan_nocon_IPLlow
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
+						est	store	eyex_foodplan_nocon_IPRlow
+						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPR)
 						
 						*	Control (age, income), low income group
 						est	restore	Prob_FI_interact
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_lowtail) post
-						est	store	eyex_foodplan_con_IPLlow
-						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPL)
+						est	store	eyex_foodplan_con_IPRlow
+						marginsplot, title(Elasticity of Pr(FS) over thrifty food plan by IPR)
 						
 						*	Graph
-						coefplot eyex_foodplan_nocon_IPLlow	eyex_foodplan_con_IPLlow, lwidth(*1) connect(l) vertical	xlabel(0(5)30)	///
-							xtitle (Income to Poverty Ratio*10)	ytitle(Pr(FS))	title (Elasticity of Pr(FS) over Food Plan by IPL)	///
-							legend(lab (1 "No controls") lab(2 "Controls") rows(1))	noci	///
+						coefplot eyex_foodplan_nocon_IPRlow	eyex_foodplan_con_IPRlow, lwidth(*1) connect(l) vertical	xlabel(0(5)30)	///
+							xtitle (Income to Poverty Ratio*10)	ytitle(Pr(FS))	title (Elasticity of Pr(FS) over Food Plan by IPR)	///
+							legend(lab (1 "No controls") lab(2 "Controls") rows(1))	noci	xline(10)	///
 							note(Controls include age and income)
-						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPLlow.png", replace
+						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPRlow.png", replace
 						graph	close
 					
 					/*
 					*	Overall (AME)
 					est	restore	Prob_FI_interact
-					local	nonlinear_terms	c.age_head_fam	gender_head_fam_enum1	c.ln_income_pc	c.non_working_age	c.no_longer_married
+					local	nonlinear_terms	c.age_head_fam	HH_female	c.ln_income_pc	c.non_working_age	c.no_longer_married
 					eststo	ME_overall: margins,	dydx(`nonlinear_terms'	)	post	//	age, gender and ln(income). Income will be semi-elasticity
 					est	restore	Prob_FI_interact
 					eststo	ME_overall_atmeans: margins,	dydx(`nonlinear_terms')	atmeans post	//	age, gender and ln(income). Income will be semi-elasticity
@@ -1997,7 +2012,7 @@
 						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels /*drop(_cons)*/	title(Marginal Effect_overall) replace
 						
 					est	restore	Prob_FI_interact	
-					eststo	ME_AME2:	margins,	expression((1/exp(ln_income_pc))*(_b[ln_income_pc]+_b[c.ln_income_pc#c.gender_head_fam_enum1]*gender_head_fam_enum1+_b[c.ln_income_pc#c.non_working_age]*non_working_age)+_b[c.ln_income_pc#c.gender_head_fam_enum1#c.non_working_age]*gender_head_fam_enum1*non_working_age)	post	//	1st-derivative w.r.t. per capita income
+					eststo	ME_AME2:	margins,	expression((1/exp(ln_income_pc))*(_b[ln_income_pc]+_b[c.ln_income_pc#c.HH_female]*HH_female+_b[c.ln_income_pc#c.non_working_age]*non_working_age)+_b[c.ln_income_pc#c.HH_female#c.non_working_age]*HH_female*non_working_age)	post	//	1st-derivative w.r.t. per capita income
 					
 					*/
 					
@@ -2009,13 +2024,13 @@
 						cap	drop	dev_from_lifeexp
 						gen		dev_from_lifeexp=.
 						forvalues	year=1999(2)2017	{
-							replace	dev_from_lifeexp	=	age_head_fam-life_exp_male_`year'	if	gender_head_fam_enum1==0	&	year2==`year'
-							replace	dev_from_lifeexp	=	age_head_fam-life_exp_female_`year'	if	gender_head_fam_enum1==1	&	year2==`year'
+							replace	dev_from_lifeexp	=	age_head_fam-life_exp_male_`year'	if	HH_female==0	&	year2==`year'
+							replace	dev_from_lifeexp	=	age_head_fam-life_exp_female_`year'	if	HH_female==1	&	year2==`year'
 						}
 						label	variable	dev_from_lifeexp	"Deviation from the life expectancy by year and gender"
 						
-						twoway	(lpolyci fv dev_from_lifeexp	if	gender_head_fam_enum1==0)	///
-								(lpolyci fv dev_from_lifeexp	if	gender_head_fam_enum1==1),	///
+						twoway	(lpolyci fv dev_from_lifeexp	if	HH_female==0)	///
+								(lpolyci fv dev_from_lifeexp	if	HH_female==1),	///
 								title(Fitted Pr(FS) over the age)	note(Life Expectancy are 73.9(male) and 79.4(female) in 1999 and 76.1(male) and 81.1(female) in 2017) ///
 								legend(lab (2 "Male") lab(3 "Female") rows(1))	xtitle(Deviation from the Life Expectancy)
 						graph	export	"${PSID_outRaw}/Fitted_age_pooled.png", replace
@@ -2070,8 +2085,8 @@
 					twoway qfitci fv age_head_fam, title(Expected Pr(FS) over age)
 													
 					twoway lpolyci fv income_pc if income_pc>0, title(Expected Pr(FS) over income)
-					twoway lpolyci fv age_head_fam	if	gender_head_fam_enum1==1, title(Expected Pr(FS) over age)
-					twoway lpolyci fv age_head_fam	if	gender_head_fam_enum1==0, title(Expected Pr(FS) over age)
+					twoway lpolyci fv age_head_fam	if	HH_female==1, title(Expected Pr(FS) over age)
+					twoway lpolyci fv age_head_fam	if	HH_female==0, title(Expected Pr(FS) over age)
 					
 					graph	twoway	(scatter rho1_foodexp_pc_thrifty_ols income_pc if income_pc>0)		///
 									(lpolyci fv income_pc if income_pc>0, title(Expected Pr(FS) over income))
@@ -2111,8 +2126,7 @@
 								title(Expected Pr(FS) over age by year)
 						graph	export	"${PSID_outRaw}/Fitted_lpoly_age_all_year.png", replace
 						graph	close
-	gg					
-					
+		
 					*	Compute the marginal effect of some covariates over the range of values.
 					*margins, dydx(age_head_fam) over(age_head_fam)
 					*marginsplot, title(Marginal Effect of Age with 95% CI)
@@ -2135,12 +2149,74 @@
 		*	Test stationary		
 		if	`stationary_check'==1	{
 			
+			*	Convert interaction variables into normal variable, for xtserial test
+			cap	drop	race_black
+			cap	drop	race_other
+			cap	drop	highest_grade?
+			cap	drop	income_gender
+			cap	drop	income_nonwork
+			cap	drop	gender_nonwork
+			cap	drop	income_gender_nonwork
+			cap	drop	nomarried_gender
+			gen	race_black		=	0	if	!mi(race_head_cat)
+			replace	race_black	=	1	if	race_head_cat==2
+			gen	race_other		=	0	if	!mi(race_head_cat)
+			replace	race_other	=	1	if	race_head_cat==3
+			tab grade_comp_cat,	gen(highest_grade)
+			gen	income_gender	=	c.ln_income_pc#c.HH_female
+			gen	income_nonwork	=	c.ln_income_pc#c.non_working_age
+			gen	gender_nonwork	=	c.HH_female#c.non_working_age
+			gen	income_gender_nonwork	=	c.ln_income_pc#c.HH_female#c.non_working_age
+			gen	nomarried_gender	=	c.no_longer_married#c.HH_female
+			
+		
 			*	Chris' suggestion
 					
-					*	Use pooled data with time FE to estimate conditional mean, and check whether there are serial correlation
-					svy: reg	`depvar'	/*`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`interactvars'	`shockvars'	`regionvars'*/	i.year
-					svy: reg	`depvar'	i.year
+					*	Testing whether dependent variable is stationary (warning: takes some time)
+						*	xtunitroot fisher	rho1_foodexp_pc_thrifty_ols,	dfuller	lags(1)	trend
+						
+					*	Testing whether there exist serial correlation
+					xtserial	rho1_foodexp_pc_thrifty_ols	///	//	depvar
+								age_head_fam age_head_fam_sq	race_black	race_other	marital_status_cat ///	//	Demographic vars
+								ln_income_pc	///	//	income var
+								emp_HH_simple	///	//	emp var
+								num_FU_fam	num_child_fam	///	//	family var
+								highest_grade1 highest_grade3 highest_grade4	///	//	edu vars
+								state_resid_fam_enum2-state_resid_fam_enum52	///	region vars
+								no_longer_employed	no_longer_married	no_longer_own_house	became_disabled	///	//	shockvars
+								income_gender	income_nonwork	gender_nonwork	income_gender_nonwork	nomarried_gender	//	interact vars		
+				
+					reg	rho1_foodexp_pc_thrifty_ols	l(1/1).rho1_foodexp_pc_thrifty_ols
 					
+					*	Use pooled data with time FE to estimate conditional mean, and check whether there are serial correlation among residuals
+					cap	drop	resid_trend
+					svy: reg	`depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`shockvars'	`interactvars'	`regionvars'	year	//	include time trend, either as linear or as FE
+					predict	resid_withtrend, residual
+					
+					
+					xtreg	resid_withtrend	l.resid_withtrend, vce(cluster fam_ID_1999) fe	//	If the estimate is statistically significant, then there is autocorrelation among residuals.
+					
+					*	Testing different ARMA(p,q) model
+					*	Here we will test p and q from 1  to 3.
+					
+					forvalues	p=1/3	{
+						forvalues	q=1/3	{
+							cap	drop	resid_p`p'_q`q'
+							
+							svy: reg	`depvar'	l(1/`p').`depvar'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`healthvars'	`foodvars'	`shockvars'	`interactvars'	`regionvars'	l(1/`q').resid_withtrend
+							predict	resid_p`p'_q`q', resid
+							
+							xtreg		resid_p`p'_q`q'	l.resid_p`p'_q`q', fe vce(cluster fam_ID_1999)	
+							est	store	ARMA_p`p'_q`q'
+						}
+					}
+					
+					esttab	ARMA_p1_q1	ARMA_p1_q2	ARMA_p1_q3	///
+							ARMA_p2_q1	ARMA_p2_q2	ARMA_p1_q3	///
+							ARMA_p3_q1	ARMA_p3_q2	ARMA_p1_q3	///
+							using "${PSID_outRaw}/ARMA_check.csv", ///
+						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation under ARMA(p,q)) replace
+		ggggg
 					predict temp, residual
 					reg		temp l.temp
 					est	store	nolag
@@ -2193,8 +2269,7 @@
 					xtreg	resid_withtimeFE	l.resid_withtimeFE	l2.resid_withtimeFE, vce(cluster fam_ID_1999) fe
 					est	store	resid_autocorr_cluster
 					
-					*	Unit root test for panel data (Takes some time to run)
-					xtunitroot fisher	rho1_foodexp_pc_thrifty_ols,	dfuller lags(1) trend
+				
 					
 					esttab	resid_autocorr_nocluster	resid_autocorr_cluster	using "${PSID_outRaw}/resid_autocorr.csv", ///
 						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
@@ -2220,6 +2295,7 @@
 }
 			
 	*	Graphs
+	
 	
 		*	Effect of non-employment
 		
@@ -2260,44 +2336,61 @@
 			
 			tsset	fam_ID_1999 year2, delta(2)
 			
+			*	Ratio of food insecure household (Pr(FS))
 			cap	drop	avg_cb_weighted
 			cap	drop	avg_cb_weighted_sample
+			cap	drop	HH_FS_ratio_PSID
 			gen	double avg_cb_weighted=.
 			gen	double avg_cb_weighted_sample=.
-			forval	year=2001(2)2017	{
+			gen	double HH_FS_ratio_PSID=.
+			forval	year=1999(2)2017	{
 				
-				* Pooled over the sample
-				svy: mean rho1_foodexp_pc_thrifty_ols if year2==`year'	
-				replace	avg_cb_weighted=e(b)[1,1]	if	year2==`year'
+				* Pr(FS)
+				if	`year'!=1999	{	
+					
+					* By year
+					qui	svy: mean rho1_foodexp_pc_thrifty_ols if year2==`year'	
+					replace	avg_cb_weighted=e(b)[1,1]	if	year2==`year'
+					
+					* Pr(FS), by year & sample
+					forval	sampleno=1/3	{
+						quietly	svy: mean rho1_foodexp_pc_thrifty_ols 		if year2==`year'	&	sample_source==`sampleno'
+						replace	avg_cb_weighted_sample=e(b)[1,1]	if	year2==`year'	&	sample_source==`sampleno'
+					}
+				}
 				
-				* By sample
-				forval	sampleno=1/3	{
-					svy: mean rho1_foodexp_pc_thrifty_ols 		if year2==`year'	&	sample_source==`sampleno'
-					replace	avg_cb_weighted_sample=e(b)[1,1]	if	year2==`year'	&	sample_source==`sampleno'
+				* PSID, by year
+				if	inlist(`year',1999,2001,2003,2015,2017)	{
+					qui	svy:	mean	fs_cat_fam_simp	if year2==`year'	
+					replace	HH_FS_ratio_PSID=e(b)[1,1]	if	year2==`year'
 				}
 			}
 			
-			cap	drop	HH_insecure_ratio
-			gen		HH_insecure_ratio	=	0.101	if	year2==	1999
-			replace	HH_insecure_ratio	=	0.107	if	year2==	2001
-			replace	HH_insecure_ratio	=	0.112	if	year2==	2003
-			replace	HH_insecure_ratio	=	0.110	if	year2==	2005
-			replace	HH_insecure_ratio	=	0.111	if	year2==	2007
-			replace	HH_insecure_ratio	=	0.147	if	year2==	2009
-			replace	HH_insecure_ratio	=	0.149	if	year2==	2011
-			replace	HH_insecure_ratio	=	0.143	if	year2==	2013
-			replace	HH_insecure_ratio	=	0.127	if	year2==	2015
-			replace	HH_insecure_ratio	=	0.118	if	year2==	2017
-			lab	var	HH_insecure_ratio	"Ratio of FI households"
+			*	Ratio of food insecure households (USDA report)
+			cap	drop	HH_FS_ratio_USDA
+			gen		HH_FS_ratio_USDA	=	(1-0.101)	if	year2==	1999
+			replace	HH_FS_ratio_USDA	=	(1-0.107)	if	year2==	2001
+			replace	HH_FS_ratio_USDA	=	(1-0.112)	if	year2==	2003
+			replace	HH_FS_ratio_USDA	=	(1-0.110)	if	year2==	2005
+			replace	HH_FS_ratio_USDA	=	(1-0.111)	if	year2==	2007
+			replace	HH_FS_ratio_USDA	=	(1-0.147)	if	year2==	2009
+			replace	HH_FS_ratio_USDA	=	(1-0.149)	if	year2==	2011
+			replace	HH_FS_ratio_USDA	=	(1-0.143)	if	year2==	2013
+			replace	HH_FS_ratio_USDA	=	(1-0.127)	if	year2==	2015
+			replace	HH_FS_ratio_USDA	=	(1-0.118)	if	year2==	2017
+			lab	var	HH_FS_ratio_USDA	"Ratio of FS households"
+			
 			
 			tsset	fam_ID_1999 year2, delta(2)
-			twoway	(tsline avg_cb_weighted,	yaxis(1) lpattern(solid))	///
-					(tsline avg_cb_weighted_sample if sample_source==1,	yaxis(1) lpattern(dash))	///
-					(tsline avg_cb_weighted_sample if sample_source==2,	yaxis(1) lpattern(dot))	///
-					(tsline avg_cb_weighted_sample if sample_source==3,	yaxis(1)	lpattern(dash_dot))	///
-					(tsline HH_insecure_ratio,	yaxis(2) lpattern(shortdash)),	///
-					legend(lab (1 "Overall") lab(2 "SRC") lab(3 "SEO") lab(4 "Immigrants Regresher"))	///
-					title(Probability of being food secure)	subtitle(from 2001 to 2017)
+			
+			sort	fam_ID_1999 year2
+			twoway	(connected	HH_FS_ratio_USDA	year2	in	1/10,	yaxis(1) lpattern(solid))	///
+					(connected	HH_FS_ratio_PSID	year2	in	1/10,	yaxis(1) lpattern(dot))	///
+					(connected	avg_cb_weighted	year2	in	1/10,	yaxis(1) lpattern(dash)),	///
+					legend(lab (1 "USDA") lab(2 "PSID") lab(3 "Pr(FS)") rows(1))	///
+					title(Ratio of being food secure)	subtitle(from 1999 to 2017)
+			graph	export	"${PSID_outRaw}/Food_Secure_by_data.png", replace
+			graph	close
 
 
 			tsset	fam_ID_1999	year
@@ -2306,6 +2399,53 @@
 			
 			dfuller	rho1_foodexp_pc_thrifty_ols
 			dfgls	rho1_foodexp_pc_thrifty_ols, maxlag(4)
+			
+	*	Summary Statistics (Table 3)
+	
+		eststo drop	Total SRC	SEO	Imm
+
+		local	sumvars	age_head_fam HH_female	HH_race_white HH_race_black HH_race_other	marital_status_cat	num_FU_fam num_child_fam	///
+						emp_HH_simple	income_pc	food_exp_pc	 college_completed phys_disab_head	food_stamp_used_1yr 	 
+		cap	drop	sample_source?
+		tab sample_source, gen(sample_source)
+		
+		svy: mean `sumvars'
+		estadd matrix mean = r(table)[1,1...]
+		estadd matrix sd = r(table)[2,1...]
+		eststo	Total
+		svy, subpop(sample_source1): mean `sumvars'
+		estadd matrix mean = r(table)[1,1...]
+		estadd matrix sd = r(table)[2,1...]
+		estadd scalar N = e(N_sub), replace
+		eststo	SRC
+		svy, subpop(sample_source2): mean `sumvars'
+		estadd matrix mean = r(table)[1,1...]
+		estadd matrix sd = r(table)[2,1...]
+		estadd scalar N = e(N_sub), replace
+		eststo	SEO
+		svy, subpop(sample_source3): mean `sumvars'
+		estadd matrix mean = r(table)[1,1...]
+		estadd matrix sd = r(table)[2,1...]
+		estadd scalar N = e(N_sub), replace
+		eststo	Imm
+		
+			
+		
+		esttab *Total SRC SEO Imm using tt3.csv, replace ///
+		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
+		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
+		title (Summary Statistics) ///
+		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
+		addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)
+		
+		esttab *Total SRC SEO Imm using tt3.tex, replace ///
+		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
+		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
+		title (Summary Statistics) ///
+		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ tex ///
+		addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)
+		
+		
 
 	
 /* Junk Code */
@@ -2537,40 +2677,7 @@
 				subtitle(Entire sample and regression sample)	///
 				legend(lab (1 "All sample") lab(2 "Regression sample") rows(1))*/
 				
-				
-		*	Summary statistics
-		eststo drop	Total SRC	SEO	Imm
-
-		local	sumvars	age_head_fam num_FU_fam num_child_fam grade_comp_head_fam alcohol_head smoke_head	fs_scale_fam food_stamp_used_1yr 	///
-						income_pc food_exp_pc edu_exp_pc health_exp_pc	///
-
-		preserve
-		recode		alcohol_head	smoke_head		food_stamp_used_1yr	(5=0)
-						
-						
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/
-		est store Total
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==1
-		est store SRC
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==2
-		est store SEO
-		estpost summarize	`sumvars' if inrange(year,3,10) /*& cvlass_sample==1*/ & sample_source==3
-		est store Imm
-		
-		tab	race_head_cat	if inrange(year,3,10)
-		tab	race_head_cat	if inrange(year,3,10)	&	sample_source==1
-		tab	race_head_cat	if inrange(year,3,10)	&	sample_source==2
-		tab	race_head_cat	if inrange(year,3,10)	&	sample_source==3
-
-
-		esttab Total SRC SEO Imm using tt2.csv, replace ///
-		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
-		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
-		title (Summary Statistics) ///
-		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
-		addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)
-
-		restore
+	
 		
 		*	Distribution of food expenditure
 		graph twoway (kdensity avg_foodexp_pc if year==10) (kdensity avg_foodexp_pc if year==10 & cvlass_sample==1), ///
