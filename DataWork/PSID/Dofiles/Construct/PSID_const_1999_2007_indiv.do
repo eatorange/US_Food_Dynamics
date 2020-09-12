@@ -208,7 +208,7 @@
 				}
 				
 			
-				
+			
 		
 
 			*	Respondent Consistency Indicator (family-level)
@@ -487,10 +487,19 @@
 				replace	grade_comp_cat`year'	=4	if	grade_comp_head_fam`year'>=16 & !mi(grade_comp_head_fam`year')
 				replace	grade_comp_cat`year'	=.n	if	mi(grade_comp_head_fam`year')
 				label	var	grade_comp_cat`year'	"Grade Household Head Completed, `year'"
+				
+				gen		grade_comp_cat_spouse`year'	=1	if	inrange(grade_comp_spouse`year',0,11)
+				replace	grade_comp_cat_spouse`year'	=2	if	inrange(grade_comp_spouse`year',12,12)
+				replace	grade_comp_cat_spouse`year'	=3	if	inrange(grade_comp_spouse`year',13,15)
+				replace	grade_comp_cat_spouse`year'	=4	if	grade_comp_spouse`year'>=16 & !mi(grade_comp_spouse`year')
+				replace	grade_comp_cat_spouse`year'	=.n	if	mi(grade_comp_spouse`year')
+				label	var	grade_comp_cat_spouse`year'	"Grade Household Spouse Completed, `year'"
 			}
 			
 			label	define	grade_comp_cat	1	"Less than HS"	2	"HS"	3	"Some College"	4	"College Degree"
 			label 	values	grade_comp_cat*	grade_comp_cat
+			
+			order	grade_comp_cat_spouse*, after(grade_comp_cat2017)
 			
 		*	Child food assistance program 
 		**	Let "N/A (no child)" as 0 for now.
@@ -653,6 +662,12 @@
 			replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,99)	|	emp_status_spouse`year'==0	//	Unemployed (including retired, disabled, keeping house, inapp, DK, NA,...)	
 			*replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,3)	//	Unemployed
 			*replace	emp_spouse_simple`year'	=0	if	inrange(emp_status_spouse`year',4,99)	|	emp_status_spouse`year'==0	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)	
+		}
+		
+		*	% of children in the households
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+			gen		ratio_child`year'	=	num_child_fam`year'/num_FU_fam`year'
+			label	var	ratio_child`year'	"Ratio of children in FU in `year'"
 		}
 		
 		

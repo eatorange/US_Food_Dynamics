@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	1
+	local	retrieve_vars	0
 	local	clean_vars		1
 	
 	
@@ -1046,6 +1046,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 										5	"Some sample member other than Head or Wife has become Head"	///
 										6 	"Some female in FU other than Head got married and non-sample member now Head"	///
 										7 	"Female Head with husband in institution; husband now Head"	///
+										8	"Other"	///
 										9 	"NA"
 			label	values	family_comp_change*	family_comp_change
 			
