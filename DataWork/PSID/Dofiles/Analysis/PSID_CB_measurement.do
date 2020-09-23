@@ -616,16 +616,16 @@
 	
 	*	OLS
 	local	run_ols	1
-		local	run_ME	1
+		local	run_ME	0
 	
 	*	LASSO
-	local	run_lasso	0
+	local	run_lasso	1
 		local	run_lasso_step1	1
 		local	run_lasso_step2	1
 		local	run_lasso_step3	1
 		
 	*	Random Forest
-	local	run_rf	0	
+	local	run_rf	1	
 		local	tune_iter	0	//	Tuning iteration
 		local	tune_numvars	0	//	Tuning numvars
 		local	run_rf_step1	1
@@ -1223,7 +1223,7 @@
 				expand	4
 				loc	var	indicator_group
 				bys	fam_ID_1999	year:	gen	`var'	=	_n
-				label	define	`var'	1	"USDA"	2	"CB (LASSO)"	3	"CB (R.Forest)"	4	"FSPS (GLM)", replace
+				label	define	`var'	1	"USDA"	2	"CB (LASSO)"	3	"CB (R.Forest)"	4	"PFS (GLM)", replace
 				label	values	`var'	`var'
 				lab	var	`var'	"Indicator Group"
 					
@@ -1269,22 +1269,22 @@
 			graph twoway 		(kdensity fs_scale_fam_rescale	if	inlist(year,1,2,3,9,10))	///
 								(kdensity rho1_foodexp_pc_thrifty_ols	if	inlist(year,1,2,3,9,10)),	///
 								title (Thrifty plan)		name(thrifty, replace)		///
-								legend(lab (1 "USDA scale") lab(2 "FSPS") rows(1))
+								legend(lab (1 "USDA scale") lab(2 "PFS") rows(1))
 								
 			graph twoway 		(kdensity fs_scale_fam_rescale	if	inlist(year,1,2,3,9,10))	///
 								(kdensity rho1_foodexp_pc_low_ols	if	inlist(year,1,2,3,9,10)),	///
 								title (Low plan)		name(low, replace)		///
-								legend(lab (1 "USDA scale") lab(2 "FSPS") rows(1))
+								legend(lab (1 "USDA scale") lab(2 "PFS") rows(1))
 								
 			graph twoway 		(kdensity fs_scale_fam_rescale	if	inlist(year,1,2,3,9,10))	///
 								(kdensity rho1_foodexp_pc_moderate_ols	if	inlist(year,1,2,3,9,10)),	///
 								title (Moderate plan)		name(moderate, replace)		///
-								legend(lab (1 "USDA scale") lab(2 "FSPS") rows(1))
+								legend(lab (1 "USDA scale") lab(2 "PFS") rows(1))
 								
 			graph twoway	 	(kdensity fs_scale_fam_rescale	if	inlist(year,1,2,3,9,10))	///
 								(kdensity rho1_foodexp_pc_liberal_ols	if	inlist(year,1,2,3,9,10)),	///
 								title (Liberal plan)	name(liberal, replace)		///
-								legend(lab (1 "USDA scale") lab(2 "FSPS") rows(1))
+								legend(lab (1 "USDA scale") lab(2 "PFS") rows(1))
 								
 			grc1leg2		thrifty	low	moderate	liberal,	title(Distribution of Food Security Indicators) legendfrom(thrifty)	///
 							note(note: "the sample includes the waves the USDA scale is constructed (1999,2001,2003,2015,2017)"	///
@@ -1458,10 +1458,10 @@
 									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2, msymbol(diamond))	///
 									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3, msymbol(triangle))	///
 									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4, msymbol(square)),	///
-									xline(${thresval_ols})	yline(1)	xtitle(FSPS in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									xline(${thresval_ols})	yline(1)	xtitle(PFS in 2015)	ytitle(USDA Food Security Score in 2017)	///
 									title(Prediction of Food Security in 2017) name(GLM_all, replace)	///
 									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-									subtitle(FSPS)
+									subtitle(PFS)
 					
 					graph	export	"${PSID_outRaw}/OOB_prediction_GLM_all.png", replace
 					graph	close
@@ -1478,7 +1478,7 @@
 									xline(${thresval_ls})	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
 									title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_all, replace)	///
 									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-									subtitle(FSPS by LASSO)
+									subtitle(PFS by LASSO)
 					
 					graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_all.png", replace
 					graph	close
@@ -1495,7 +1495,7 @@
 									xline(${thresval_rf})	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
 									title(Resilience in 2015 vs Food Security in 2017)	name(RF_all, replace)	///
 									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-									subtitle(FSPS by RF)
+									subtitle(PFS by RF)
 					
 					graph	export	"${PSID_outRaw}/OOB_prediction_RF_all.png", replace
 					graph	close
@@ -1528,7 +1528,7 @@
 				local	USDA_rmse_sub			=	e(rmse)
 				local	USDA_rmse_sub_bymean	=	e(rmse)	/	USDA_mean
 				
-			*	FSPS scores
+			*	PFS scores
 			foreach	type	in	ols	ls	rf	{
 				
 				*	All sample
@@ -1568,13 +1568,13 @@
 		
 	*	Association
 	local	model_check	0	//	varying LHS
-	local	specification_check	1	//	varying RHS
+	local	specification_check	0	//	varying RHS
 		local	prep_spec	1
 		local	spec_analysis	1
 		local	stationary_check	0
 	local	indicator_comparison	0
 	local	pre_post	0
-	local	by_year	0	
+	local	by_year	1	
 
 	
 							
@@ -1661,7 +1661,7 @@
 		local	demovars	c.age_head_fam##c.age_head_fam	c.HH_female	c.HH_race_black c.HH_race_other	c.marital_status_cat
 		local	econvars	c.ln_income_pc	/*wealth_pc	wealth_pc_sq*/
 		local	familyvars	c.num_FU_fam c.ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
-		local	eduvars		/*attend_college_head*/ c.highest_grade1 c.highest_grade3 c.highest_grade4	
+		local	eduvars		/*attend_college_head*/ c.highdegree_NoHS c.highdegree_somecol c.highdegree_col
 		local	empvars		c.emp_HH_simple
 		local	healthvars	c.phys_disab_head
 		local	foodvars	c.food_stamp_used_1yr	/*child_meal_assist elderly_meal*/	c.WIC_received_last	
@@ -2182,8 +2182,8 @@
 						*	By income group
 						est	restore	Prob_FI_interact
 						margins,	dydx(c.ln_income_pc)	over(income_to_poverty_cat)
-						marginsplot, title(Semi-elasticity of FSPS w.r.t. income with 95% CI) xtitle(Income-to-Poverty Ratio)	///
-										note(1% change in income increases FSPS by y-var percentage point)
+						marginsplot, title(Semi-elasticity of PFS w.r.t. income with 95% CI) xtitle(Income-to-Poverty Ratio)	///
+										note(1% change in income increases PFS by y-var percentage point)
 						graph	export	"${PSID_outRaw}/ME_income_bygroup.png", replace
 						graph	close
 						
@@ -2198,8 +2198,8 @@
 						}
 						est	restore	Prob_FI_interact
 						margins,	dydx(c.ln_income_pc)	over(income_to_poverty_lowtail)
-						marginsplot, title(Marginal Effect of Income on FSPS) xtitle(Income to Poverty Ratio(%))	ytitle(FSPS(percentage point))	///
-										note("Income to Poverty Ratio is calculated by dividing total annual income into Federal Poverty Line" "Change in FSPS with respect to 1% increase in per capita income")
+						marginsplot, title(Marginal Effect of Income on PFS) xtitle(Income to Poverty Ratio(%))	ytitle(PFS(percentage point))	///
+										note("Income to Poverty Ratio is calculated by dividing total annual income into Federal Poverty Line" "Change in PFS with respect to 1% increase in per capita income")
 						graph	export	"${PSID_outRaw}/ME_income_lowtail.png", replace
 						graph	close
 						
@@ -2208,16 +2208,16 @@
 							est	restore	Prob_FI_interact
 							margins,	dydx(c.ln_income_pc)	subpop(if year2==`year')	over(income_to_poverty_lowtail) post
 							est store SE_`year'
-							marginsplot,	title(Semi-elasticity of FSPS over income in `year')
+							marginsplot,	title(Semi-elasticity of PFS over income in `year')
 							graph	export	"${PSID_outRaw}/ME_income_lowtail_`year'.png", replace
 							graph	close	
 							
 						}
 						coefplot (SE_2001, msymbol(circle)) (SE_2007, msymbol(diamond))	(SE_2011, msymbol(square))	(SE_2017, msymbol(triangle)), noci	lwidth(*1) connect(l) vertical	///
 						xlabel(1 "20" 2 "40"	3	"60"	4	"80"	5	"100"	6	"120"	7	"140"	8	"160"	9	"180"	10	"200"	11	"220"	12	"240"	13	"260"	14	"280")	///
-						note("Income to Poverty Ratio is calculated by dividing total annual income into Federal Poverty Line" "Change in FSPS with respect to 1% increase in per capita income")	///
+						note("Income to Poverty Ratio is calculated by dividing total annual income into Federal Poverty Line" "Change in PFS with respect to 1% increase in per capita income")	///
 						legend(lab (1 "2001") lab(2 "2007") lab (3 "2011") lab(4 "2017")	rows(1))	///
-						xtitle (Income to Poverty Ratio(%))	ytitle(FSPS(percentage point))	title (Marginal Effect of Income on FSPS)	
+						xtitle (Income to Poverty Ratio(%))	ytitle(PFS(percentage point))	title (Marginal Effect of Income on PFS)	
 						graph	export	"${PSID_outRaw}/ME_income_lowtail_byyear.png", replace
 						graph	close
 						
@@ -2228,18 +2228,18 @@
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
 						margins, eyex(foodexp_W_thrifty) over(year2) post
 						est	store	eyex_foodplan_nocon_year
-						marginsplot, title(Elasticity of FSPS over thrifty food plan by year)
+						marginsplot, title(Elasticity of PFS over thrifty food plan by year)
 						
 						*	Control (age, income), by year
 						est	restore	Prob_FI_interact
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
 						margins, eyex(foodexp_W_thrifty) over(year2) post
 						est	store	eyex_foodplan_con_year
-						marginsplot, title(Elasticity of FSPS over thrifty food plan by year)
+						marginsplot, title(Elasticity of PFS over thrifty food plan by year)
 						
 						*	Graph
 						coefplot eyex_foodplan_nocon_year	eyex_foodplan_con_year, lwidth(*1) connect(l) vertical	xlabel(1(1)9)	///
-							xtitle (Survey Wave)	ytitle(FSPS)	title (Elasticity of FSPS over Food Plan by year)	///
+							xtitle (Survey Wave)	ytitle(PFS)	title (Elasticity of PFS over Food Plan by year)	///
 							legend(lab (2 "No controls") lab(4 "Controls") rows(1))	///
 							note(Controls include age and income)
 						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_year.png", replace
@@ -2250,18 +2250,18 @@
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_cat) post
 						est	store	eyex_foodplan_nocon_IPR
-						marginsplot, title(Elasticity of FSPS over thrifty food plan by IPR)
+						marginsplot, title(Elasticity of PFS over thrifty food plan by IPR)
 						
 						*	Control (age, income), by income group
 						est	restore	Prob_FI_interact
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_cat) post
 						est	store	eyex_foodplan_con_IPR
-						marginsplot, title(Elasticity of FSPS over thrifty food plan by IPR)
+						marginsplot, title(Elasticity of PFS over thrifty food plan by IPR)
 						
 						*	Graph
 						coefplot eyex_foodplan_nocon_IPR	eyex_foodplan_con_IPR, lwidth(*1) connect(l) vertical	xlabel(1(1)11)	///
-							xtitle (Income to Poverty Ratio)	ytitle(FSPS)	title (Elasticity of FSPS over Food Plan by IPR)	///
+							xtitle (Income to Poverty Ratio)	ytitle(PFS)	title (Elasticity of PFS over Food Plan by IPR)	///
 							legend(lab (2 "No controls") lab(4 "Controls") rows(1))	///
 							note(Controls include age and income)
 						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPR.png", replace
@@ -2272,18 +2272,18 @@
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	/*c.age_head_fam##c.age_head_fam		ln_income_pc */
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_lowtail) post
 						est	store	eyex_foodplan_nocon_IPRlow
-						marginsplot, title(Elasticity of FSPS over thrifty food plan by IPR)
+						marginsplot, title(Elasticity of PFS over thrifty food plan by IPR)
 						
 						*	Control (age, income), low income group
 						est	restore	Prob_FI_interact
 						svy: reg rho1_foodexp_pc_thrifty_ols	foodexp_W_thrifty	c.age_head_fam##c.age_head_fam		ln_income_pc
 						margins, eyex(foodexp_W_thrifty) over(income_to_poverty_lowtail) post
 						est	store	eyex_foodplan_con_IPRlow
-						marginsplot, title(Elasticity of FSPS over thrifty food plan by IPR)
+						marginsplot, title(Elasticity of PFS over thrifty food plan by IPR)
 						
 						*	Graph
 						coefplot eyex_foodplan_nocon_IPRlow	eyex_foodplan_con_IPRlow, lwidth(*1) connect(l) vertical	xlabel(0(5)30)	///
-							xtitle (Income to Poverty Ratio*10)	ytitle(FSPS)	title (Elasticity of FSPS over Food Plan by IPR)	///
+							xtitle (Income to Poverty Ratio*10)	ytitle(PFS)	title (Elasticity of PFS over Food Plan by IPR)	///
 							legend(lab (1 "No controls") lab(2 "Controls") rows(1))	noci	xline(10)	///
 							note(Controls include age and income)
 						graph	export	"${PSID_outRaw}/Elasticity_over_foodplan_IPRlow.png", replace
@@ -2319,7 +2319,7 @@
 						
 						twoway	(lpolyci fv dev_from_lifeexp	if	HH_female==0)	///
 								(lpolyci fv dev_from_lifeexp	if	HH_female==1),	///
-								title(Predicted FSPS over the age)	note(Life Expectancy are 73.9(male) and 79.4(female) in 1999 and 76.1(male) and 81.1(female) in 2017) ///
+								title(Predicted PFS over the age)	note(Life Expectancy are 73.9(male) and 79.4(female) in 1999 and 76.1(male) and 81.1(female) in 2017) ///
 								legend(lab (2 "Male") lab(3 "Female") rows(1))	xtitle(Deviation from the Life Expectancy)
 						graph	export	"${PSID_outRaw}/Fitted_age_pooled.png", replace
 						graph	close
@@ -2328,7 +2328,7 @@
 						twoway	(lpoly fv dev_from_lifeexp if year2==1999)	(lpoly fv dev_from_lifeexp if year2==2005)	///
 								(lpoly fv dev_from_lifeexp if year2==2011)	(lpoly fv dev_from_lifeexp if year2==2017),	///
 								legend(lab (1 "1999") lab(2 "2005") lab(3 "2011") lab(4 "2017") rows(1))	///
-								xtitle(Deviation from the Life Expectancy)	ytitle(Predicted FSPS)	title(Predicted FSPS over Life)
+								xtitle(Deviation from the Life Expectancy)	ytitle(Predicted PFS)	title(Predicted PFS over Life)
 						graph	export	"${PSID_outRaw}/Fitted_age_byyear.png", replace
 						graph	close
 						
@@ -2344,21 +2344,21 @@
 							
 							*	1999							
 							summ	retire_age	if	retire_year_head==1999	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==1),	xline(`r(mean)')	xtitle(Age)	legend(lab (2 "FSPS"))	title(1999)	name(fv_age_retire_1999, replace)
+							graph	twoway	(lpolyci fv age_head_fam	if	year==1),	xline(`r(mean)')	xtitle(Age)	legend(lab (2 "PFS"))	title(1999)	name(fv_age_retire_1999, replace)
 							
 							*	2007
 							summ	retire_age	if	retire_year_head==2005	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==4),	xline(`r(mean)')	xtitle(Age) legend(lab (2 "FSPS"))	title(2005)	name(fv_age_retire_2005, replace)
+							graph	twoway	(lpolyci fv age_head_fam	if	year==4),	xline(`r(mean)')	xtitle(Age) legend(lab (2 "PFS"))	title(2005)	name(fv_age_retire_2005, replace)
 							
 							*	2013
 							summ	retire_age	if	retire_year_head==2011	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==7),	xline(`r(mean)')	xtitle(Age) legend(lab (2 "FSPS"))	title(2011)	name(fv_age_retire_2011, replace)
+							graph	twoway	(lpolyci fv age_head_fam	if	year==7),	xline(`r(mean)')	xtitle(Age) legend(lab (2 "PFS"))	title(2011)	name(fv_age_retire_2011, replace)
 							
 							*	2017
 							summ	retire_age	if	retire_year_head==2017	&	e(sample)
-							graph	twoway	(lpolyci fv age_head_fam	if	year==10),	xline(`r(mean)')	xtitle(Age) legend(lab (2 "FSPS"))	title(2017)	name(fv_age_retire_2017, replace)
+							graph	twoway	(lpolyci fv age_head_fam	if	year==10),	xline(`r(mean)')	xtitle(Age) legend(lab (2 "PFS"))	title(2017)	name(fv_age_retire_2017, replace)
 							
-							grc1leg2		fv_age_retire_1999	fv_age_retire_2005	fv_age_retire_2011	fv_age_retire_2017,	title(Predicted FSPS over age) legendfrom(fv_age_retire_1999)	///
+							grc1leg2		fv_age_retire_1999	fv_age_retire_2005	fv_age_retire_2011	fv_age_retire_2017,	title(Predicted PFS over age) legendfrom(fv_age_retire_1999)	///
 											note(Vertical line is the average retirement age of the year in the sample)	xtob1title
 							graph	export	"${PSID_outRaw}/Fitted_age_retirement.png", replace
 							graph	close
@@ -2368,15 +2368,15 @@
 
 				
 					
-					twoway qfitci fv income_pc, title(Expected FSPS over income)
-					twoway qfitci fv age_head_fam, title(Expected FSPS over age)
+					twoway qfitci fv income_pc, title(Expected PFS over income)
+					twoway qfitci fv age_head_fam, title(Expected PFS over age)
 													
-					twoway lpolyci fv income_pc if income_pc>0, title(Expected FSPS over income)
-					twoway lpolyci fv age_head_fam	if	HH_female==1, title(Expected FSPS over age)
-					twoway lpolyci fv age_head_fam	if	HH_female==0, title(Expected FSPS over age)
+					twoway lpolyci fv income_pc if income_pc>0, title(Expected PFS over income)
+					twoway lpolyci fv age_head_fam	if	HH_female==1, title(Expected PFS over age)
+					twoway lpolyci fv age_head_fam	if	HH_female==0, title(Expected PFS over age)
 					
 					graph	twoway	(scatter rho1_foodexp_pc_thrifty_ols income_pc if income_pc>0)		///
-									(lpolyci fv income_pc if income_pc>0, title(Expected FSPS over income))
+									(lpolyci fv income_pc if income_pc>0, title(Expected PFS over income))
 					
 					
 						*	By year
@@ -2384,11 +2384,11 @@
 						gen year2 = (year*2)+1997
 						
 						forval	year=1999(2)2017	{
-							qui	twoway lpolyci fv income_pc if income_pc>0	&	year2==`year', title(Expected FSPS over income in `year')
+							qui	twoway lpolyci fv income_pc if income_pc>0	&	year2==`year', title(Expected PFS over income in `year')
 							graph	export	"${PSID_outRaw}/Fitted_lpoly_income_`year'.png", replace
 							graph	close	
 							
-							qui	twoway lpolyci fv age_head_fam if year2==`year', title(Expected FSPS over age in `year')
+							qui	twoway lpolyci fv age_head_fam if year2==`year', title(Expected PFS over age in `year')
 							graph	export	"${PSID_outRaw}/Fitted_lpoly_age_`year'.png", replace
 							graph	close
 						}
@@ -2400,7 +2400,7 @@
 								(lpoly fv income_pc if income_pc>0	&	year2==2011	&	income_pc<100)	(lpoly fv income_pc if income_pc>0	&	year2==2013	&	income_pc<100)	///
 								(lpoly fv income_pc if income_pc>0	&	year2==2015	&	income_pc<100)	(lpoly fv income_pc if income_pc>0	&	year2==2017	&	income_pc<100),	///
 								legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
-								title(Predicted FSPS over income)	xtitle(Per capita income (thousands))
+								title(Predicted PFS over income)	xtitle(Per capita income (thousands))
 						graph	export	"${PSID_outRaw}/Fitted_lpoly_income_all_year.png", replace
 						graph	close
 						
@@ -2410,7 +2410,7 @@
 								(lpoly fv age_head_fam if year2==2011)	(lpoly fv age_head_fam if year2==2013)	///
 								(lpoly fv age_head_fam if year2==2015)	(lpoly fv age_head_fam if year2==2017),	///
 								legend(lab (1 "1999") lab(2 "2001") lab(3 "2003") lab(4 "2005") lab(5 "2007") lab(6 "2009") lab(7 "2011") lab(8 "2013") lab(9 "2015") lab(10 "2017") rows(2))	///
-								title(Expected FSPS over age by year)
+								title(Expected PFS over age by year)
 						graph	export	"${PSID_outRaw}/Fitted_lpoly_age_all_year.png", replace
 						graph	close
 		
@@ -2593,7 +2593,7 @@
 					function y=gammaden(7.672119,0.3827603,0,x), range(0 10)	lpattern(dashdot)	||	///	//	2013 (4 years after job-loss)
 					function y=gammaden(8.372554,0.487376,0,x), range(0 10)		lpattern(shortdash)		///	//	2015 (6 years after job-loss)
 					legend(lab (1 "2007(6.24)") lab(2 "2009(3.64)") lab(3 "2011(2.34)") lab(4 "2013(4.16)") lab(5 "2015(5.2)"))	///
-					title(The Effect of Job-Loss on FSPS PDF)	subtitle(Job Loss in 2009)	///
+					title(The Effect of Job-Loss on PFS PDF)	subtitle(Job Loss in 2009)	///
 					xtitle(food expenditure per capita (thousands))	///
 					note(Female-headed household. Job loss in 2009 but re-employed since 2011.)
 			graph	export	"${PSID_outRaw}/effect_of_job_loss_on_CB_pdf.png", replace
@@ -2609,7 +2609,7 @@
 					function y=gammaden(4.702001,0.8223391,0,x), range(0 10)	lpattern(dashdot)	||	///	//	2013 (4 years after marriage-shock)
 					function y=gammaden(9.6309,0.6496494,0,x), range(0 10)		lpattern(shortdash)		///	//	2015 (6 years after marriage-shock)
 					legend(lab (1 "2005(3.21)") lab(2 "2007(4.68)") lab(3 "2009(2.6)") lab(4 "2011(2.6)") lab(5 "2013(5.2)"))	///
-					title(The Effect of Marriage Shock on FSPS PDF)	subtitle(Marriage shock in 2007)	///
+					title(The Effect of Marriage Shock on PFS PDF)	subtitle(Marriage shock in 2007)	///
 					xtitle(food expenditure per capita (thousands))	///
 					note(Male-headed household. No longer married in 2007 and remained since then.)
 			graph	export	"${PSID_outRaw}/effect_of_marriage_shock_on_CB_pdf.png", replace
@@ -2623,7 +2623,7 @@
 			
 			tsset	fam_ID_1999 year2, delta(2)
 			
-			*	Ratio of food insecure household (FSPS)
+			*	Ratio of food insecure household (PFS)
 			cap	drop	avg_cb_weighted
 			cap	drop	avg_cb_weighted_sample
 			cap	drop	HH_FS_ratio_PSID
@@ -2632,14 +2632,14 @@
 			gen	double HH_FS_ratio_PSID=.
 			forval	year=1999(2)2017	{
 				
-				* FSPS
+				* PFS
 				if	`year'!=1999	{	
 					
 					* By year
 					qui	svy: mean rho1_foodexp_pc_thrifty_ols if year2==`year'	
 					replace	avg_cb_weighted=e(b)[1,1]	if	year2==`year'
 					
-					* FSPS, by year & sample
+					* PFS, by year & sample
 					forval	sampleno=1/3	{
 						quietly	svy: mean rho1_foodexp_pc_thrifty_ols 		if year2==`year'	&	sample_source==`sampleno'
 						replace	avg_cb_weighted_sample=e(b)[1,1]	if	year2==`year'	&	sample_source==`sampleno'
@@ -2674,7 +2674,7 @@
 			twoway	(connected	HH_FS_ratio_USDA	year2	in	1/10,	yaxis(1) lpattern(solid))	///
 					(connected	HH_FS_ratio_PSID	year2	in	1/10,	yaxis(1) lpattern(dot))	///
 					(connected	avg_cb_weighted	year2	in	1/10,	yaxis(1) lpattern(dash)),	///
-					legend(lab (1 "USDA") lab(2 "PSID") lab(3 "FSPS") rows(1))	///
+					legend(lab (1 "USDA") lab(2 "PSID") lab(3 "PFS") rows(1))	///
 					title(Ratio of being food secure)	subtitle(from 1999 to 2017)
 			graph	export	"${PSID_outRaw}/Food_Secure_by_data.png", replace
 			graph	close
