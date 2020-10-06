@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	0
+	local	retrieve_vars	1
 	local	clean_vars		1
 	
 	
@@ -75,7 +75,7 @@
 	*	Therefore, I will use "psid use" command only for each variable and merge them. This takes more time and requires more work than using "psid add", but still takes much less time than manual cleaning
 	
 	if	`retrieve_vars==1'	{
-	
+		
 		* Import relevant variables using "psidtools" command	
 					
 			*	Survey Weights
@@ -746,6 +746,16 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		tempfile	retire_year_head
 		save		`retire_year_head'
 		
+	*	Lastly, prepare individual gender variable which cannot be imported using "psidtools" command below, as it is uniform across the wave.
+	*	Individual gender variable will be used in constructing the thrifty food plan (TFP) variable
+		use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
+		gen	x11101ll	=	(ER30001*1000) + ER30002 // Personal identifier
+		isid	x11101ll
+		clonevar indiv_gender	=	ER32000
+		
+		tempfile indiv_gender
+		save	 `indiv_gender'
+		
 		*	Merge individual cross-wave with family cross-wave
 		use	`weight_long_ind', clear
 		merge 1:1 x11101ll using `weight_cross_ind', keepusing(weight_cross_ind*) nogen assert(3)
@@ -841,6 +851,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `emp_status_head', keepusing(emp_status_head*) nogen assert(3)
 		merge 1:1 x11101ll using `emp_status_spouse', keepusing(emp_status_spouse*) nogen assert(3)
 		merge 1:1 x11101ll using `retire_year_head', keepusing(retire_year_head*) nogen assert(3)
+		merge 1:1 x11101ll using `indiv_gender', keepusing(indiv_gender) nogen assert(3)
 		
 		qui		compress
 		save	"${PSID_dtInt}/PSID_raw_1999_2017_ind.dta", replace
