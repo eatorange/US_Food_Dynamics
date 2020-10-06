@@ -483,7 +483,7 @@
 			
 			*	Dummy for each variable
 			
-			label variable	race_head_cat`year'	"Racial Category of Head, `year'"
+			label variable	race_head_cat`year'	"Race (Head), `year'"
 		}
 		label	define	race_cat	1	"White"	2	"Black"	3	"Others"
 		label	values	race_head_cat*	race_cat
@@ -524,15 +524,16 @@
 			
 			label	var	age_head_cat`year'	"Age of Household Head (category), `year'"
 			
-			gen		non_working_age`year'	=0	if	inrange(age_head_fam`year',16,64)
-			replace	non_working_age`year'	=1	if	!mi(age_head_fam`year')	&	!inrange(age_head_fam`year',16,64)
+			gen		retire_age`year'	=0	if	inrange(age_head_fam`year',1,64)
+			replace	retire_age`year'	=1	if	!mi(age_head_fam`year')	&	!inrange(age_head_fam`year',1,64)
+			label	var	retire_age`year'	"65 or older in `year'"
 		}
 		label	define	age_head_cat	1	"16-24"	2	"25-34"	3	"35-44"	///
 										4	"45-54"	5	"55-64"	6	"65 and older"
 		label	values	age_head_cat*	age_head_cat
 		
-		label	define	non_working_age	0 "Working age (16-64)"	1	"Outside working age (65 or older)"
-		label	values	non_working_age*	non_working_age
+		label	define	retire_age	0 "No"	1	"Yes"
+		label	values	retire_age*	retire_age
 		
 		*	Education	(category)
 			foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
@@ -722,7 +723,7 @@
 		*	% of children in the households
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			gen		ratio_child`year'	=	num_child_fam`year'/num_FU_fam`year'
-			label	var	ratio_child`year'	"Ratio of children in FU in `year'"
+			label	var	ratio_child`year'	"\% of children population in `year'"
 		}
 		
 		
@@ -730,7 +731,95 @@
 		*	Food expenditure
 		tempfile temp
 		save	`temp'
+		
+			*	Import monthly food plan cost data, which has cost per gender-age
+			import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("thrifty") firstrow clear
 
+			*	Make sure each gender-age uniquly identifies observation
+			isid	gender	age
+
+			rename	gender	indiv_gender
+
+			tempfile	foodprice_raw
+			save	`foodprice_raw'
+		
+			*	Save data for each year
+			forvalues	year=1999(2)2017	{
+				
+				use	`foodprice_raw', clear
+				
+				rename	age	age_ind`year'
+				keep	indiv_gender	age_ind`year'	foodcost_monthly_`year'
+				
+				tempfile	foodcost_`year'
+				save	`foodcost_`year''
+				
+			}
+			
+			*	There are household members whose ages are missing in PSID. In that case, we apply average cost of male/female, from 19(20) to 50.
+			*	I manually checked the observations, and very few numbers of household members in HH have missing ages (between 0.01~0.2%) in each year, and most of them are adults.
+
+			scalar	foodcost_monthly_avgadult_1999	=	115.25
+			scalar	foodcost_monthly_avgadult_2001	=	122.45
+			scalar	foodcost_monthly_avgadult_2003	=	127.8
+			scalar	foodcost_monthly_avgadult_2005	=	137.4
+			scalar	foodcost_monthly_avgadult_2007	=	147.45
+			scalar	foodcost_monthly_avgadult_2009	=	159
+			scalar	foodcost_monthly_avgadult_2011	=	166.35
+			scalar	foodcost_monthly_avgadult_2013	=	172.2
+			scalar	foodcost_monthly_avgadult_2015	=	176
+			scalar	foodcost_monthly_avgadult_2017	=	174.3
+
+			*	Merge PSID data with cost dataset
+			
+			use	`temp', clear 
+			*use	"${PSID_dtInt}/PSID_clean_1999_2017_ind.dta", clear
+			
+			forvalues	year=1999(2)2017	{
+				
+				merge m:1 indiv_gender age_ind`year' using `foodcost_`year'', keepusing(foodcost_monthly_`year')	nogen keep(1 3)
+				replace	foodcost_monthly_`year' = foodcost_monthly_avgadult_`year'	if	mi(age_ind`year')
+				
+				foreach	plan	in	thrifty	/*low	moderate	liberal*/	{
+				
+					*	Sum all individual costs to calculate total monthly clost 
+					bys x11102_`year': egen foodexp_W_`plan'`year' = total(foodcost_monthly_`year') if !mi(x11102_`year')	&	inrange(xsqnr_`year',1,20) //	Total household monthly cost
+					
+					*	Adjust by the number of families
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.2	if	num_FU_fam`year'==1	//	1 person family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.1	if	num_FU_fam`year'==2	//	2 people family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.05	if	num_FU_fam`year'==3	//	3 people family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*0.95	if	inlist(num_FU_fam`year',5,6)	//	5-6 people family
+					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*0.90	if	num_FU_fam`year'>=7	//	7+ people family
+						
+					
+					*	Calulate total annual cost per capita, in thousand sollars			
+					replace foodexp_W_`plan'`year'	=	((foodexp_W_`plan'`year'*12) / num_FU_fam`year' ) /	1000	//	Total household annual cost per capita in thousands
+					
+					*	Make the food plan cost non-missing for household member NOT in the household (i.e. sequence number is outside 1 to 20)
+					*	This step makes all members in a household have the same non-missing value, so they can be treated as duplicates and be dropped when constructing household-level data
+					bys	x11102_`year': egen foodexp_W_`plan'`year'_temp = mean(foodexp_W_`plan'`year')
+					drop	foodexp_W_`plan'`year'
+					rename	foodexp_W_`plan'`year'_temp	foodexp_W_`plan'`year'
+					
+					label	var	foodexp_W_`plan'`year'	"`plan' Food Plan (annual per capita) in `year'"
+				
+				}
+	
+				
+			}
+			
+			*	Drop variables no longer needed
+			drop	foodcost_monthly_????
+		
+
+		*	The code below using "simplified" food price data is no longer used as of Sep 26, 2017
+		{
+		/*
+		use	"${PSID_dtInt}/PSID_clean_1999_2017_ind.dta", clear
+		tempfile temp2
+		save `temp2'
+		
 		*	clean food price data
 		import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("food_cost_month") firstrow clear
 		replace	year=year+1
@@ -748,7 +837,7 @@
 		save 	`monthly_foodprice'
 
 		*	Merge food price data into the main data
-		use	`temp', clear
+		use	`temp2', clear
 		gen	temptag=1
 		merge m:1 temptag using `monthly_foodprice', assert(1	3) nogen
 		drop	temptag
@@ -757,7 +846,7 @@
 			
 			*	Yearly food expenditure = monthly food expenditure * 12
 			*	Monthly food expenditure is calculated by the (# of children * children cost) + (# of adult * adult cost)
-			foreach	plan	in	thrifty low moderate liberal	{
+			foreach	plan	in	thrifty /*low moderate liberal*/	{
 				
 				foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 				
@@ -777,18 +866,24 @@
 					*	Scale it to thousand-dollars
 					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'/1000
 					
+					/*
 					*	Get the average value per capita (SL: This variable would no longer needed as of June 14, 2020)
 					sort	fam_ID_1999
 					if	!inlist(`year',1999)	{
 						local	prevyear=`year'-2
 						gen	avg_foodexp_W_`plan'`year'	=	(foodexp_W_`plan'`year'+foodexp_W_`plan'`prevyear')/2
 					}
+					*/
 					
 				}
 			}
+	
 		
 		*	Drop variables no longer needed
 		drop child_thrifty2013-adult_liberal2017
+		*/
+		}
+		
 		
 		*	Food security category (simplified)
 		*	This simplified category is based on Tiehen(2019)
@@ -879,7 +974,7 @@
 
 		
 		*	Drop individual level variables
-		drop	x11101ll weight_long_ind* weight_cross_ind* respondent???? relat_to_head* age_ind* edu_years????	relat_to_current_head*	
+		drop	x11101ll weight_long_ind* weight_cross_ind* respondent???? relat_to_head* age_ind* edu_years????	relat_to_current_head*	indiv_gender
 		*	Keep	relevant years
 		keep	*1999	*2001	*2003	*2005	*2007	*2009	*2011	*2013	*2015	*2017	/*fam_comp**/	sample_source	ER31996 ER31997		
 		
@@ -925,29 +1020,29 @@
 		label	var	x11102_				"Interview No."	
 		label	var	weight_long_fam		"Longitudinal Family Weight"
 		label	var	age_head_fam		"Age"
-		label	var	race_head_fam		"Race of Household Head"
+		label	var	race_head_fam		"Race"
 		label	var	total_income_fam	"Total Household Income"
-		label	var	marital_status_fam	"Marital Status of Head"
-		label	var	num_FU_fam			"Number of Family members"
-		label	var	num_child_fam		"# of Children"
-		label	var	gender_head_fam		"Gender of Household Head"
-		label	var	grade_comp_head_fam	"Grades completed(head)"
+		label	var	marital_status_fam	"Marital status"
+		label	var	num_FU_fam			"Number of family members"
+		label	var	num_child_fam		"Number of children"
+		label	var	gender_head_fam		"Gender"
+		label	var	grade_comp_head_fam	"Grades completed="
 		label	var	state_resid_fam		"State of Residence"
-		label 	var	fs_raw_fam 			"Food Security Raw Score"
-		label 	var	fs_scale_fam 		"Food Security Scale Score"
-		label	var	fs_scale_fam_rescale	"Food Security Scale Score (USDA)-rescaled"
-		label	var	fs_cat_fam 			"Food Security Category"
-		label	var	food_stamp_used_2yr	"Received Food Stamp (2 years ago)"
+		label 	var	fs_raw_fam 			"USDA food security raw score"
+		label 	var	fs_scale_fam 		"USDA food security scale score"
+		label	var	fs_scale_fam_rescale	"USDA food security scale score-rescaled"
+		label	var	fs_cat_fam 			"USDA food security category"
+		label	var	food_stamp_used_2yr	"Received food Stamp (2 years ago)"
 		label	var	food_stamp_used_1yr "Received food stamp"
 		label	var	child_meal_assist	"Received child free meal at school"
 		label	var	WIC_received_last	"Received foods through WIC"
-		label	var	family_comp_change	"Change in Family Composition"
-		label	var	grade_comp_cat		"Highest Grade Completed (Head)"
-		label	var	race_head_cat		"Race of Household Head"
+		label	var	family_comp_change	"Change in family composition"
+		label	var	grade_comp_cat		"Highest Grade Completed"
+		label	var	race_head_cat		"Racial category"
 		label	var	marital_status_cat	"Married"
 		label	var	child_in_FU_cat		"Household has a child"
-		label	var	age_head_cat 		"Age of Household Head (category)"
-		label	var	total_income_fam	"Total Household Income"
+		label	var	age_head_cat 		"Age category"
+		label	var	total_income_fam	"Total household income"
 		label	var	hs_completed_head	"HH completed high school/GED"
 		label	var	college_completed	"HH has college degree"
 		label	var	respondent_BMI		"Respondent's Body Mass Index"
@@ -955,7 +1050,7 @@
 		label	var	food_exp_pc			"Food expenditure per capita (thousands)"
 		label	var	avg_income_pc		"Average income over two years per capita"
 		label	var	avg_foodexp_pc		"Average food expenditure over two years per capita"
-		label	var	splitoff_indicator		"Splitoff indicator"
+		label	var	splitoff_indicator	"Splitoff indicator"
 		label	var	num_split_fam		"# of splits"
 		label	var	main_fam_ID		"Family ID"
 		label	var	food_exp_total		"Total food expenditure"
@@ -1004,8 +1099,8 @@
 		label	var	smoke_spouse	"Smoking (spouse)"
 		label	var	num_smoke_head		"# of smoking (head)"
 		label	var	num_smoke_spouse	"# of smoking (spouse)"
-		label	var	phys_disab_head		"Physical Disability (head)"
-		label	var	phys_disab_spouse	"Physical Disability (spouse)"
+		label	var	phys_disab_head		"Disabled"
+		label	var	phys_disab_spouse	"Disabled (spouse)"
 		label	var	housing_status		"Housing status"
 		label	var	elderly_meal	"Received free/reduced cost elderly meal"
 		label	var	retire_plan_head		"Retirement plan (head)"
@@ -1044,11 +1139,12 @@
 		label	var	accum_splitoff		"Accumulated splitoff"
 		label	var	other_debts			"Other debts"
 		label	var	fs_cat_fam_simp		"Food Security Category (binary)"
-		label	var	non_working_age		"Ouside working age"
+		label	var	retire_age		"65 or older"
 		label	var	retire_year_head	"Year of retirement"
 		label	var	retire_year_head	"Age when retired"
-		label	var	ratio_child			"Percetange of children population"
+		label	var	ratio_child			"\% of children population"
 		label	var	grade_comp_cat_spouse	"Highest Grade Completed (Spouse)"
+		label	var	foodexp_W_thrifty	"Thrifty Food Plan (TFP) cost (annual per capita)"
 
 		*label	var	cloth_exp_total		"Total cloth expenditure"
 		
@@ -1115,6 +1211,7 @@
 		*label	var	lag_avg_foodexp_pc_`i'	"Lagged avg. food exp (pc) `i'th polynimial	order"
 		
 	}
+	label	var	lag_food_exp_pc_1	"Lagged food expenditure per capita"
 	order	lag_food_exp_pc_1-lag_food_exp_pc_5,	after(food_exp_pc)
 	*order	lag_avg_foodexp_pc_1-lag_avg_foodexp_pc_5,	after(avg_foodexp_pc)
 	 
@@ -1149,19 +1246,22 @@
 
 		*	Non-linear terms of income & wealth	&	age
 		gen	income_pc_sq	=	(income_pc)^2
-		label	var	income_pc_sq	"(Income per capita)^2"
+		label	var	income_pc_sq	"(Income per capita)$^2$ (thousands)"
 		gen	wealth_pc_sq	=	(wealth_pc)^2
-		label	var	wealth_pc_sq	"(Wealth per capita)^2"
+		label	var	wealth_pc_sq	"(Wealth per capita)$^2$ (thousands)"
 		gen	age_head_fam_sq		=	(age_head_fam)^2
+		label	var	age_head_fam_sq	"Age$^2$"
 		gen	age_spouse_sq		=	(age_spouse)^2
+		label	var	age_head_fam_sq	"Age$^2$ (spouse)"
 		gen	income_pc_orig	=	income_pc*1000	//	Non-scaled, unit is dollars
 		gen	invhyp_age	=	asinh(age_head_fam)	//	Inverse hyperbolic transformation of age
 		gen	asinh_income	=	asinh(income_pc*1000)	//	Inverse hyperbolic transformation of income
 		gen	ln_income_pc	=	ln(income_pc*1000)	//	Log of income
-		lab	var	ln_income_pc	"Log of income per capita"
+		lab	var	ln_income_pc	"ln(income per capita)"
 		gen	ln_wealth_pc	=	ln(wealth_pc*1000)	//	Log of income
-		lab	var	ln_wealth_pc	"Log of wealth per capita"
+		lab	var	ln_wealth_pc	"ln(wealth per capita)"
 		gen	income_cubic	=	(income_pc)^3	//	Cubic of income
+		label	var	income_pc_sq	"(Income per capita)$^3$"
 		
 		*	Decompose unordered categorical variables
 		local	catvars	race_head_cat	marital_status_fam	gender_head_fam	state_resid_fam	housing_status	family_comp_change	couple_status	grade_comp_cat	grade_comp_cat_spouse	year	sample_source
@@ -1169,7 +1269,7 @@
 			tab	`var',	gen(`var'_enum)
 		}
 		rename	gender_head_fam_enum1	HH_female
-		label	variable	HH_female	"Gender:Female"
+		label	variable	HH_female	"Female"
 		
 		rename	(race_head_cat_enum1 race_head_cat_enum2 race_head_cat_enum3)	(HH_race_white	HH_race_black	HH_race_other)
 		label	variable	HH_race_white	"Race: White"
@@ -1179,18 +1279,18 @@
 		rename	(grade_comp_cat_enum1	grade_comp_cat_enum2	grade_comp_cat_enum3	grade_comp_cat_enum4)	///
 				(highdegree_NoHS	highdegree_HS		highdegree_somecol	highdegree_col)
 				
-		label	variable	highdegree_NoHS		"Highest Degree: Less than High School"
-		label	variable	highdegree_HS		"Highest Degree: High School"
-		label	variable	highdegree_somecol	"Highest Degree: Some College"
-		label	variable	highdegree_col		"Highest Degree: College"
+		label	variable	highdegree_NoHS		"Highest degree: less than high school"
+		label	variable	highdegree_HS		"Highest degree: high school"
+		label	variable	highdegree_somecol	"Highest degree: some college"
+		label	variable	highdegree_col		"Highest degree: college"
 		
 		rename	(grade_comp_cat_spouse_enum1	grade_comp_cat_spouse_enum2	grade_comp_cat_spouse_enum3	grade_comp_cat_spouse_enum4)	///
 				(highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse)
 				
-		label	variable	highdegree_NoHS_spouse		"Highest Degree: Less than High School (Spouse)"
-		label	variable	highdegree_HS_spouse		"Highest Degree: High School (Spouse)"
-		label	variable	highdegree_somecol_spouse	"Highest Degree: Some College (Spouse)"
-		label	variable	highdegree_col_spouse		"Highest Degree: College (Spouse)"
+		label	variable	highdegree_NoHS_spouse		"Highest degree: less than high school (spouse)"
+		label	variable	highdegree_HS_spouse		"Highest degree: high school (spouse)"
+		label	variable	highdegree_somecol_spouse	"Highest degree: some college (spouse)"
+		label	variable	highdegree_col_spouse		"Highest degree: college (spouse)"
 		
 		rename	(sample_source_enum1	sample_source_enum2	sample_source_enum3)	///
 				(sample_source_SRC	sample_source_SEO	sample_source_IMM)
