@@ -668,53 +668,163 @@
 			*	For food security threshold value, we use the ratio from the annual USDA reports.
 			*	(https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-us/readings/#reports)
 			
-			local	prop_insecure_1		=	101	// 1999: 10.1% are food insecure
-			local	prop_insecure_2		=	107	// 2001: 10.7% are food insecure
-			local	prop_insecure_3		=	112	// 2003: 11.2% are food insecure
-			local	prop_insecure_4		=	110	// 2005: 11.0% are food insecure
-			local	prop_insecure_5		=	111	// 2007: 11.1% are food insecure
-			local	prop_insecure_6		=	147	// 2009: 14.7% are food insecure
-			local	prop_insecure_7		=	149	// 2011: 14.9% are food insecure
-			local	prop_insecure_8		=	143	// 2013: 14.3% are food insecure
-			local	prop_insecure_9		=	127	// 2015: 12.7% are food insecure
-			local	prop_insecure_10	=	118	// 2017: 11.8% are food insecure
+			*** One thing we need to be careful is that, we need to match the USDA ratio to the "population ratio(weighted)", NOT the "sample ratio(unweighted)"
+			*	To get population ratio, we should use "svy: mean"	or "svy: proportion"
+			*	The best way to do is let STATA find them automatically, but for now (2020/10/6) I will find them manually.
+				*	One idea I have to do it automatically is to use loop(while) until we get the threshold value matching the USDA ratio.
+			*	Due to time constraint, I only found it for 2015 (year=9) for OLS, which is needed to generate validation table.
+			
+			
+			local	prop_FI_1	=	0.101	// 1999: 10.1% are food insecure (7.1% are low food secure, 3.0% are very low food secure)
+			local	prop_FI_2	=	0.107	// 2001: 10.7% are food insecure (7.4% are low food secure, 3.3% are very low food secure)
+			local	prop_FI_3	=	0.112	// 2003: 11.2% are food insecure (7.7% are low food secure, 3.5% are very low food secure)
+			local	prop_FI_4	=	0.110	// 2005: 11.0% are food insecure (7.1% are low food secure, 3.9% are very low food secure)
+			local	prop_FI_5	=	0.111	// 2007: 11.1% are food insecure (7.0% are low food secure, 4.1% are very low food secure)
+			local	prop_FI_6	=	0.147	// 2009: 14.7% are food insecure (9.0% are low food secure, 5.7% are very low food secure)
+			local	prop_FI_7	=	0.149	// 2011: 14.9% are food insecure (9.2% are low food secure, 5.7% are very low food secure)
+			local	prop_FI_8	=	0.143	// 2013: 14.3% are food insecure (8.7% are low food secure, 5.6% are very low food secure)
+			local	prop_FI_9	=	0.127	// 2015: 12.7% are food insecure (7.7% are low food secure, 5.0% are very low food secure)
+			local	prop_FI_10	=	0.118	// 2017: 11.8% are food insecure (7.3% are low food secure, 4.5% are very low food secure)
+			
+			local	prop_VLFS_1		=	0.030	// 1999: 10.1% are food insecure (7.1% are low food secure, 3.0% are very low food secure)
+			local	prop_VLFS_2		=	0.033	// 2001: 10.7% are food insecure (7.4% are low food secure, 3.3% are very low food secure)
+			local	prop_VLFS_3		=	0.035	// 2003: 11.2% are food insecure (7.7% are low food secure, 3.5% are very low food secure)
+			local	prop_VLFS_4		=	0.039	// 2005: 11.0% are food insecure (7.1% are low food secure, 3.9% are very low food secure)
+			local	prop_VLFS_5		=	0.041	// 2007: 11.1% are food insecure (7.0% are low food secure, 4.1% are very low food secure)
+			local	prop_VLFS_6		=	0.057	// 2009: 14.7% are food insecure (9.0% are low food secure, 5.7% are very low food secure)
+			local	prop_VLFS_7		=	0.057	// 2011: 14.9% are food insecure (9.2% are low food secure, 5.7% are very low food secure)
+			local	prop_VLFS_8		=	0.056	// 2013: 14.3% are food insecure (8.7% are low food secure, 5.6% are very low food secure)
+			local	prop_VLFS_9		=	0.050	// 2015: 12.7% are food insecure (7.7% are low food secure, 5.0% are very low food secure)
+			local	prop_VLFS_10	=	0.045	// 2017: 11.8% are food insecure (7.3% are low food secure, 4.5% are very low food secure)
 		
-			*	Categorize food security status based on the CB score.
-			foreach	type	in	ols	ls	rf	{
-				foreach	plan	in	thrifty /*low moderate liberal*/	{
-					
-					gen		rho1_`plan'_IS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Food insecure
-					gen		rho1_`plan'_HS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Highly secure
-					
-					/*	Since we are currently using the USDA FS status as an external threshold for FS/FI categorization using CB measure,
-						, we cannot categorize when there is no data of the USDA status unless we use other external source. */
-					*replace	rho1_`plan'_IS_`type'=.	if	!inlist(year,2,3,9,10)
-					*replace	rho1_`plan'_HS_`type'=.	if	!inlist(year,2,3,9,10)
-					
-					foreach	year	in	2	3	4	5	6	7	8	9	10	{
-					
-						xtile `plan'_pctile_`type'_`year' = rho1_foodexp_pc_`plan'_`type' if !mi(rho1_foodexp_pc_`plan'_`type')	&	year==`year', nq(1000)
+			*	Categorize food security status based on the PFS.
+			quietly	{
+				foreach	type	in	ols	ls	rf	{
+					foreach	plan	in	thrifty /*low moderate liberal*/	{
+						
+						gen	rho1_`plan'_FS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Food secure
+						gen	rho1_`plan'_FI_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Food insecure (low food secure and very low food secure)
+						gen	rho1_`plan'_LFS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Low food secure
+						gen	rho1_`plan'_VLFS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Very low food secure
+						gen	rho1_`plan'_cat_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Categorical variable: FS, LFS or VLFS
+						
+						/*	Since we are currently using the USDA FS status as an external threshold for FS/FI categorization using CB measure,
+							, we cannot categorize when there is no data of the USDA status unless we use other external source. */
+						*replace	rho1_`plan'_FI_`type'=.	if	!inlist(year,2,3,9,10)
+						*replace	rho1_`plan'_FS_`type'=.	if	!inlist(year,2,3,9,10)
+						
+						foreach	year	in	2	3	4	5	6	7	8	9	10	{
 							
-						replace	rho1_`plan'_IS_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',1,`prop_insecure_`year'')	&	year==`year'	//	Food insecure
-						replace	rho1_`plan'_HS_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',`prop_insecure_`year''+1,1000)	&	year==`year'	//	Highly secure
-					}
-					
-					label	var	rho1_`plan'_IS_`type'	"Food Insecure (CB) (Thrifty)"
-					label	var	rho1_`plan'_HS_`type'	"Highly Food secure (CB) (Thrifty)"
-					
-				}	//	plan
-			}	//	type
-		
+							di	"current loop is `plan', `type' in year `year'"
+							xtile `plan'_pctile_`type'_`year' = rho1_foodexp_pc_`plan'_`type' if !mi(rho1_foodexp_pc_`plan'_`type')	&	year==`year', nq(1000)
+								
+							*replace	rho1_`plan'_FI_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',1,`prop_FI_`year'')	&	year==`year'	//	Food insecure
+							*replace	rho1_`plan'_FS_`type'	=	1	if	inrange(`plan'_pctile_`type'_`year',`prop_FI_`year''+1,1000)	&	year==`year'	//	Highly secure
+							
+							* We use loop to find the threshold value for categorizing households as food (in)secure
+							local	counter 	=	1	//	reset counter
+							local	ratio_FI	=	0	//	reset FI population ratio
+							local	ratio_VLFS	=	0	//	reset VLFS population ratio
+							
+							foreach	indicator	in	FI	VLFS	{
+								
+								local	counter 	=	1	//	reset counter
+								local	ratio_`indicator'	=	0	//	reset population ratio
+							
+								* To decrease running time, we first loop by 10 
+								while (`counter' < 1000 & `ratio_`indicator''<`prop_`indicator'_`year'') {	//	Loop until population ratio > USDA ratio
+									
+									di	"current indicator is `indicator', counter is `counter'"
+									qui	replace	rho1_`plan'_`indicator'_`type'=1	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',1,`counter')	//	categorize certain number of households at bottom as FI
+									qui	svy, subpop(year_enum`year'): mean 	rho1_`plan'_`indicator'_`type'	//	Generate population ratio
+									local ratio_`indicator' = _b[rho1_`plan'_`indicator'_`type']
+									
+									local counter = `counter' + 10	//	Increase counter by 10
+								}
 
-	*svy: tab rho1_thrifty_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls), cell
-	*svy: tab rho1_low_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_low_ls), cell
-	*svy: tab rho1_moderate_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_moderate_ls), cell
-	*svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal_ls), cell
+								*	Since we first looped by unit of 10, we now have to find to exact value by looping 1 instead of 10.
+								di "internediate counter is `counter'"
+								local	counter=`counter'-10	//	Adjust the counter, since we added extra 10 at the end of the first loop
+
+								while (`counter' > 1 & `ratio_`indicator''>`prop_`indicator'_`year'') {	//	Loop until population ratio < USDA ratio
+									
+									di "counter is `counter'"
+									qui	replace	rho1_`plan'_`indicator'_`type'=0	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',`counter',1000)
+									qui	svy, subpop(year_enum`year'): mean 	rho1_`plan'_`indicator'_`type'
+									local ratio_`indicator' = _b[rho1_`plan'_`indicator'_`type']
+									
+									local counter = `counter' - 1
+								}
+								di "Final counter is `counter'"
+
+								*	Now we finalize the threshold value - whether `counter' or `counter'+1
+									
+									*	Counter
+									local	diff_case1	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
+
+									*	Counter + 1
+									qui	replace	rho1_`plan'_`indicator'_`type'=1	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',1,`counter'+1)
+									qui	svy, subpop(year_enum`year'): mean 	rho1_`plan'_`indicator'_`type'
+									local	ratio_`indicator' = _b[rho1_`plan'_`indicator'_`type']
+									local	diff_case2	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
+									qui	di "diff_case2 is `diff_case2'"
+
+									*	Compare two threshold values and choose the one closer to the USDA value
+									if	(`diff_case1'<`diff_case2')	{
+										global	threshold_`indicator'_`plan'_`type'_`year'	=	`counter'
+									}
+									else	{	
+										global	threshold_`indicator'_`plan'_`type'_`year'	=	`counter'+1
+									}
+								
+								*	Categorize households based on the finalized threshold value.
+								qui	{
+									replace	rho1_`plan'_`indicator'_`type'=1	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',1,${threshold_`indicator'_`plan'_`type'_`year'})
+									replace	rho1_`plan'_`indicator'_`type'=0	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',${threshold_`indicator'_`plan'_`type'_`year'}+1,1000)		
+								}	
+								di "thresval is ${threshold_`indicator'_`plan'_`type'_`year'}"
+							}	//	indicator
+							
+							*	Food secure households
+							replace	rho1_`plan'_FS_`type'=0	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',1,${threshold_FI_`plan'_`type'_`year'})
+							replace	rho1_`plan'_FS_`type'=1	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',${threshold_FI_`plan'_`type'_`year'}+1,1000)
+							
+							*	Low food secure households
+							replace	rho1_`plan'_LFS_`type'=1	if	year==`year'	&	rho1_`plan'_FI_`type'==1	&	rho1_`plan'_VLFS_`type'==0	//	food insecure but NOT very low food secure households			
+							*	Categorize households into one of the three values: FS, LFS and VLFS						
+							replace	rho1_`plan'_cat_`type'=1	if	year==`year'	&	rho1_`plan'_VLFS_`type'==1
+							replace	rho1_`plan'_cat_`type'=2	if	year==`year'	&	rho1_`plan'_LFS_`type'==1
+							replace	rho1_`plan'_cat_`type'=3	if	year==`year'	&	rho1_`plan'_FS_`type'==1
+							assert	rho1_`plan'_cat_`type'!=0	if	year==`year'
+							
+						}	//	year
+						
+						label	var	rho1_`plan'_FI_`type'	"Food Insecurity (PFS) (`type')"
+						label	var	rho1_`plan'_FS_`type'	"Food security (PFS) (`type')"
+						label	var	rho1_`plan'_LFS_`type'	"Low food security (PFS) (`type')"
+						label	var	rho1_`plan'_VLFS_`type'	"Very low food security (PFS) (`type')"
+						label	var	rho1_`plan'_cat_`type'	"PFS category: FS, LFS or VLFS"
+						
+					}	//	plan
+				}	//	type
+				
+				lab	define	PFS_category	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food security(FS)"
+				lab	value	rho1*_cat_*	PFS_category
+				
+			}	//	qui
+			
+			
+	
+
+	*svy: tab rho1_thrifty_FS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls), cell
+	*svy: tab rho1_low_FS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_low_ls), cell
+	*svy: tab rho1_moderate_FS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_moderate_ls), cell
+	*svy: tab rho1_liberal_FS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_liberal_ls), cell
 
 
-	*svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==1, cell
-	*svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==2, cell
-	*svy: tab rho1_liberal_HS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==3, cell
+	*svy: tab rho1_liberal_FS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==1, cell
+	*svy: tab rho1_liberal_FS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==2, cell
+	*svy: tab rho1_liberal_FS_lasso fs_cat_fam_simp if !mi(rho1_avg_foodexp_pc_thrifty_ls) & sample_source==3, cell
 	
 			*	Validation Result
 				sort	fam_ID_1999	year
@@ -755,20 +865,20 @@
 					*	All sample
 					
 					gen		valid_result_`type'	=	.
-					replace	valid_result_`type'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale==1
-					replace	valid_result_`type'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale!=1
-					replace	valid_result_`type'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale==1
-					replace	valid_result_`type'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale!=1
+					replace	valid_result_`type'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp==1	//	fs_scale_fam_rescale==1
+					replace	valid_result_`type'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp!=1	//	fs_scale_fam_rescale!=1
+					replace	valid_result_`type'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp==1	//	fs_scale_fam_rescale==1
+					replace	valid_result_`type'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp!=1	//	fs_scale_fam_rescale!=1
 					label	var	valid_result_`type'	"Validation Result of `type'"
 					
 					*	By subsample
 					forval	sampleno=1/3	{
 						
 						gen		valid_result_`type'_`sampleno'	=	.
-						replace	valid_result_`type'_`sampleno'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale==1	&	sample_source==`sampleno'
-						replace	valid_result_`type'_`sampleno'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==1	&	fs_scale_fam_rescale!=1	&	sample_source==`sampleno'
-						replace	valid_result_`type'_`sampleno'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale==1	&	sample_source==`sampleno'
-						replace	valid_result_`type'_`sampleno'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_HS_`type'==0	&	fs_scale_fam_rescale!=1	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp==1	/*fs_scale_fam_rescale==1*/	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp!=1	/*fs_scale_fam_rescale!=1*/	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp==1	/*fs_scale_fam_rescale==1*/	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp!=1	/*fs_scale_fam_rescale!=1*/	&	sample_source==`sampleno'
 						
 					}
 					
@@ -791,9 +901,9 @@
 				
 				foreach	type	in	ols	ls	rf	{
 					
-					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_HS_`type'==0	&	year==9	//	Maximum PFS of households categorized as food insecure
+					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==0	&	year==9	//	Maximum PFS of households categorized as food insecure
 					local	max_pfs_thrifty_`type'	=	r(max)
-					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_HS_`type'==1	&	year==9	//	Minimum PFS of households categorized as food secure
+					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==1	&	year==9	//	Minimum PFS of households categorized as food secure
 					local	min_pfs_thrifty_`type'	=	r(min)
 
 					global	thresval_`type'	=	(`max_pfs_thrifty_`type''	+	`min_pfs_thrifty_`type'')/2	//	Average of the two scores above is a threshold value.
@@ -802,13 +912,13 @@
 				
 				/*
 				sort rho1_foodexp_pc_thrifty_ols
-				br rho1_foodexp_pc_thrifty_ols rho1_thrifty_HS_ols if year==9
+				br rho1_foodexp_pc_thrifty_ols rho1_thrifty_FS_ols if year==9
 				
 				sort rho1_foodexp_pc_thrifty_ls
-				br rho1_foodexp_pc_thrifty_ls rho1_thrifty_HS_ls if year==9
+				br rho1_foodexp_pc_thrifty_ls rho1_thrifty_FS_ls if year==9
 				
 				sort rho1_foodexp_pc_thrifty_rf
-				br rho1_foodexp_pc_thrifty_rf rho1_thrifty_HS_rf if year==9
+				br rho1_foodexp_pc_thrifty_rf rho1_thrifty_FS_rf if year==9
 				
 				
 				*	As of 2020/9/5, threshold scores are 0.4020(OLS), 0.4527(LASSO), 0.1540(R.Forest)
@@ -1107,115 +1217,159 @@
 		
 	*	Transition matrces
 	
-	qui	svy, subpop(year_enum3):	proportion	rho1_thrifty_HS_ols	if	l_rho1_thrifty_HS_ols==0
-	qui	svy, subpop(year_enum3):	proportion	rho1_thrifty_HS_ols	if	l_rho1_thrifty_HS_ols==1
-	
 	local	run_transition_matrix	0
 	
 	if	`run_transition_matrix'==1	{
 		
 		mat drop _all
-		cap	drop	??_rho1_thrifty_HS_ols
+		cap	drop	??_rho1_thrifty_FS_ols
 		
 		*	Generate lagged FS dummy from PFS, as svy: command does not support factor variable so we can't use l.	
 		forvalues	diff=1/9	{
-			if	`diff'!=9	{
-				gen	l`diff'_rho1_thrifty_HS_ols	=	l`diff'.rho1_thrifty_HS_ols	//	Lag
+			foreach	category	in	FS	FI	LFS	VLFS	cat	{
+				if	`diff'!=9	{
+					gen	l`diff'_rho1_thrifty_`category'_ols	=	l`diff'.rho1_thrifty_`category'_ols	//	Lag
+				}
+				gen	f`diff'_rho1_thrifty_`category'_ols	=	f`diff'.rho1_thrifty_`category'_ols	//	Forward
 			}
-			gen	f`diff'_rho1_thrifty_HS_ols	=	f`diff'.rho1_thrifty_HS_ols	//	Forward	
 		}
 		
 		*	Generate transition matrices
-		
+	
 			*	Initial
-			svy: proportion rho1_thrifty_HS_ols	if year_enum2==1
-			svy, subpop(year_enum10):	proportion rho1_thrifty_HS_ols
+			*svy, subpop(year_enum2): 	proportion rho1_thrifty_FS_ols
+			*svy, subpop(year_enum10):	proportion rho1_thrifty_FS_ols
+			
+			*svy, subpop(year_enum9):	tab l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+			
+			*local	year=3
+			*local	4year_later	=	`year'+1
+			*svy, subpop(year_enum`4year_later'):	tab l2_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+			*svy, subpop(year_enum4):	tab l2_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
 			
 			*	2 X 2 (FS, FI)	-	FS status conditional upon the stataus 2 years ago
-			forvalues	year=3/10	{
-					
-				qui	svy, subpop(year_enum`year'):qui proportion	rho1_thrifty_HS_ols	if	l_rho1_thrifty_HS_ols==0	//	Previously FI
+			cap	mat	drop	trans_2by2_joint_2yrs
+			cap	mat	drop	trans_2by2_marginal_2yrs
+			forvalues	year=3/10	{			
+				
+				*	Marginal distribution (P_t|P_t-1)
+				qui	svy, subpop(year_enum`year'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	//	Previously FI
 				mat	trans_2by2_`year'_FI	=	e(b)
-				qui	svy, subpop(year_enum`year'): proportion	rho1_thrifty_HS_ols	if	l_rho1_thrifty_HS_ols==1	//	Previously FS
+				qui	svy, subpop(year_enum`year'): proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	//	Previously FS
 				mat	trans_2by2_`year'_FS	=	e(b)
 				
-				mat	trans_2by2_`year'	=	nullmat(trans_2by2_`year')	\	trans_2by2_`year'_FI	\	trans_2by2_`year'_FS
+				mat	trans_2by2_marginal_`year'	=	nullmat(trans_2by2_`year')	\	trans_2by2_`year'_FI	\	trans_2by2_`year'_FS				
+				mat	trans_2by2_marginal_2yrs	=	nullmat(trans_2by2_marginal_2yrs),	trans_2by2_marginal_`year'
 				
-				mat	trans_2by2_2years	=	nullmat(trans_2by2_2years),	trans_2by2_`year'
+				*	Joint distribution	(two-way tabulate)
+				svy, subpop(year_enum`year'): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				mat	trans_2by2_joint_`year' = e(b)[1,1], e(b)[1,2] \ e(b)[1,3], e(b)[1,4]			
+				mat	trans_2by2_joint_2yrs	=	nullmat(trans_2by2_joint_2yrs),	trans_2by2_joint_`year'
+				
 			}
 			
-			putexcel	set "${PSID_outRaw}/Transition_Matrices", sheet(2by2) modify
-			putexcel	A3	=	matrix(trans_2by2_2years), names overwritefmt nformat(number_d1)
+			putexcel	set "${PSID_outRaw}/Transition_Matrices", sheet(2by2) replace	/*modify*/
+			putexcel	A3	=	matrix(trans_2by2_marginal_2yrs), names overwritefmt nformat(number_d1)
+			putexcel	A8	=	matrix(trans_2by2_joint_2yrs), names overwritefmt nformat(number_d1)
+				
+			*	2 X 2 (FS, FI) - FS status over 4 years 4 years ago (ex. 2001-2005, 2003-2007, ...)			
+			cap	mat	drop	trans_2by2_joint_4yrs
+			cap	mat	drop	trans_2by2_marginal_4yrs
 			
-			
-			*	2 X 2 (FS, FI) - FS status conditional upon the stataus up to 4 years ago (ex. 2001-2005, 2003-2007, ...)
-			*	This matrices are generated by multiplying two adjacent 2-by-2 matrices (ex. 2001-2005 = 2001-2003 * 2003-2005)
 			forvalues	year=3/9	{
+							
+				local	4year_later	=	`year'+1	
 				
-				local	4year_later	=	`year'+1		
-				mat	trans_2by2_`year'_`4year_later'	=	trans_2by2_`year' * trans_2by2_`4year_later'	//	Transition matrix from year to 4 years later
+				*	Marginal distribution (P_t|P_t-2)
+				*	This matrices are generated by multiplying two adjacent 2-by-2 matrices (ex. 2001-2005 = 2001-2003 * 2003-2005)
 				
-				mat	trans_2by2_4years	=	nullmat(trans_2by2_4years),	trans_2by2_`year'_`4year_later'
+				mat	trans_2by2_marginal_`year'_`4year_later'	=	trans_2by2_marginal_`year' * trans_2by2_marginal_`4year_later'	//	Transition matrix from year to 4 years later		
+				mat	trans_2by2_marginal_4yrs	=	nullmat(trans_2by2_marginal_4yrs),	trans_2by2_marginal_`year'_`4year_later'
+				
+				*	Joint distribution (2-way tabulate)
+				svy, subpop(year_enum`4year_later'): tabulate l2_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				mat	trans_2by2_joint_`4year_later' = e(b)[1,1], e(b)[1,2] \ e(b)[1,3], e(b)[1,4]			
+				mat	trans_2by2_joint_4yrs	=	nullmat(trans_2by2_joint_4yrs),	trans_2by2_joint_`4year_later'
+							
 			
 			}
+			putexcel	A13	=	matrix(trans_2by2_marginal_4yrs), names overwritefmt nformat(number_d1)
+			putexcel	A18	=	matrix(trans_2by2_joint_4yrs), names overwritefmt nformat(number_d1)
 			
-			putexcel	A9	=	matrix(trans_2by2_4years), names overwritefmt nformat(number_d1)
 		
-			*	2 X 2 (FS, FI) - FS status conditional upon the stataus up to 6 years ago (ex. 2001-2007, 2003-2009, ...)
+			*	2 X 2 (FS, FI) - FS status over 6 years (ex. 2001-2007, 2003-2009, ...)
 			*	This matrices are generated by multiplying three adjacent 2-by-2 matrices (ex. 2001-2007 = 2001-2003 * 2003-2005 * 2003-2005)
-			cap	mat	drop	trans_2by2_6years
+			cap	mat	drop	trans_2by2_joint_4yrs
+			cap	mat	drop	trans_2by2_marginal_4yrs
+			
 			forvalues	year=3/8	{
 				
 				local	4year_later	=	`year'+1
 				local	6year_later	=	`year'+2
-				mat	trans_2by2_`year'_`6year_later'	=	trans_2by2_`year' * trans_2by2_`4year_later'	*	trans_2by2_`6year_later'	//	Transition matrix from year to 4 years later
 				
-				mat	trans_2by2_6years	=	nullmat(trans_2by2_6years),	trans_2by2_`year'_`6year_later'
+				*	Marginal distribution
+				*	This matrices are generated by multiplying three adjacent 2-by-2 matrices (ex. 2001-2007 = 2001-2003 * 2003-2005 * 2003-2005)
+				mat	trans_2by2_marginal_`year'_`6year_later'	=	trans_2by2_marginal_`year' * trans_2by2_marginal_`4year_later'	*	trans_2by2_marginal_`6year_later'	//	Transition matrix from year to 4 years later		
+				mat	trans_2by2_marginal_6yrs	=	nullmat(trans_2by2_marginal_6yrs),	trans_2by2_marginal_`year'_`6year_later'
+				
+				*	Joint distribution
+				svy, subpop(year_enum`6year_later'): tabulate l3_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				mat	trans_2by2_joint_`6year_later' = e(b)[1,1], e(b)[1,2] \ e(b)[1,3], e(b)[1,4]			
+				mat	trans_2by2_joint_6yrs	=	nullmat(trans_2by2_joint_6yrs),	trans_2by2_joint_`6year_later'
 			
 			}
-			putexcel	A15	=	matrix(trans_2by2_6years), names overwritefmt nformat(number_d1)
+			putexcel	A23	=	matrix(trans_2by2_marginal_6yrs), names overwritefmt nformat(number_d1)
+			putexcel	A28	=	matrix(trans_2by2_joint_6yrs), names overwritefmt nformat(number_d1)
 			
 			*	2 X 2 (FS, FI) over the entire periods
-			cap	mat	drop	trans_2by_2_18years
-			forvalues	year=4/10	{
-				
-				if	`year'==4	{
-					mat	trans_2by_2_18years	=	trans_2by2_3	*	trans_2by2_`year'
-				}
-				else	{
-					mat	trans_2by_2_18years	=	trans_2by_2_18years	*	trans_2by2_`year'
-				}
-				
-			}
+			cap	mat	drop	trans_2by2_marginal_18years
+			cap	mat	drop	trans_2by2_joint_18years
 			
-			putexcel	A20	=	matrix(trans_2by_2_18years), names overwritefmt nformat(number_d1)
+				*	Marginal
+				forvalues	year=4/10	{
+					
+					if	`year'==4	{
+						mat	trans_2by2_marginal_18years	=	trans_2by2_marginal_3	*	trans_2by2_marginal_`year'
+					}
+					else	{
+						mat	trans_2by2_marginal_18years	=	trans_2by2_marginal_18years	*	trans_2by2_marginal_`year'
+					}
+					
+				}
+				
+				*	Joint
+				svy, subpop(year_enum10): tabulate l8_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				mat	trans_2by2_joint_18years = e(b)[1,1], e(b)[1,2] \ e(b)[1,3], e(b)[1,4]			
+			
+			putexcel	A33	=	matrix(trans_2by2_marginal_18years), names overwritefmt nformat(number_d1)
+			putexcel	A38	=	matrix(trans_2by2_joint_18years), names overwritefmt nformat(number_d1)
 			
 			*	First-order dependence test
 				
 				*	Generate state sequence variable (t-2, t-1)
-				gen		PFS_ols_FI_FI	=	0	if	!mi(l2_rho1_thrifty_HS_ols)
-				replace	PFS_ols_FI_FI	=	1	if	l2_rho1_thrifty_HS_ols==0	&	l1_rho1_thrifty_HS_ols==0
+				gen		PFS_ols_FI_FI	=	0	if	!mi(l2_rho1_thrifty_FS_ols)	&	!mi(l1_rho1_thrifty_FS_ols)
+				replace	PFS_ols_FI_FI	=	1	if	l2_rho1_thrifty_FS_ols==0	&	l1_rho1_thrifty_FS_ols==0
 				
-				gen		PFS_ols_FI_FS	=	0	if	!mi(l2_rho1_thrifty_HS_ols)	&	!mi(rho1_thrifty_HS_ols)
-				replace	PFS_ols_FI_FS	=	1	if	l2_rho1_thrifty_HS_ols==0	&	l1_rho1_thrifty_HS_ols==1
+				gen		PFS_ols_FI_FS	=	0	if	!mi(l2_rho1_thrifty_FS_ols)	&	!mi(l1_rho1_thrifty_FS_ols)
+				replace	PFS_ols_FI_FS	=	1	if	l2_rho1_thrifty_FS_ols==0	&	l1_rho1_thrifty_FS_ols==1
 				
-				gen		PFS_ols_FS_FI	=	0	if	!mi(l2_rho1_thrifty_HS_ols)	&	!mi(rho1_thrifty_HS_ols)
-				replace	PFS_ols_FS_FI	=	1	if	l2_rho1_thrifty_HS_ols==1	&	l1_rho1_thrifty_HS_ols==0
+				gen		PFS_ols_FS_FI	=	0	if	!mi(l2_rho1_thrifty_FS_ols)	&	!mi(l1_rho1_thrifty_FS_ols)
+				replace	PFS_ols_FS_FI	=	1	if	l2_rho1_thrifty_FS_ols==1	&	l1_rho1_thrifty_FS_ols==0
 				
-				gen		PFS_ols_FS_FS	=	0	if	!mi(l2_rho1_thrifty_HS_ols)	&	!mi(rho1_thrifty_HS_ols)
-				replace	PFS_ols_FS_FS	=	1	if	l2_rho1_thrifty_HS_ols==1	&	l1_rho1_thrifty_HS_ols==1
+				gen		PFS_ols_FS_FS	=	0	if	!mi(l2_rho1_thrifty_FS_ols)	&	!mi(l1_rho1_thrifty_FS_ols)
+				replace	PFS_ols_FS_FS	=	1	if	l2_rho1_thrifty_FS_ols==1	&	l1_rho1_thrifty_FS_ols==1
 			
 				*	Calculate ratio of 
-				svy, subpop(PFS_ols_FI_FI):	tab	rho1_thrifty_HS_ols	//	(FI, FI, FI) & (FI, FI, FS)
+				svy, subpop(PFS_ols_FI_FI):	tab	rho1_thrifty_FS_ols	//	(FI, FI, FI) & (FI, FI, FS)
 				mat	FI_FI_FI	=	e(b)[1,1]
 				mat	FI_FI_FS	=	e(b)[1,2]
-				svy, subpop(PFS_ols_FI_FS):	tab	rho1_thrifty_HS_ols	//	(FI, FS, FI) & (FI, FS, FS)
+				svy, subpop(PFS_ols_FI_FS):	tab	rho1_thrifty_FS_ols	//	(FI, FS, FI) & (FI, FS, FS)
 				mat	FI_FS_FI	=	e(b)[1,1]
 				mat	FI_FS_FS	=	e(b)[1,2]
-				svy, subpop(PFS_ols_FS_FI):	tab	rho1_thrifty_HS_ols	//	(FS, FI, FI) & (FS, FI, FS)
+				svy, subpop(PFS_ols_FS_FI):	tab	rho1_thrifty_FS_ols	//	(FS, FI, FI) & (FS, FI, FS)
 				mat	FS_FI_FI	=	e(b)[1,1]
 				mat	FS_FI_FS	=	e(b)[1,2]
-				svy, subpop(PFS_ols_FS_FS):	tab	rho1_thrifty_HS_ols	//	(FS, FS, FI) & (FS, FS, FS)
+				svy, subpop(PFS_ols_FS_FS):	tab	rho1_thrifty_FS_ols	//	(FS, FS, FI) & (FS, FS, FS)
 				mat	FS_FS_FI	=	e(b)[1,1]
 				mat	FS_FS_FS	=	e(b)[1,2]
 				
@@ -1230,13 +1384,13 @@
 			mat	zeros	=	[0,0]
 			forvalues	year=4/10	{
 				
-				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_HS_ols	if	PFS_ols_FI_FI==1	//	Pr(t-1,t|FI, FI)
+				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_FS_ols	if	PFS_ols_FI_FI==1	//	Pr(t-1,t|FI, FI)
 				mat	FI_FI_`year'	=	e(b),	zeros
-				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_HS_ols	if	PFS_ols_FI_FS==1	//	Pr(t-1,t|FI, FS)
+				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_FS_ols	if	PFS_ols_FI_FS==1	//	Pr(t-1,t|FI, FS)
 				mat	FI_FS_`year'	=	zeros,	e(b)
-				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_HS_ols	if	PFS_ols_FS_FI==1	//	Pr(t-1,t|FS, FI)
+				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_FS_ols	if	PFS_ols_FS_FI==1	//	Pr(t-1,t|FS, FI)
 				mat	FS_FI_`year'	=	e(b),	zeros
-				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_HS_ols	if	PFS_ols_FS_FS==1	//	Pr(t-1,t|FS, FS)
+				svy, subpop(year_enum`year'):	proportion	rho1_thrifty_FS_ols	if	PFS_ols_FS_FS==1	//	Pr(t-1,t|FS, FS)
 				mat	FS_FS_`year'	=	zeros,	e(b)
 				
 				mat	trans_4by4_`year'	=	FI_FI_`year'	\	FI_FS_`year'	\	FS_FI_`year'	\	FS_FS_`year'
@@ -1280,9 +1434,9 @@
 				forval	year=2/10	{		
 					
 					*	Set threshold PFS value for year, which is the average of the maximum PFS of FI households and the minimum PFS of the FS households
-					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_HS_`type'==0	&	year==`year'	//	Maximum PFS of households categorized as food insecure
+					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==0	&	year==`year'	//	Maximum PFS of households categorized as food insecure
 					local	max_pfs_thrifty_`type'_`year'	=	r(max)
-					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_HS_`type'==1	&	year==`year'	//	Minimum PFS of households categorized as food secure
+					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==1	&	year==`year'	//	Minimum PFS of households categorized as food secure
 					local	min_pfs_thrifty_`type'_`year'	=	r(min)
 
 					global	thresval_`type'_`year'	=	(`max_pfs_thrifty_`type'_`year''	+	`min_pfs_thrifty_`type'_`year'')/2	//	Average of the two scores above is a threshold value.
@@ -1334,7 +1488,7 @@
 		local	prep_spec	1
 		local	spec_analysis	1
 		local	stationary_check	0
-	local	indicator_comparison	0
+	local	indicator_comparison	1
 	local	pre_post	0
 	local	by_year	1	
 
@@ -1343,6 +1497,10 @@
 	
 	if	`indicator_comparison'==1	{
 	
+		cap	drop	USDA_available_years
+		gen		USDA_available_years=0
+		replace	USDA_available_years=1	if	inlist(year,1,2,3,9,10)
+		
 		
 		local	depvar		rho1_foodexp_pc_thrifty_ols
 		*local	lagdepvar	l.`depvar'
@@ -1356,45 +1514,45 @@
 		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	ib0.state_resid_fam	
 		local	interactvars	c.ln_income_pc#c.HH_female	///
-								c.ln_income_pc#c.retire_age	///
-								c.HH_female#c.retire_age	///
-								c.ln_income_pc#c.HH_female#c.retire_age	///
+								c.ln_income_pc#c.age_over65	///
+								c.HH_female#c.age_over65	///
+								c.ln_income_pc#c.HH_female#c.age_over65	///
 								c.no_longer_married#c.HH_female
 		local	timevars	i.year
 		
-		local	MEvars	c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'	// c.retire_age	
+		local	MEvars	c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'	// c.age_over65	
 			
 		*	Regression of 4 different indicators on food security correlates
 		
 		local	depvar	fs_scale_fam_rescale
-		svy: reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
 		est	store	USDA_continuous
-		eststo	USDA_cont_ME: margins,	dydx(`MEvars')	post	
+		*eststo	USDA_cont_ME: margins,	dydx(`MEvars')	post	
 		
 		local	depvar	rho1_foodexp_pc_thrifty_ols
-		svy: reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
 		est	store	CB_continuous
-		eststo	CB_cont_ME: margins,	dydx(`MEvars')	post	
+		*eststo	CB_cont_ME: margins,	dydx(`MEvars')	post	
 		
 		local	depvar	fs_cat_fam_simp
-		svy: reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
 		est	store	USDA_binary
-		eststo	USDA_bin_ME: margins,	dydx(`MEvars')	post	
+		*eststo	USDA_bin_ME: margins,	dydx(`MEvars')	post	
 		
-		local	depvar	rho1_thrifty_HS_ols
-		svy: reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		local	depvar	rho1_thrifty_FS_ols
+		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
 		est	store	CB_binary
-		eststo	CB_bin_ME: margins,	dydx(`MEvars')	post	
+		*eststo	CB_bin_ME: margins,	dydx(`MEvars')	post	
 		
 		
 		*	Output
 		esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.csv", ///
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-				title(Average Marginal Effects on Food Security Status) replace
+				title(Effect of Correlates on Food Security Status) replace
 				
 		esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.tex", ///
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-				title(Average Marginal Effects on Food Security Status) replace
+				title(Effect of Correlates on Food Security Status) replace
 				
 		esttab	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_ME.csv", ///
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
@@ -1430,9 +1588,9 @@
 		local	shockvars	c.no_longer_employed	c.no_longer_married	c.no_longer_own_house	c.became_disabled
 		local	regionvars	ib0.state_resid_fam	
 		local	interactvars	c.ln_income_pc#c.HH_female	///
-								c.ln_income_pc#c.retire_age	///
-								c.HH_female#c.retire_age	///
-								c.ln_income_pc#c.HH_female#c.retire_age	///
+								c.ln_income_pc#c.age_over65	///
+								c.HH_female#c.age_over65	///
+								c.ln_income_pc#c.HH_female#c.age_over65	///
 								c.no_longer_married#c.HH_female
 		local	timevars	i.year
 		
@@ -1496,9 +1654,9 @@
 		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	ib0.state_resid_fam	
 		local	interactvars	c.ln_income_pc#c.HH_female	///
-								c.ln_income_pc#c.retire_age	///
-								c.HH_female#c.retire_age	///
-								c.ln_income_pc#c.HH_female#c.retire_age	///
+								c.ln_income_pc#c.age_over65	///
+								c.HH_female#c.age_over65	///
+								c.ln_income_pc#c.HH_female#c.age_over65	///
 								c.no_longer_married#c.HH_female
 		local	timevars	i.year
 		
@@ -1677,7 +1835,7 @@
 		
 	
 	*	CB (binary category)
-	local	depvar		rho1_thrifty_HS_ols
+	local	depvar		rho1_thrifty_FS_ols
 	
 		* LPM
 			
@@ -1882,9 +2040,9 @@
 			local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 			local	regionvars	ib0.state_resid_fam	
 			local	interactvars	c.ln_income_pc#c.HH_female	///
-									c.ln_income_pc#c.retire_age	///
-									c.HH_female#c.retire_age	///
-									c.ln_income_pc#c.HH_female#c.retire_age	///
+									c.ln_income_pc#c.age_over65	///
+									c.HH_female#c.age_over65	///
+									c.ln_income_pc#c.HH_female#c.age_over65	///
 									c.no_longer_married#c.HH_female
 			local	timevars	i.year
 	
@@ -1919,16 +2077,16 @@
 					test	age_head_fam c.age_head_fam#c.age_head_fam
 					
 					*	gender and its interaction terms (whether gender matters)
-					test	HH_female	c.ln_income_pc#c.HH_female	c.HH_female#c.retire_age	c.ln_income_pc#c.HH_female#c.retire_age
+					test	HH_female	c.ln_income_pc#c.HH_female	c.HH_female#c.age_over65	c.ln_income_pc#c.HH_female#c.age_over65
 					
 					*	income and its interaction terms (wheter income matters)
-					test	c.ln_income_pc	c.ln_income_pc#c.HH_female	c.ln_income_pc#c.retire_age	c.ln_income_pc#c.HH_female#c.retire_age
+					test	c.ln_income_pc	c.ln_income_pc#c.HH_female	c.ln_income_pc#c.age_over65	c.ln_income_pc#c.HH_female#c.age_over65
 					
 					*	# of FU and # of children (jointly) (whether family size matters)
 					//test	c.num_FU_fam c.num_child_fam
 					
 					*	All terms interacting with outside workinge age (whether being non-working age matters)
-					test	c.ln_income_pc#c.retire_age	c.HH_female#c.retire_age	c.ln_income_pc#c.HH_female#c.retire_age
+					test	c.ln_income_pc#c.age_over65	c.HH_female#c.age_over65	c.ln_income_pc#c.HH_female#c.age_over65
 					
 					*	No longer married and its interaction term (wheter being no longer married matters)
 					test	no_longer_married	c.no_longer_married#c.HH_female
@@ -2054,7 +2212,7 @@
 					/*
 					*	Overall (AME)
 					est	restore	Prob_FI_interact
-					local	nonlinear_terms	c.age_head_fam	HH_female	c.ln_income_pc	c.retire_age	c.no_longer_married
+					local	nonlinear_terms	c.age_head_fam	HH_female	c.ln_income_pc	c.age_over65	c.no_longer_married
 					eststo	ME_overall: margins,	dydx(`nonlinear_terms'	)	post	//	age, gender and ln(income). Income will be semi-elasticity
 					est	restore	Prob_FI_interact
 					eststo	ME_overall_atmeans: margins,	dydx(`nonlinear_terms')	atmeans post	//	age, gender and ln(income). Income will be semi-elasticity
@@ -2062,7 +2220,7 @@
 						cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels /*drop(_cons)*/	title(Marginal Effect_overall) replace
 						
 					est	restore	Prob_FI_interact	
-					eststo	ME_AME2:	margins,	expression((1/exp(ln_income_pc))*(_b[ln_income_pc]+_b[c.ln_income_pc#c.HH_female]*HH_female+_b[c.ln_income_pc#c.retire_age]*retire_age)+_b[c.ln_income_pc#c.HH_female#c.retire_age]*HH_female*retire_age)	post	//	1st-derivative w.r.t. per capita income
+					eststo	ME_AME2:	margins,	expression((1/exp(ln_income_pc))*(_b[ln_income_pc]+_b[c.ln_income_pc#c.HH_female]*HH_female+_b[c.ln_income_pc#c.age_over65]*age_over65)+_b[c.ln_income_pc#c.HH_female#c.age_over65]*HH_female*age_over65)	post	//	1st-derivative w.r.t. per capita income
 					
 					*/
 					
@@ -2213,9 +2371,9 @@
 			replace	race_other	=	1	if	race_head_cat==3
 			tab grade_comp_cat,	gen(highest_grade)
 			gen	income_gender	=	c.ln_income_pc#c.HH_female
-			gen	income_nonwork	=	c.ln_income_pc#c.retire_age
-			gen	gender_nonwork	=	c.HH_female#c.retire_age
-			gen	income_gender_nonwork	=	c.ln_income_pc#c.HH_female#c.retire_age
+			gen	income_nonwork	=	c.ln_income_pc#c.age_over65
+			gen	gender_nonwork	=	c.HH_female#c.age_over65
+			gen	income_gender_nonwork	=	c.ln_income_pc#c.HH_female#c.age_over65
 			gen	nomarried_gender	=	c.no_longer_married#c.HH_female
 			
 		
