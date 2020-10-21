@@ -524,16 +524,16 @@
 			
 			label	var	age_head_cat`year'	"Age of Household Head (category), `year'"
 			
-			gen		retire_age`year'	=0	if	inrange(age_head_fam`year',1,64)
-			replace	retire_age`year'	=1	if	!mi(age_head_fam`year')	&	!inrange(age_head_fam`year',1,64)
-			label	var	retire_age`year'	"65 or older in `year'"
+			gen		age_over65`year'	=0	if	inrange(age_head_fam`year',1,64)
+			replace	age_over65`year'	=1	if	!mi(age_head_fam`year')	&	!inrange(age_head_fam`year',1,64)
+			label	var	age_over65`year'	"65 or older in `year'"
 		}
 		label	define	age_head_cat	1	"16-24"	2	"25-34"	3	"35-44"	///
 										4	"45-54"	5	"55-64"	6	"65 and older"
 		label	values	age_head_cat*	age_head_cat
 		
-		label	define	retire_age	0 "No"	1	"Yes"
-		label	values	retire_age*	retire_age
+		label	define	age_over65	0 "No"	1	"Yes"
+		label	values	age_over65*	age_over65
 		
 		*	Education	(category)
 			foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
@@ -591,7 +591,10 @@
 		forval	year=1999(2)2017	{
 			cap	drop	retire_age`year'
 			gen	retire_age`year'	=	age_head_fam`year'	-	(`year'-retire_year_head`year')	///
-				if	emp_status_head`year'==4	&	inrange(retire_year_head`year',1910,`year')	&	inrange(age_head_fam`year',1,120)	&	`year'>=retire_year_head`year'
+				if	emp_status_head`year'==4	&	///	/*	Household head is currently retired	*/		
+					inrange(retire_year_head`year',1910,`year')	&	///	/*	Retired year is in between 1910 and the year surveyd (to exclude data entry error)
+					inrange(age_head_fam`year',1,120)	&	///	/*	Household head is between 1 and 120 years old (to exclude data entry error)
+					`year'>=retire_year_head`year'	//	The year surveyed is later than the year retired (to exclude non-sensible responses)
 			lab	var	retire_age`year' "Retirement age in `year'"
 		}
 		
@@ -890,12 +893,12 @@
 		foreach	year	in	1999	2001	2003	2015	2017	{
 			
 			clonevar	fs_cat_fam_simp`year'	=	fs_cat_fam`year'
-			*recode		fs_cat_fam_simp	(3,4=1) (1,2=1)
 			*label	define	fs_cat_simp	1	"High Secure"	2	"Marginal Secure"	3	"Insecure"
-			recode		fs_cat_fam_simp`year'	(2 3 4=0) (1=1)
+			*recode		fs_cat_fam_simp`year'	(2 3 4=0) (1=1)
+			recode		fs_cat_fam_simp`year'	(3 4=0) (1 2=1)
 
 		}
-		label	define	fs_cat_simp	0	"Food Insecure (any)"	1	"Food Secure"
+		label	define	fs_cat_simp	0	"Food Insecure"	1	"Food Secure"
 		label values	fs_cat_fam_simp*	fs_cat_simp
 		
 		*	Food security score (Rescaled)
@@ -1139,7 +1142,8 @@
 		label	var	accum_splitoff		"Accumulated splitoff"
 		label	var	other_debts			"Other debts"
 		label	var	fs_cat_fam_simp		"Food Security Category (binary)"
-		label	var	retire_age		"65 or older"
+		label	var	age_over65		"65 or older"
+		label	var	retire_age		"Age of retirement"
 		label	var	retire_year_head	"Year of retirement"
 		label	var	retire_year_head	"Age when retired"
 		label	var	ratio_child			"\% of children population"
