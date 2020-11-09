@@ -81,7 +81,8 @@
 		
 	*	OLS
 	local	run_GLM	1
-		local	run_ME	0
+		local	run_ME	1
+		local	model_selection	0
 	
 	*	LASSO
 	local	run_lasso	1
@@ -104,7 +105,7 @@
 		
 		*	Declare variables
 		local	depvar		food_exp_pc
-		local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	/*lag_food_exp_pc_1-lag_food_exp_pc_5*/
+		local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	/*##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	lag_food_exp_pc_1-lag_food_exp_pc_5*/
 		local	demovars	c.age_head_fam##c.age_head_fam	HH_race_black	HH_race_other	marital_status_cat	HH_female	/*ib1.race_head_cat*/	/*ib1.gender_head_fam*/		
 		local	econvars	ln_income_pc	/*ln_wealth_pc*/	/*income_pc	income_pc_sq	wealth_pc	wealth_pc_sq*/	
 		local	healthvars	phys_disab_head
@@ -118,38 +119,91 @@
 		
 		local	MEvars	c.lag_food_exp_pc_1	`healthvars'	c.age_head_fam	/*ib1.race_head_cat*/	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
 		
-		summ `depvar'	`lag_food_exp_pc_1'	`age_head_fam'	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	if	year==9
+		*summ `depvar'	`lag_food_exp_pc_1'	`age_head_fam'	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
+		
+		*	Model selection (highest order)
+		if	`model_selection'==1	{
+			
+			local	statevars	c.lag_food_exp_pc_1
+			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			est	sto	ols_step1_order1
+			
+			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			est	sto	ols_step1_order2
+			
+			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			est	sto	ols_step1_order3
+			
+			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			est	sto	ols_step1_order4
+			
+			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			est	sto	ols_step1_order5
+			
+			
+			*	Output
+			esttab	ols_step1_order1	ols_step1_order2	ols_step1_order3	ols_step1_order4	ols_step1_order5	using "${PSID_outRaw}/GLM_model_selection.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Average Marginal Effects on Food Expenditure per capita) 	///
+					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
+					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
+					replace
+					
+			esttab	ols_step1_order1	ols_step1_order2	ols_step1_order3	ols_step1_order4	ols_step1_order5	using "${PSID_outRaw}/GLM_model_selection.tex", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Average Marginal Effects on Food Expenditure per capita) 	///
+					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
+					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
+					replace
+			
+		}
+		
 		
 		*	Step 1
-		*svy: reg	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	if	in_sample==1
-		svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
+		
+			*	All sample
+			*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			*	SRC only
+			svy, subpop(sample_source_SRC): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
 		
 		est	sto	ols_step1
 		
-		gen	ols_step1_sample=1	if	e(sample)==1
-		predict double mean1_foodexp_ols
-		predict double e1_foodexp_ols, r
+		gen	ols_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
+		predict double mean1_foodexp_ols	///
+			if	((e(sample)==1 & `=e(subpop)')	|	(sample_source_SRC==1	&	year==10))	// Although 2017 sample is not included in estimating the PFS, we can still consturct the 2017 PFS.
+		predict double e1_foodexp_ols	///
+			if	((e(sample)==1 & `=e(subpop)')	|	(sample_source_SRC==1	&	year==10)), r
 		gen e1_foodexp_sq_ols = (e1_foodexp_ols)^2
-		
-				
+
 		*	Marginal Effect
-		if	`run_ME'==1	{
-		
+		if	`run_ME'==1	{	
 			eststo	ols_step1_ME: margins,	dydx(`MEvars')	post
-		
 		}
 				
 		
 		*	Step 2
 		local	depvar	e1_foodexp_sq_ols
 		
-		svy: reg `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	ols_step1_sample==1	//	glm does not converge, thus use OLS
-		*svy: glm `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'		if	ols_step1_sample==1, family(/*gamma*/poisson)	link(log)
-		est store ols_step2
+			*	All sample
+			*svy: reg `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	ols_step1_sample==1	//	glm does not converge, thus use OLS)
 			
-		gen	ols_step2_sample=1	if	e(sample)==1
+			*	SRC only
+			svy, subpop(ols_step1_sample): reg `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	ols_step1_sample==1*/	//	glm does not converge, thus use OLS)
+		
+		est store ols_step2
+		gen	ols_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
 		*svy:	reg `e(depvar)' `e(selected)'
-		predict	double	var1_foodexp_ols
+		predict	double	var1_foodexp_ols	///
+			if	((e(sample)==1 & `=e(subpop)')	|	(sample_source_SRC==1	&	year==10))
 		
 		
 		*	Marginal Effect
@@ -172,8 +226,6 @@
 					23 observations with negative income are dropped which account for less than 0.5\% of the sample size)	///
 					replace		
 		}
-		
-		
 		
 		
 		*	Step 3
@@ -231,40 +283,46 @@
 			
 			set	seed	20200505
 			
-			/*
+			
 			*	LASSO with K-fold cross validation
 			** As of Aug 21, 2020, the estimated lambda with lse is 2016.775 (lse).
 			** As of Sep 4, 2020, the estimated lambda with lse is 845.955 (lse). Since this lamba value gives too many variables, we use lambda = exp(8) whose MSPE is only very slightly higher than the MSPE under the lse.
 			** As of Sep 11, 2020, the estimated lambda with lse is 1208.72 (lse). Since this lamba value gives too many variables, we use lambda = exp(8) whose MSPE is only very slightly higher than the MSPE under the lse.
-			cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	///
-								`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	in_sample==1,	///
-				/*lopt*/ lse	seed(20200505)	notpen(`regionvars'	`timevars')	 /*rolling	h(1) fe	prestd 	postres	ols*/	plotcv 
-			est	store	lasso_step1_lse
+			** As of Nov 5, 2020 using SRC sample only, the estimated lambda with lse is 1546.914 (lse).
 			
-			*cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
-			cvlasso, postresult lse
-			*/
+				/*
+				*	Finding optimal lambda using cross-validation (computationally intensive)
+				cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	///
+									`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	in_sample==1	&	sample_source_SRC==1,	///
+					/*lopt*/ lse	seed(20200505)	notpen(`regionvars'	`timevars')	 /*rolling	h(1) fe	prestd 	postres	ols*/	plotcv 
+				est	store	lasso_step1_lse
+				
+				*cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
+				cvlasso, postresult lse
+				*/
+				
+				*	Running lasso with pre-determined lambda value 
+				*local	lambdaval=exp(14.7)	//	14.7 is as of Aug 21
+				*local	lambdaval=2208.348	//	manual lambda value from the cvplot. This is the value slightly higher than lse but give only slightly higher MSPE
+				local	lambdaval=1546.914	//	the lse value found from cvlasso using SRC sample only as of Nov 5.
+				lasso2	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1,	///
+							ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
+				est	store	lasso_step1_manual
+				lasso2, postresults
+				
 			
-			*local	lambdaval=exp(14.7)	//	14.7 is as of Aug 21
-			local	lambdaval=2208.348	//	manual lambda value from the cvplot. This is the value slightly higher than lse but give only slightly higher MSPE
-			lasso2	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-								`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1,	///
-						ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
-			est	store	lasso_step1_manual
-			lasso2, postresults
-			
-			
-			gen	lasso_step1_sample=1	if	e(sample)==1		
-
-	
 			*	Manually run post-lasso
+				gen	lasso_step1_sample=1	if	e(sample)==1		
 				global selected_step1_lasso `e(selected)'	`e(notpen)'
 				svy:	reg `depvar' ${selected_step1_lasso}	if	lasso_step1_sample==1
 				est store postlasso_step1_lse
 				
 				*	Predict conditional means and variance from Post-LASSO
-				predict double mean1_foodexp_lasso, xb
-				predict double e1_foodexp_lasso, r
+				predict double mean1_foodexp_lasso	///
+					if	((lasso_step1_sample==1)	|	(sample_source_SRC==1	&	year==10)), xb
+				predict double e1_foodexp_lasso	///
+					if	((lasso_step1_sample==1)	|	(sample_source_SRC==1	&	year==10)), r
 				gen e1_foodexp_sq_lasso = (e1_foodexp_lasso)^2
 				
 				shapley2, stat(r2)	indepvars(`e(selected)')
@@ -278,39 +336,43 @@
 			local	depvar	e1_foodexp_sq_lasso
 			
 			*	LASSO
+			**	Update (2020/11/5) lse gives 19030.549 (lse), dropping everything. So we use lambda=exp(8) from cvplot.
 			**	Update (2020/9/4) lopt gives lambda=1052.087, giving too many outputs, and lse ~ exp(10), which gives too little variables. We use somewhere between
 			**	As of 2020/5/20, the following cvlasso not only takes too much time, but neither lopt nor lse work - lopt (ln(lambda)=20.78) gives too many variables, and lse (ln(lambda)=24.32) reduces everything.
 			**	Therefore, I run regular lasso using "lasso2" and the lambda value in between (ln(lambda)=22.7)
-			
-						
-			/*	
-			cvlasso	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-								`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	lasso_step1_sample==1,	///
-						/*lopt*/ lse	seed(20200505)	 /*rolling	h(1) fe	prestd 	postres		ols*/	notpen(`regionvars'	`timevars')	plotcv
-			est	store	lasso_step2_lse			
-			*** Somehow, the lambda from lopt does not reduce dimensionality a lot, and the lambda from lse does not keep ANY RHS varaible.
-			*** For now (2020/5/18), we will just use the residual from lopt, but we could improve it later (ex. using the lambda somewhere between lopt and lse)
+				
+				/*
+				*	Finding optimal lambda using cross-validation (computationally intensive)		
+				cvlasso	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	lasso_step1_sample==1,	///
+							/*lopt*/ lse	seed(20200505)	 /*rolling	h(1) fe	prestd 	postres		ols*/	notpen(`regionvars'	`timevars')	plotcv
+				est	store	lasso_step2_lse			
+				*** Somehow, the lambda from lopt does not reduce dimensionality a lot, and the lambda from lse does not keep ANY RHS varaible.
+				*** For now (2020/5/18), we will just use the residual from lopt, but we could improve it later (ex. using the lambda somewhere between lopt and lse)
+				
+				*	Manually run post-lasso
+				cvlasso, postresult lse	//	Need this command to use `e(selected)' macro
+				*/
+				
+				
+				*	Running lasso with pre-determined lambda value 				
+				set	seed	20205020
+				local	lambdaval=exp(8)
+				lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	lasso_step1_sample==1,	///
+							ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
+				est	store	lasso_step2_manual
+				lasso2, postresults
+				
 			
 			*	Manually run post-lasso
-			cvlasso, postresult lse	//	Need this command to use `e(selected)' macro
-			*/
-			
-			
-			set	seed	20205020
-			local	lambdaval=exp(8.3)
-			lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-								`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	lasso_step1_sample==1,	///
-						ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
-			est	store	lasso_step2_manual
-			
-			
-			gen	lasso_step2_sample=1	if	e(sample)==1	
-			lasso2, postresults
+			gen	lasso_step2_sample=1	if	e(sample)==1			
 			global selected_step2_lasso `e(selected)'	`e(notpen)'
 			svy:	reg `depvar' ${selected_step2_lasso}	if	lasso_step2_sample==1
 			
 			est store postlasso_step2_manual
-			predict	double	var1_foodexp_lasso, xb
+			predict	double	var1_foodexp_lasso	///
+				if	((lasso_step2_sample==1)	|	(sample_source_SRC==1	&	year==10)), xb
 			
 			*	lopt gives too many variables, so we won't use decomposition for now.
 			shapley2, stat(r2)	indepvars(`e(selected)')
@@ -333,7 +395,7 @@
 				*	Generate resilience score. 
 				*	Should include in-sample as well as out-of-sample to validate its OOS performance
 				gen rho1_foodexp_pc_`plan'_ls = gammaptail(alpha1_foodexp_pc_lasso, foodexp_W_`plan'/beta1_foodexp_pc_lasso)	/*if	(lasso_step1_sample==1)	&	(lasso_step2_sample==1)*/	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
-				label	var	rho1_foodexp_pc_`plan'_ls "Resilience score (LASSO), `plan' plan"
+				label	var	rho1_foodexp_pc_`plan'_ls "PFS (LASSO), `plan' plan"
 				
 			}
 			
@@ -418,7 +480,7 @@
 			forvalues i = 10(5)500 {
 				local j = `j' + 1
 				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
 				quietly replace iter1 = `i' in `j'
 				quietly replace out_of_bag_error1 = `e(OOB_Error)' in `j'
 				predict p if	out_of_sample==1
@@ -444,7 +506,8 @@
 			forvalues i = 1(1)26 {
 				local j = `j'+ 1
 				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-											`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1, type(reg)	seed(20200505) iterations(100) numvars(`i')
+											`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1	&	sample_source_SRC==1,	///
+											type(reg)	seed(20200505) iterations(80) numvars(`i')
 				quietly replace nvars = `i' in `j'
 				quietly replace oob_error = `e(OOB_Error)' in `j'
 				predict p	if	out_of_sample==1
@@ -474,7 +537,8 @@
 			
 			loc	depvar	food_exp_pc
 			rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, type(reg)	iterations(80)	numvars(23)	seed(20200505) 
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1,	///
+									type(reg)	iterations(80)	numvars(15)	seed(20200505) 
 			* Variable importance plot
 			matrix importance_mean = e(importance)
 			svmat importance_mean
@@ -507,7 +571,8 @@
 			
 			loc	depvar	e1_foodexp_sq_rf
 			rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, type(reg)	iterations(80)	numvars(23)	seed(20200505) 
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1,	///
+									type(reg)	iterations(80)	numvars(15)	seed(20200505) 
 			
 			* Variable importance plot
 			matrix importance_var = e(importance)
@@ -529,12 +594,20 @@
 			graph	export	"${PSID_outRaw}/rf_feature_importance_step2.png", replace
 			graph	close
 			
-			predict	var1_foodexp_rf
+			predict	var1_foodexp_rf	/*	in_sample==1	&	sample_source_SRC==1*/
 		}	//	Step 2
 		
 		
 		*	Step 3
 		if	`run_rf_step3'==1	{
+			
+			*	Drop parameters generated from non-SRC sample
+			*	Unlike GLM or LASSO, "rforest" command does not allow missing values in dependent variable, thus cannot predict values only for SRC samples from the previous step
+			*	As a roundabout, we first predict values for all sample, and drop them for non-SRC sample.
+			*	This shouldn't be a big issue as "rforest" are still conducted for the SRC sample only by using "if" in "rforest" command
+			*	One small issue is that "rforest" does not specify which observations are used in the estimation (i.e. e(sample) does not exist)
+			replace	mean1_foodexp_rf=.	if	sample_source_SRC!=1	|	year==1
+			replace	var1_foodexp_rf=.	if	sample_source_SRC!=1	|	year==1
 			
 			*	Assume the outcome variable follows the Gamma distribution
 			gen alpha1_foodexp_pc_rf = (mean1_foodexp_rf)^2 / var1_foodexp_rf	//	shape parameter of Gamma (alpha)
@@ -546,7 +619,7 @@
 				*	Generate resilience score. 
 				*	Should include in-sample as well as out-of-sample to validate its OOS performance
 				gen rho1_foodexp_pc_`plan'_rf = gammaptail(alpha1_foodexp_pc_rf, foodexp_W_`plan'/beta1_foodexp_pc_rf)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
-				label	var	rho1_foodexp_pc_`plan'_rf "Resilience score (Random Forest), `plan' plan"
+				label	var	rho1_foodexp_pc_`plan'_rf "PFS (Random Forest), `plan' plan"
 			}
 			
 			*	As of 2020-09-05, we don't need the rest of the step 3 code below, as we will use OLS
@@ -698,7 +771,7 @@
 			local	prop_VLFS_10	=	0.045	// 2017: 11.8% are food insecure (7.3% are low food secure, 4.5% are very low food secure)
 		
 			*	Categorize food security status based on the PFS.
-			quietly	{
+			 quietly	{
 				foreach	type	in	ols	ls	rf	{
 					foreach	plan	in	thrifty /*low moderate liberal*/	{
 						
@@ -734,7 +807,7 @@
 								* To decrease running time, we first loop by 10 
 								while (`counter' < 1000 & `ratio_`indicator''<`prop_`indicator'_`year'') {	//	Loop until population ratio > USDA ratio
 									
-									di	"current indicator is `indicator', counter is `counter'"
+									qui di	"current indicator is `indicator', counter is `counter'"
 									qui	replace	rho1_`plan'_`indicator'_`type'=1	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',1,`counter')	//	categorize certain number of households at bottom as FI
 									qui	svy, subpop(year_enum`year'): mean 	rho1_`plan'_`indicator'_`type'	//	Generate population ratio
 									local ratio_`indicator' = _b[rho1_`plan'_`indicator'_`type']
@@ -743,19 +816,19 @@
 								}
 
 								*	Since we first looped by unit of 10, we now have to find to exact value by looping 1 instead of 10.
-								di "internediate counter is `counter'"
+								qui di "internediate counter is `counter'"
 								local	counter=`counter'-10	//	Adjust the counter, since we added extra 10 at the end of the first loop
 
 								while (`counter' > 1 & `ratio_`indicator''>`prop_`indicator'_`year'') {	//	Loop until population ratio < USDA ratio
 									
-									di "counter is `counter'"
+									qui di "counter is `counter'"
 									qui	replace	rho1_`plan'_`indicator'_`type'=0	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',`counter',1000)
 									qui	svy, subpop(year_enum`year'): mean 	rho1_`plan'_`indicator'_`type'
 									local ratio_`indicator' = _b[rho1_`plan'_`indicator'_`type']
 									
 									local counter = `counter' - 1
 								}
-								di "Final counter is `counter'"
+								qui di "Final counter is `counter'"
 
 								*	Now we finalize the threshold value - whether `counter' or `counter'+1
 									
@@ -782,7 +855,7 @@
 									replace	rho1_`plan'_`indicator'_`type'=1	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',1,${threshold_`indicator'_`plan'_`type'_`year'})
 									replace	rho1_`plan'_`indicator'_`type'=0	if	year==`year'	&	inrange(`plan'_pctile_`type'_`year',${threshold_`indicator'_`plan'_`type'_`year'}+1,1000)		
 								}	
-								di "thresval is ${threshold_`indicator'_`plan'_`type'_`year'}"
+								di "thresval of `indicator' in year `year' is ${threshold_`indicator'_`plan'_`type'_`year'}"
 							}	//	indicator
 							
 							*	Food secure households
@@ -811,7 +884,7 @@
 				lab	define	PFS_category	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food security(FS)"
 				lab	value	rho1*_cat_*	PFS_category
 				
-			}	//	qui
+			 }	//	qui
 			
 			
 	
@@ -834,19 +907,19 @@
 												4	"Classified as food insecure"
 				
 				*	USDA
-				gen		valid_result_USDA	=	1	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp==1
-				replace	valid_result_USDA	=	2	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp!=1
-				replace	valid_result_USDA	=	3	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp==1
-				replace	valid_result_USDA	=	4	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp!=1
-				
+				gen		valid_result_USDA	=	1	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp==1
+				replace	valid_result_USDA	=	2	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp==0
+				replace	valid_result_USDA	=	3	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp==1
+				replace	valid_result_USDA	=	4	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp==0
+				/*
 					*	By sub-sample
 					forval	sampleno=1/3	{
 						
 						gen		valid_result_USDA_`sampleno'	=	.
-						replace	valid_result_USDA_`sampleno'	=	1	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp==1	&	sample_source==`sampleno'
-						replace	valid_result_USDA_`sampleno'	=	2	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp!=1	&	sample_source==`sampleno'
-						replace	valid_result_USDA_`sampleno'	=	3	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp==1	&	sample_source==`sampleno'
-						replace	valid_result_USDA_`sampleno'	=	4	if	inrange(year,10,10)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp!=1	&	sample_source==`sampleno'
+						replace	valid_result_USDA_`sampleno'	=	1	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp==1	&	sample_source==`sampleno'
+						replace	valid_result_USDA_`sampleno'	=	2	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==1	&	fs_cat_fam_simp!=1	&	sample_source==`sampleno'
+						replace	valid_result_USDA_`sampleno'	=	3	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp==1	&	sample_source==`sampleno'
+						replace	valid_result_USDA_`sampleno'	=	4	if	inrange(year,10,10)	&	!mi(l.rho1_thrifty_FS_ols)	&	l.fs_cat_fam_simp==0	&	fs_cat_fam_simp!=1	&	sample_source==`sampleno'
 						
 					}
 					
@@ -857,7 +930,7 @@
 					label	var	valid_result_USDA_SRC	"Validation Result of USDA in SRC"
 					label	var	valid_result_USDA_SEO	"Validation Result of USDA in SEO"
 					label	var	valid_result_USDA_IMM	"Validation Result of USDA in Immigrants"
-				
+				*/
 				
 				*	GLM, LASSO and RF
 				foreach	type	in	ols	ls	rf	{
@@ -865,20 +938,20 @@
 					*	All sample
 					
 					gen		valid_result_`type'	=	.
-					replace	valid_result_`type'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp==1	//	fs_scale_fam_rescale==1
-					replace	valid_result_`type'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp!=1	//	fs_scale_fam_rescale!=1
-					replace	valid_result_`type'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp==1	//	fs_scale_fam_rescale==1
-					replace	valid_result_`type'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp!=1	//	fs_scale_fam_rescale!=1
+					replace	valid_result_`type'	=	1	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp==1	//	fs_scale_fam_rescale==1
+					replace	valid_result_`type'	=	2	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp==0	//	fs_scale_fam_rescale!=1
+					replace	valid_result_`type'	=	3	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp==1	//	fs_scale_fam_rescale==1
+					replace	valid_result_`type'	=	4	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp==0	//	fs_scale_fam_rescale!=1
 					label	var	valid_result_`type'	"Validation Result of `type'"
-					
+				/*	
 					*	By subsample
 					forval	sampleno=1/3	{
 						
 						gen		valid_result_`type'_`sampleno'	=	.
-						replace	valid_result_`type'_`sampleno'	=	1	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp==1	/*fs_scale_fam_rescale==1*/	&	sample_source==`sampleno'
-						replace	valid_result_`type'_`sampleno'	=	2	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp!=1	/*fs_scale_fam_rescale!=1*/	&	sample_source==`sampleno'
-						replace	valid_result_`type'_`sampleno'	=	3	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp==1	/*fs_scale_fam_rescale==1*/	&	sample_source==`sampleno'
-						replace	valid_result_`type'_`sampleno'	=	4	if	inrange(year,10,10)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp!=1	/*fs_scale_fam_rescale!=1*/	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	1	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp==1	/*fs_scale_fam_rescale==1*/	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	2	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==1	&	fs_cat_fam_simp!=1	/*fs_scale_fam_rescale!=1*/	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	3	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp==1	/*fs_scale_fam_rescale==1*/	&	sample_source==`sampleno'
+						replace	valid_result_`type'_`sampleno'	=	4	if	inrange(year,10,10)	&	!mi(l.fs_cat_fam_simp)	&	l.rho1_thrifty_FS_`type'==0	&	fs_cat_fam_simp!=1	/*fs_scale_fam_rescale!=1*/	&	sample_source==`sampleno'
 						
 					}
 					
@@ -888,6 +961,7 @@
 					label	var	valid_result_`type'_SRC	"Validation Result of `type' in SRC"
 					label	var	valid_result_`type'_SEO	"Validation Result of `type' in SEO"
 					label	var	valid_result_`type'_IMM	"Validation Result of `type' in Immigrants"
+				*/
 				}
 				
 				label	values	valid_result_*	valid_result
@@ -939,7 +1013,7 @@
 				estadd matrix mean = r(table)[1,1...]
 				eststo	valid_result_`type'
 						
-				
+				/*
 				foreach sample in SRC SEO IMM	{
 					
 					di "Validation result of `type' in `sample'"
@@ -950,13 +1024,14 @@
 					eststo	valid_result_`type'_`sample'
 		
 				}
+				*/
 								
 			}				
 			
-		local	result_output_list	valid_result_USDA	valid_result_USDA_SRC	valid_result_USDA_SEO	valid_result_USDA_IMM	///
-									valid_result_ols	valid_result_ols_SRC	valid_result_ols_SEO	valid_result_ols_IMM	///
-									valid_result_ls		valid_result_ls_SRC		valid_result_ls_SEO		valid_result_ls_IMM	///
-									valid_result_rf		valid_result_rf_SRC		valid_result_rf_SEO		valid_result_rf_IMM
+		local	result_output_list	valid_result_USDA	/*valid_result_USDA_SRC	valid_result_USDA_SEO	valid_result_USDA_IMM*/	///
+									valid_result_ols	/*valid_result_ols_SRC	valid_result_ols_SEO	valid_result_ols_IMM*/	///
+									valid_result_ls		/*valid_result_ls_SRC		valid_result_ls_SEO		valid_result_ls_IMM*/	///
+									valid_result_rf		/*valid_result_rf_SRC		valid_result_rf_SEO		valid_result_rf_IMM*/
 		
 		esttab `result_output_list' using "${PSID_outRaw}/valid_result.csv", replace ///
 		cells("mean(pattern(1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1) fmt(2))") label	///
@@ -971,131 +1046,62 @@
 		title (Validation of 2017 Food Security Prediction) ///
 		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ tex ///
 		addnotes(Sample include households surveyed in 2017)
-		
-		
-			*	Predictive Power Plot		
-			sort	fam_ID_1999	year
-				*	USDA
-					
-					*	All sample
-					tab	valid_result_USDA	if	inrange(year,10,10)
-					graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==1, msymbol(circle))	///
-									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==2, msymbol(diamond))	///
-									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==3, msymbol(triangle))	///
-									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==4, msymbol(square)),	///
-									xline(1)	yline(1)	xtitle(USDA scale in 2015)	ytitle(USDA scale in 2017)	///
-									title(Validation of Food Security Status Prediction)	name(USDA_all, replace)	///
-									legend(lab (1 "Classified as food secure") lab(2 "Mis-Classified as food secure") lab(3 "Mis-Classified as food insecure")	lab(4 "Classified as food insecure")	rows(2))	///
-									subtitle(USDA Measure)
-					
-					graph	export	"${PSID_outRaw}/OOB_prediction_USDA_all.png", replace
-					graph	close
-					
-				
-				*	GLM
-			
-					*	All sample
-					tab	valid_result_ols	if	inrange(year,10,10)
-					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1, msymbol(circle))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2, msymbol(diamond))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3, msymbol(triangle))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4, msymbol(square)),	///
-									xline(${thresval_ols})	yline(1)	xtitle(PFS in 2015)	ytitle(USDA Food Security Score in 2017)	///
-									title(Prediction of Food Security in 2017) name(GLM_all, replace)	///
-									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-									subtitle(PFS)
-					
-					graph	export	"${PSID_outRaw}/OOB_prediction_GLM_all.png", replace
-					graph	close
-					
-					
-				*	LASSO
-					
-					*	All sample
-					tab	valid_result_ls	if	inrange(year,10,10)
-					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1, msymbol(circle))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2, msymbol(diamond))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3, msymbol(triangle))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4, msymbol(square)),	///
-									xline(${thresval_ls})	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-									title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_all, replace)	///
-									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-									subtitle(PFS by LASSO)
-					
-					graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_all.png", replace
-					graph	close
-					
-				
-				*	Random Forest
-					
-					*	All sample
-					tab	valid_result_rf	if	inrange(year,10,10)
-					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1, msymbol(circle))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2, msymbol(diamond))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3, msymbol(triangle))	///
-									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4, msymbol(square)),	///
-									xline(${thresval_rf})	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
-									title(Resilience in 2015 vs Food Security in 2017)	name(RF_all, replace)	///
-									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
-									subtitle(PFS by RF)
-					
-					graph	export	"${PSID_outRaw}/OOB_prediction_RF_all.png", replace
-					graph	close
-					
 
-			 grc1leg2		USDA_all	GLM_all	/*LASSO_all	RF_all*/,	legendfrom(USDA_all)	 /*xtob1title*/	ytol1title 	maintotoptitle ///
-			 note("Sample include households survey responses in 2017")
-			 
-			graph	export	"${PSID_outRaw}/Predictive_Power_Plot.png", replace
-			graph	close
 		
-					
+		
+		*	Out-of-sample wellbeing predictive accuracy of the measures (RMSE)
+		*	Bivariate regression of USDA food security score on the previous score (USDA, PFS under different construction methods)
+		
+			*	Specifiy subsample to be used
+			cap drop pred_power_sample
+			qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if year_enum10==1
+			gen pred_power_sample=1 if e(sample)
 			
-		*	Out-of-sample wellbeing predictive accuracy of resilience measures (RMSE)
-		*	Bivariate regression of USDA food security score on the previous score (USDA, CB scores under different construction methods)
-		
 			*	Mean of the outcome
-			qui	summarize	fs_scale_fam_rescale	if	inrange(year,10,10)
+			qui	summarize	fs_scale_fam_rescale	if	pred_power_sample==1
 			scalar	USDA_mean	=	r(mean)
 			
 			*	USDA
 							
 				*	All sample
-				qui	reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	inrange(year,10,10)
+				reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	pred_power_sample==1
 				local	USDA_rmse_all			=	e(rmse)
 				local	USDA_rmse_all_bymean	=	e(rmse)	/	USDA_mean
 				
+				/*
 				*	SEO & Imm
 				qui	reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	inrange(year,10,10)	&	inrange(sample_source,2,3)
 				local	USDA_rmse_sub			=	e(rmse)
 				local	USDA_rmse_sub_bymean	=	e(rmse)	/	USDA_mean
+				*/
 				
 			*	PFS scores
 			foreach	type	in	ols	ls	rf	{
 				
 				*	All sample
-				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	inrange(year,10,10)
+				reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	pred_power_sample==1
 				local	`type'_rmse_all	=	e(rmse)
 				local	`type'_rmse_all_bymean	=	e(rmse)	/	USDA_mean
 				
+				/*
 				*	Sub sample
 				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	inrange(year,10,10)	&	inrange(sample_source,2,3)
 				local	`type'_rmse_sub	=	e(rmse)
 				local	`type'_rmse_sub_bymean	=	e(rmse)	/	USDA_mean
-				
+				*/
 				
 			}
 			
 			*	Divide RMSE by mean outcome
 			*	if	greater than 0.5, it is not good for prediction. If less than 0.2, then it is good for predion.
 
-			cap	mat	drop	rmse_all	rmse_eval_all	rmse_all	rmse_sub	rmse_eval_sub	rmse_eval_table
+			cap	mat	drop	rmse_all	rmse_eval_all	rmse_all	/*rmse_sub	rmse_eval_sub*/	rmse_eval_table
 			mat	define		rmse_all		=	`USDA_rmse_all'	\	`ols_rmse_all'	\	`ls_rmse_all'	\	`rf_rmse_all'
 			mat	define		rmse_eval_all	=	`USDA_rmse_all_bymean'	\	`ols_rmse_all_bymean'	\	`ls_rmse_all_bymean'	\	`rf_rmse_all_bymean'
-			mat	define		rmse_sub		=	`USDA_rmse_sub'	\	`ols_rmse_sub'	\	`ls_rmse_sub'	\	`rf_rmse_sub'
-			mat	define		rmse_eval_sub	=	`USDA_rmse_sub_bymean'	\	`ols_rmse_sub_bymean'	\	`ls_rmse_sub_bymean'	\	`rf_rmse_sub_bymean'
+			*mat	define		rmse_sub		=	`USDA_rmse_sub'	\	`ols_rmse_sub'	\	`ls_rmse_sub'	\	`rf_rmse_sub'
+			*mat	define		rmse_eval_sub	=	`USDA_rmse_sub_bymean'	\	`ols_rmse_sub_bymean'	\	`ls_rmse_sub_bymean'	\	`rf_rmse_sub_bymean'
 
-			mat	define	rmse_eval_table	=	rmse_all,	rmse_eval_all,	rmse_sub,	rmse_eval_sub
+			mat	define	rmse_eval_table	=	rmse_all,	rmse_eval_all /*,	rmse_sub,	rmse_eval_sub*/
 			mat	list	rmse_eval_table
 			
 			/*
@@ -1104,6 +1110,28 @@
 			reg	fs_scale_fam_rescale	l.rho1_avg_foodexp_pc_thrifty_rf	if	inrange(year,9,10)	//	Random Forest
 			*/
 			
+			
+			/* This is a temporary code added for the updated paper (2020/11/8). Will be combined to the current code once done.
+
+			*	Mean of the outcome
+			svy, subpop(year_enum10): mean	fs_scale_fam_rescale	//	if	inrange(year,10,10)
+			scalar	USDA_mean	=	e(b)[1,1]
+
+			*	USDA
+							
+				*	All sample
+				cap drop pred_power_sample
+				reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if year_enum10==1
+				gen pred_power_sample=1 if e(sample)
+				reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	pred_power_sample==1
+				
+				svy, subpop(pred_power_sample): proportion valid_result_USDA valid_result_ols
+				
+				
+				local	USDA_rmse_all			=	e(rmse)
+				local	USDA_rmse_all_bymean	=	e(rmse)	/	USDA_mean
+			*/
+						
 		
 		
 		
@@ -1116,7 +1144,7 @@
 		*	Spearman's rank correlation
 			
 			*	Pooled
-			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if inlist(year,2,3,9,10),	stats(rho obs p)
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf*/	if inlist(year,2,3,9,10),	stats(rho obs p)
 			
 			*	By year
 			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==2,	stats(rho obs p)
@@ -1175,13 +1203,13 @@
 										
 			
 			*	Output graph and combine them
-			graph twoway 		(kdensity fs_scale_fam_rescale	if	inlist(year,1,2,3,9,10))	///
-								(kdensity rho1_foodexp_pc_thrifty_ols	if	inlist(year,1,2,3,9,10)),	///
-								title (TFP)		name(thrifty, replace)		///
-								legend(lab (1 "USDA scale") lab(2 "PFS") rows(1))	///
-								note(note: "the sample includes the waves the USDA scale is constructed (1999,2001,2003,2015,2017)"	///
-								"USDA scale is rescaled such that it varies from 0 to 1 and the greater the scale" ///
-								"and the higher the scale, the more likely a household is food secure")					
+			graph twoway 		(kdensity fs_scale_fam_rescale	if	inlist(year,2,3,9,10)	&	!mi(rho1_foodexp_pc_thrifty_ols))	///
+								(kdensity rho1_foodexp_pc_thrifty_ols	if	inlist(year,2,3,9,10)	&	!mi(fs_scale_fam_rescale)),	///
+								title (Density Estimates of the USDA scale and the PFS)		name(thrifty, replace)		///
+								legend(lab (1 "(Re-scaled) USDA scale") lab(2 "PFS") rows(1))	///
+								note("* The sample includes the waves where both measures are available ('01,'03,'15,'17))"	///
+								"* (Re-scaled) USDA scale varies from 0 to 1 and the greater the scale, the more food secure" ///
+								"* Mean/SD: 0.95/0.13(USDA), 0.75/0.26(PFS), Spearman's rank correlation: 0.3663")					
 			
 			/*
 			graph twoway 		(kdensity fs_scale_fam_rescale	if	inlist(year,1,2,3,9,10))	///
@@ -1490,19 +1518,19 @@
 		local	stationary_check	0
 	local	indicator_comparison	1
 	local	pre_post	0
-	local	by_year	1	
+	local	by_year	0	
 
 	
 							
 	
 	if	`indicator_comparison'==1	{
 	
-		cap	drop	USDA_available_years
-		gen		USDA_available_years=0
-		replace	USDA_available_years=1	if	inlist(year,1,2,3,9,10)
+		cap	drop	USDA_PFS_available_years
+		gen		USDA_PFS_available_years=0
+		replace	USDA_PFS_available_years=1	if	inlist(year,2,3,9,10)
 		
 		
-		local	depvar		rho1_foodexp_pc_thrifty_ols
+		*local	depvar		rho1_foodexp_pc_thrifty_ols
 		*local	lagdepvar	l.`depvar'
 		local	demovars	c.age_head_fam##c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat
 		local	econvars	c.ln_income_pc	/*wealth_pc	wealth_pc_sq*/
@@ -1525,22 +1553,22 @@
 		*	Regression of 4 different indicators on food security correlates
 		
 		local	depvar	fs_scale_fam_rescale
-		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
 		est	store	USDA_continuous
 		*eststo	USDA_cont_ME: margins,	dydx(`MEvars')	post	
 		
 		local	depvar	rho1_foodexp_pc_thrifty_ols
-		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
 		est	store	CB_continuous
-		*eststo	CB_cont_ME: margins,	dydx(`MEvars')	post	
+		eststo	CB_cont_ME: margins,	dydx(`MEvars')	post	
 		
 		local	depvar	fs_cat_fam_simp
-		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
 		est	store	USDA_binary
 		*eststo	USDA_bin_ME: margins,	dydx(`MEvars')	post	
 		
 		local	depvar	rho1_thrifty_FS_ols
-		svy, subpop(USDA_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'
+		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
 		est	store	CB_binary
 		*eststo	CB_bin_ME: margins,	dydx(`MEvars')	post	
 		
@@ -1562,7 +1590,7 @@
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 				title(Average Marginal Effects on Food Security Status) replace
 				
-		esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_all.csv", ///
+		esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	/*USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME*/	using "${PSID_outRaw}/USDA_CB_all.csv", ///
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 				title(Average Marginal Effects on Food Security Status) replace
 		
@@ -3021,3 +3049,87 @@
 					
 					graph	export	"${PSID_outRaw}/OOB_prediction_RF_lowinc.png", replace
 					graph	close
+
+					
+					
+		* Predicative Accuracy Plot
+		
+				
+		
+			*	Predictive Power Plot		
+			sort	fam_ID_1999	year
+				*	USDA
+					
+					*	All sample
+					tab	valid_result_USDA	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	valid_result_USDA==4, msymbol(square)),	///
+									xline(1)	yline(1)	xtitle(USDA scale in 2015)	ytitle(USDA scale in 2017)	///
+									title(Validation of Food Security Status Prediction)	name(USDA_all, replace)	///
+									legend(lab (1 "Classified as food secure") lab(2 "Mis-Classified as food secure") lab(3 "Mis-Classified as food insecure")	lab(4 "Classified as food insecure")	rows(2))	///
+									subtitle(USDA Measure)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_USDA_all.png", replace
+					graph	close
+					
+				
+				*	GLM
+			
+					*	All sample
+					tab	valid_result_ols	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if	valid_result_ols==4, msymbol(square)),	///
+									xline(${thresval_ols})	yline(1)	xtitle(PFS in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Prediction of Food Security in 2017) name(GLM_all, replace)	///
+									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
+									subtitle(PFS)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_GLM_all.png", replace
+					graph	close
+					
+					
+				*	LASSO
+					
+					*	All sample
+					tab	valid_result_ls	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if	valid_result_ls==4, msymbol(square)),	///
+									xline(${thresval_ls})	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(LASSO_all, replace)	///
+									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(12%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
+									subtitle(PFS by LASSO)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_LASSO_all.png", replace
+					graph	close
+					
+				
+				*	Random Forest
+					
+					*	All sample
+					tab	valid_result_rf	if	inrange(year,10,10)
+					graph	twoway	(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==1, msymbol(circle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==2, msymbol(diamond))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==3, msymbol(triangle))	///
+									(scatter	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if	valid_result_rf==4, msymbol(square)),	///
+									xline(${thresval_rf})	yline(1)	xtitle(Resilience Score in 2015)	ytitle(USDA Food Security Score in 2017)	///
+									title(Resilience in 2015 vs Food Security in 2017)	name(RF_all, replace)	///
+									legend(lab (1 "Classified as food secure(72%)") lab(2 "Mis-Classified as food secure(9%)") lab(3 "Mis-Classified as food insecure(11%)")	lab(4 "Classified as food insecure(7%)")	rows(2))	///
+									subtitle(PFS by RF)
+					
+					graph	export	"${PSID_outRaw}/OOB_prediction_RF_all.png", replace
+					graph	close
+					
+
+			 grc1leg2		USDA_all	GLM_all	/*LASSO_all	RF_all*/,	legendfrom(USDA_all)	 /*xtob1title*/	ytol1title 	maintotoptitle ///
+			 note("Sample include households survey responses in 2017")
+			 
+			graph	export	"${PSID_outRaw}/Predictive_Power_Plot.png", replace
+			graph	close
+		
+					
