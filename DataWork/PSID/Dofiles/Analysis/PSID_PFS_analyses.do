@@ -65,25 +65,98 @@
 	
 	set	seed 20200513
 	
+	*	Define global macros
+		
+		*	Samples to use
+		global	study_sample	sample_source_SRC_SEO
+		
+		*	States (used for regression coefficients plots)
+		global	state_Northeast	6.state_resid_fam	18.state_resid_fam	20.state_resid_fam	28.state_resid_fam	///
+								29.state_resid_fam	31.state_resid_fam	37.state_resid_fam	/*38.state_resid_fam*/	44.state_resid_fam
+		global	state_Ncentral	12.state_resid_fam	13.state_resid_fam	14.state_resid_fam	15.state_resid_fam	///
+								21.state_resid_fam	22.state_resid_fam	24.state_resid_fam	26.state_resid_fam	///
+								33.state_resid_fam	38.state_resid_fam	40.state_resid_fam	48.state_resid_fam
+		global	state_South		1.state_resid_fam	3.state_resid_fam	7.state_resid_fam	8.state_resid_fam	///
+								9.state_resid_fam	10.state_resid_fam	16.state_resid_fam	17.state_resid_fam	///
+								19.state_resid_fam	23.state_resid_fam	32.state_resid_fam	35.state_resid_fam	///
+								39.state_resid_fam	41.state_resid_fam	42.state_resid_fam	45.state_resid_fam	///
+								47.state_resid_fam
+			*	Without Delarware
+			global	state_South_noDE	1.state_resid_fam	3.state_resid_fam	/*7.state_resid_fam*/	8.state_resid_fam	///
+										9.state_resid_fam	10.state_resid_fam	16.state_resid_fam	17.state_resid_fam	///
+										19.state_resid_fam	23.state_resid_fam	32.state_resid_fam	35.state_resid_fam	///
+										39.state_resid_fam	41.state_resid_fam	42.state_resid_fam	45.state_resid_fam	///
+										47.state_resid_fam
+		global	state_West		2.state_resid_fam	4.state_resid_fam	5.state_resid_fam	11.state_resid_fam	///
+								25.state_resid_fam	27.state_resid_fam	30.state_resid_fam	36.state_resid_fam	///
+								43.state_resid_fam	46.state_resid_fam	49.state_resid_fam	
+		
+		
+		*	Grouped state (Based on John's suggestion on 2020/12/15)
+		
+			*	Reference state
+			global	state_bgroup	state_resid_fam_enum32	//	NY
+			
+			*	Excluded states (Alaska, Hawaii, U.S. territory, DK/NA)
+			global	state_group0	state_resid_fam_enum1	state_resid_fam_enum52	///	//	Inapp, DK/NA
+									state_resid_fam_enum50	state_resid_fam_enum51	//	AK, HI
+			global	state_group_ex	${state_group0}
+			
+			*	Northeast
+			global	state_group1	state_resid_fam_enum19 state_resid_fam_enum29 state_resid_fam_enum44	///	//	ME, NH, VT
+									state_resid_fam_enum21 state_resid_fam_enum7	//	MA, CT
+			global	state_group_NE	${state_group1}
+				
+			*	Mid-atlantic
+			global	state_group2	state_resid_fam_enum38	//	PA
+			global	state_group3	state_resid_fam_enum30	//	NJ
+			global	state_group4	state_resid_fam_enum9	state_resid_fam_enum8	state_resid_fam_enum20	//	DC, DE, MD
+			global	state_group5	state_resid_fam_enum45	//	VA
+			global	state_group_MidAt	${state_group2}	${state_group3}	${state_group4}	${state_group5}
+			
+			*	South
+			global	state_group6	state_resid_fam_enum33	state_resid_fam_enum39	//	NC, SC
+			global	state_group7	state_resid_fam_enum11	//	GA
+			global	state_group8	state_resid_fam_enum17	state_resid_fam_enum41	state_resid_fam_enum47	//	KT, TN, WV
+			global	state_group9	state_resid_fam_enum10	//	FL
+			global	state_group10	state_resid_fam_enum2	state_resid_fam_enum4	state_resid_fam_enum24 state_resid_fam_enum18	//	AL, AR, MS, LA
+			global	state_group11	state_resid_fam_enum42	//	TX
+			global	state_group_South	${state_group6}	${state_group7}	${state_group8}	${state_group9}	${state_group10}	${state_group11}
+			
+			*	Mid-west
+			global	state_group12	state_resid_fam_enum35	//	OH
+			global	state_group13	state_resid_fam_enum14	//	IN
+			global	state_group14	state_resid_fam_enum22 	//	MI
+			global	state_group15	state_resid_fam_enum13	//	IL
+			global	state_group16	state_resid_fam_enum23 state_resid_fam_enum48	//	MN, WI
+			global	state_group17	state_resid_fam_enum15	state_resid_fam_enum25	//	IA, MO
+			global	state_group_MidWest	${state_group12}	${state_group13}	${state_group14}	${state_group15}	${state_group16}	${state_group17}
+			
+			*	West
+			global	state_group18	state_resid_fam_enum16	state_resid_fam_enum27	///	//	KS, NE
+									state_resid_fam_enum34	state_resid_fam_enum40	///	//	ND, SD
+									state_resid_fam_enum36	//	OK
+			global	state_group19	state_resid_fam_enum3	state_resid_fam_enum6	///	//	AZ, CO
+									state_resid_fam_enum12	state_resid_fam_enum26	///	//	ID, MT
+									state_resid_fam_enum28	state_resid_fam_enum31	///	//	NV, NM
+									state_resid_fam_enum43	state_resid_fam_enum49		//	UT, WY
+			global	state_group20	state_resid_fam_enum37	state_resid_fam_enum46	//	OR, WA
+			global	state_group21	state_resid_fam_enum5	//	CA						
+			global	state_group_West	${state_group18}	${state_group19}	${state_group20}	${state_group21}	
+	
 	
 	/****************************************************************
 		SECTION 1: Construct PFS measurement
 	****************************************************************/	
 
-	
-	/****************************************************************
-		SECTION 2: Construct PFS measurement
-	****************************************************************/	
-
-		
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
 		
 	*	OLS
 	local	run_GLM	1
-		local	run_ME	0
 		local	model_selection	0
-	
+		local	run_ME	0
+		
 	*	LASSO
 	local	run_lasso	1
 		local	run_lasso_step1	1
@@ -100,6 +173,8 @@
 	*svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
 	*svyset	ER31997 [pweight=weight_long_fam], strata(ER31996)	singleunit(scaled)
 	
+	
+	
 	*	GLM
 	if	`run_GLM'==1	{
 
@@ -114,7 +189,7 @@
 		local	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	/*attend_college_head college_yrs_head (hs_completed_head	college_completed	other_degree_head)##c.grade_comp_head_fam*/	
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal	/*meal_together*/	
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	ib0.state_resid_fam	
+		local	regionvars	/*ib0.state_resid_fam*/	state_group? state_group1? state_group2?
 		local	timevars	i.year
 		
 		local	MEvars	c.lag_food_exp_pc_1	`healthvars'	c.age_head_fam	/*ib1.race_head_cat*/	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
@@ -125,27 +200,27 @@
 		if	`model_selection'==1	{
 			
 			local	statevars	c.lag_food_exp_pc_1
-			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'	/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			est	sto	ols_step1_order1
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			est	sto	ols_step1_order2
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			est	sto	ols_step1_order3
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			est	sto	ols_step1_order4
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(sample_source_SRC): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			est	sto	ols_step1_order5
 			
@@ -173,15 +248,17 @@
 			*	All sample
 			*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
 			*	SRC only
-			svy, subpop(sample_source_SRC): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 		
 		est	sto	ols_step1
 		
+		*	Predict fitted value and residual
+		**	As of 2021/1/2, we will include 2017 in our regression sample which was not previously included.
 		gen	ols_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
-		predict double mean1_foodexp_ols	///
-			if	((e(sample)==1 & `=e(subpop)')	|	(sample_source_SRC==1	&	year==10))	// Although 2017 sample is not included in estimating the PFS, we can still consturct the 2017 PFS.
-		predict double e1_foodexp_ols	///
-			if	((e(sample)==1 & `=e(subpop)')	|	(sample_source_SRC==1	&	year==10)), r
+		predict double mean1_foodexp_ols	if	ols_step1_sample==1
+		/*if	((e(sample)==1 & `=e(subpop)')	|	(${study_sample}==1	&	year==10))*/	// Although 2017 sample is not included in estimating the PFS, we can still consturct the 2017 PFS
+		predict double e1_foodexp_ols	if	ols_step1_sample==1,r
+			/*if	((e(sample)==1 & `=e(subpop)')	|	(${study_sample}==1	&	year==10)), r*/
 		gen e1_foodexp_sq_ols = (e1_foodexp_ols)^2
 
 		*	Marginal Effect
@@ -202,23 +279,24 @@
 		est store ols_step2
 		gen	ols_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
 		*svy:	reg `e(depvar)' `e(selected)'
-		predict	double	var1_foodexp_ols	///
-			if	((e(sample)==1 & `=e(subpop)')	|	(sample_source_SRC==1	&	year==10))
-			
+		predict	double	var1_foodexp_ols	if	ols_step2_sample==1	/*if	((e(sample)==1 & `=e(subpop)')	|	(${study_sample}==1	&	year==10))*/
+					
 		*	Output
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
+					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
 					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
 					replace
 					
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.tex", ///
 					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
+					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
 					23 observations with negative income are dropped which account for less than 0.5\% of the sample size)	///
 					replace		
+		
+			
 		
 		
 		*	Marginal Effect
@@ -280,7 +358,7 @@
 		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	/*meal_together*/	elderly_meal
 		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	state_resid_fam_enum1-state_resid_fam_enum52
+		local	regionvars	/*state_resid_fam_enum1-state_resid_fam_enum52*/ state_group? state_group1? state_group2?
 		local	timevars	year_enum2-year_enum9
 		
 		
@@ -308,7 +386,7 @@
 				/*
 				*	Finding optimal lambda using cross-validation (computationally intensive)
 				cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	///
-									`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	in_sample==1	&	sample_source_SRC==1,	///
+									`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	/*in_sample==1	&*/	${study_sample}==1,	///
 					/*lopt*/ lse	seed(20200505)	notpen(`regionvars'	`timevars')	 /*rolling	h(1) fe	prestd 	postres	ols*/	plotcv 
 				est	store	lasso_step1_lse
 				
@@ -319,9 +397,10 @@
 				*	Running lasso with pre-determined lambda value 
 				*local	lambdaval=exp(14.7)	//	14.7 is as of Aug 21
 				*local	lambdaval=2208.348	//	manual lambda value from the cvplot. This is the value slightly higher than lse but give only slightly higher MSPE
-				local	lambdaval=1546.914	//	the lse value found from cvlasso using SRC sample only as of Nov 5.
+				*local	lambdaval=1546.914	//	the lse value found from cvlasso using SRC sample only as of Nov 5.
+				local	lambdaval=2000	//	temporary value, will find the exact value via cvlasso it later.
 				lasso2	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1,	///
+									`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	/*in_sample==1	&*/	${study_sample}==1,	///
 							ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
 				est	store	lasso_step1_manual
 				lasso2, postresults
@@ -334,10 +413,10 @@
 				est store postlasso_step1_lse
 				
 				*	Predict conditional means and variance from Post-LASSO
-				predict double mean1_foodexp_lasso	///
-					if	((lasso_step1_sample==1)	|	(sample_source_SRC==1	&	year==10)), xb
-				predict double e1_foodexp_lasso	///
-					if	((lasso_step1_sample==1)	|	(sample_source_SRC==1	&	year==10)), r
+				predict double mean1_foodexp_lasso	if	lasso_step1_sample==1, xb	
+					/*if	((lasso_step1_sample==1)	|	(${study_sample}==1	&	year==10)), xb*/
+				predict double e1_foodexp_lasso	if	lasso_step1_sample==1,r	
+					/*if	((lasso_step1_sample==1)	|	(${study_sample}==1	&	year==10)), r*/
 				gen e1_foodexp_sq_lasso = (e1_foodexp_lasso)^2
 				
 				shapley2, stat(r2)	indepvars(${selected_step1_lasso})
@@ -377,7 +456,7 @@
 				
 				*	Running lasso with pre-determined lambda value 				
 				set	seed	20205020
-				local	lambdaval=exp(8.5)
+				local	lambdaval=exp(9.0)	//	temporary value, will find the exact value via cvlasso later.
 				lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
 									`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	lasso_step1_sample==1,	///
 							ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
@@ -391,8 +470,8 @@
 			svy:	reg `depvar' ${selected_step2_lasso}	`e(notpen)'	if	lasso_step2_sample==1
 			
 			est store postlasso_step2_manual
-			predict	double	var1_foodexp_lasso	///
-				if	((lasso_step2_sample==1)	|	(sample_source_SRC==1	&	year==10)), xb
+			predict	double	var1_foodexp_lasso	if	lasso_step2_sample==1,xb	
+				/*if	((lasso_step2_sample==1)	|	(${study_sample}==1	&	year==10)), xb*/
 			
 			*	Shapley Decomposition
 			shapley2, stat(r2)	indepvars(${selected_step2_lasso})
@@ -506,7 +585,7 @@
 			forvalues i = 10(5)500 {
 				local j = `j' + 1
 				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	/*in_sample==1	&*/	${study_sample}==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
 				quietly replace iter1 = `i' in `j'
 				quietly replace out_of_bag_error1 = `e(OOB_Error)' in `j'
 				predict p if	out_of_sample==1
@@ -532,7 +611,7 @@
 			forvalues i = 1(1)26 {
 				local j = `j'+ 1
 				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-											`foodvars'	`childvars'	`changevars'	`regionvars'	if	in_sample==1	&	sample_source_SRC==1,	///
+											`foodvars'	`childvars'	`changevars'	`regionvars'	if	/*in_sample==1	&*/	${study_sample}==1,	///
 											type(reg)	seed(20200505) iterations(80) numvars(`i')
 				quietly replace nvars = `i' in `j'
 				quietly replace oob_error = `e(OOB_Error)' in `j'
@@ -563,7 +642,7 @@
 			
 			loc	depvar	food_exp_pc
 			rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1,	///
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	/*in_sample==1	&*/	${study_sample}==1,	///
 									type(reg)	iterations(80)	numvars(15)	seed(20200505) 
 			* Variable importance plot
 			matrix importance_mean = e(importance)
@@ -600,7 +679,7 @@
 			
 			loc	depvar	e1_foodexp_sq_rf
 			rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1	&	sample_source_SRC==1,	///
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	/*in_sample==1	&*/	${study_sample}==1,	///
 									type(reg)	iterations(80)	numvars(15)	seed(20200505) 
 			
 			* Variable importance plot
@@ -626,7 +705,7 @@
 			putexcel	set "${PSID_outRaw}/Feature_importance", sheet(var) /*replace*/	modify
 			putexcel	A3	=	matrix(importance_var), names overwritefmt nformat(number_d1)
 			
-			predict	var1_foodexp_rf	/*	in_sample==1	&	sample_source_SRC==1*/
+			predict	var1_foodexp_rf	/*	in_sample==1	&	${study_sample}==1*/
 		}	//	Step 2
 		
 		
@@ -638,8 +717,8 @@
 			*	As a roundabout, we first predict values for all sample, and drop them for non-SRC sample.
 			*	This shouldn't be a big issue as "rforest" are still conducted for the SRC sample only by using "if" in "rforest" command
 			*	One small issue is that "rforest" does not specify which observations are used in the estimation (i.e. e(sample) does not exist)
-			replace	mean1_foodexp_rf=.	if	sample_source_SRC!=1	|	year==1
-			replace	var1_foodexp_rf=.	if	sample_source_SRC!=1	|	year==1
+			replace	mean1_foodexp_rf=.	if	${study_sample}!=1	|	year==1
+			replace	var1_foodexp_rf=.	if	${study_sample}!=1	|	year==1
 			
 			*	Assume the outcome variable follows the Gamma distribution
 			gen alpha1_foodexp_pc_rf = (mean1_foodexp_rf)^2 / var1_foodexp_rf	//	shape parameter of Gamma (alpha)
@@ -718,42 +797,34 @@
 
 		*cap	drop	sample_source?
 		*tab sample_source, gen(sample_source)
-		
-		
-		svy, subpop(if `estimation_year'): mean  `sumvars'
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)): mean	`sumvars'
 		estat sd
 		estadd matrix mean = r(mean)
 		estadd matrix sd = r(sd)
 		estadd scalar N = e(N_sub), replace
 		eststo	Total
 		
-		svy, subpop(if sample_source_SRC==1 & `estimation_year'): mean  `sumvars'
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)	&	sample_source_SRC==1): mean  `sumvars'
 		estat sd
 		estadd matrix mean = r(mean)
 		estadd matrix sd = r(sd)
 		estadd scalar N = e(N_sub), replace
 		eststo	SRC
 		
-		svy, subpop(if sample_source_SEO==1 & `estimation_year'): mean  `sumvars'
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)	&	sample_source_SEO==1): mean  `sumvars'
 		estat sd
 		estadd matrix mean = r(mean)
 		estadd matrix sd = r(sd)
 		estadd scalar N = e(N_sub), replace
 		eststo	SEO
 		
-		svy, subpop(if sample_source_IMM==1 & `estimation_year'): mean  `sumvars'
-		estat sd
-		estadd matrix mean = r(mean)
-		estadd matrix sd = r(sd)
-		estadd scalar N = e(N_sub), replace
-		eststo	Imm
 		
 		/*
 		svy: mean income_pc if `estimation_sample'
 		estadd matrix mean = r(table)[1,1...]
 		estadd matrix sd = r(table)[2,1...]
 		eststo	Total
-		svy, subpop(sample_source_SRC): mean `sumvars'
+		svy, subpop(${study_sample}): mean `sumvars'
 		estadd matrix mean = r(table)[1,1...]
 		estadd matrix sd = r(table)[2,1...]
 		estadd scalar N = e(N_sub), replace
@@ -771,14 +842,14 @@
 		*/
 			
 		
-		esttab *Total SRC SEO Imm using tt3.csv, replace ///
+		esttab *Total SRC SEO using tt3.csv, replace ///
 		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
 		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
 		title (Summary Statistics) ///
 		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
 		/*addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)*/
 		
-		esttab *Total SRC SEO Imm using tt3.tex, replace ///
+		esttab *Total SRC SEO using tt3.tex, replace ///
 		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
 		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
 		title (Summary Statistics) ///
@@ -849,6 +920,9 @@
 							, we cannot categorize when there is no data of the USDA status unless we use other external source. */
 						*replace	rho1_`plan'_FI_`type'=.	if	!inlist(year,2,3,9,10)
 						*replace	rho1_`plan'_FS_`type'=.	if	!inlist(year,2,3,9,10)
+						
+						*	Generate a variable for the threshold PFS
+						gen	PFS_threshold_`type'=.
 						
 						foreach	year	in	2	3	4	5	6	7	8	9	10	{
 							
@@ -928,11 +1002,23 @@
 							
 							*	Low food secure households
 							replace	rho1_`plan'_LFS_`type'=1	if	year==`year'	&	rho1_`plan'_FI_`type'==1	&	rho1_`plan'_VLFS_`type'==0	//	food insecure but NOT very low food secure households			
+							
 							*	Categorize households into one of the three values: FS, LFS and VLFS						
 							replace	rho1_`plan'_cat_`type'=1	if	year==`year'	&	rho1_`plan'_VLFS_`type'==1
 							replace	rho1_`plan'_cat_`type'=2	if	year==`year'	&	rho1_`plan'_LFS_`type'==1
 							replace	rho1_`plan'_cat_`type'=3	if	year==`year'	&	rho1_`plan'_FS_`type'==1
 							assert	rho1_`plan'_cat_`type'!=0	if	year==`year'
+							
+							*	Save threshold PFS as global macros and a variable, the average of the maximum PFS among the food insecure households and the minimum of the food secure households					
+							qui	summ	rho1_foodexp_pc_`plan'_`type'	if	year==`year'	&	rho1_`plan'_FS_`type'==1	//	Minimum PFS of FS households
+							local	min_FS_PFS	=	r(min)
+							qui	summ	rho1_foodexp_pc_`plan'_`type'	if	year==`year'	&	rho1_`plan'_FI_`type'==1	//	Maximum PFS of FI households
+							local	max_FI_PFS	=	r(max)
+							
+							*	Save the threshold PFS
+							replace	PFS_threshold_`type'	=	(`min_FS_PFS'	+	`max_FI_PFS')/2		if	year==`year'
+							*global	PFS_threshold_`type'_`year'	=	(`min_FS_PFS'	+	`max_FI_PFS')/2
+							
 							
 						}	//	year
 						
@@ -1117,13 +1203,13 @@
 		foreach	type	in	ols	/*ls	rf*/	{
 			
 			*	Regression
-			svy: reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'
+			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'
 			est	sto	corr_USDA_`type'_lin_noFE
-			svy: reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type'
+			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type'
 			est	sto	corr_USDA_`type'_nonlin_noFE
-			svy: reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'	i.year ib0.state_resid_fam
+			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'	i.year ib0.state_resid_fam
 			est	sto	corr_USDA_`type'_lin_FE
-			svy: reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type' i.year ib0.state_resid_fam
+			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type' i.year ib0.state_resid_fam
 			est	sto	corr_USDA_`type'_nonlin_FE
 			
 			*	Output (Table A4 of 2020/11/16 draft)
@@ -1139,36 +1225,45 @@
 		*	Spearman's rank correlation
 			
 			*	Pooled
-			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if inlist(year,2,3,9,10),	stats(rho obs p)
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	///
+				if ${study_sample}	&	inlist(year,2,3,9,10),	stats(rho obs p)
+			ktau 	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	///
+				if ${study_sample}	&	inlist(year,2,3,9,10), stats(taua taub p)
 			
 			*	By year
-			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==2,	stats(rho obs p)
-			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==3,	stats(rho obs p)
-			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==9,	stats(rho obs p)
-			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==10, stats(rho obs p)
+			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==2,	stats(rho obs p)
+			*ktau	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==2,	stats(taua taub score se p)
+			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==3,	stats(rho obs p)
+			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==9,	stats(rho obs p)
+			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==10, stats(rho obs p)
+			
+			*	Summarize PFS (https://www.stata.com/support/faqs/statistics/percentiles-for-survey-data/)
+			summ	rho1_foodexp_pc_thrifty_ols if ${study_sample}==1  [aweight=weight_multi12], detail
 		}		
 	}		
 	
 	*	Out-of-sample predictive power
+	**	As of 2021/1/2, we no longer use OOS-predictive power. If we want to re-use it, we need to re-run this file with in_sample==1 (2001 to 2015) only.
 	if	`oos_pred_power'==1	{
 	
 		*	Out-of-sample wellbeing predictive accuracy of the measures (RMSE)
 		*	Bivariate regression of USDA food security score on the previous score (USDA, PFS under different construction methods)
+		*** As of 12/8/2020, I fixed the code here such that I regress 2017 USDA on the predicted PFS (previously I regressed 2017 USDA on the realized 2015 PFS)
 		
 			*	Specifiy subsample to be used
 				
 				*	USDA & PFS available (for main paper)
 				cap drop pred_power_sample_main
-				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if year_enum10==1
+				qui	reg	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*l.rho1_foodexp_pc_thrifty_ols*/	if year_enum10==1
 				gen pred_power_sample_main=1 if e(sample)
 				
 				*	USDA, PFS(GLM), PFS(LASSO), PFS(RF) available (for appendix)
 				cap drop pred_power_sample_ML
-				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if year_enum10==1
+				qui	reg	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*l.rho1_foodexp_pc_thrifty_ols*/	if year_enum10==1
 				gen pred_power_sample_ML=1 		if e(sample)
-				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ls	if year_enum10==1
+				qui	reg	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ls	/*l.rho1_foodexp_pc_thrifty_ls*/	if year_enum10==1
 				replace pred_power_sample_ML=.	if !e(sample)
-				qui	reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_rf	if year_enum10==1
+				qui	reg	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_rf	/*l.rho1_foodexp_pc_thrifty_rf*/	if year_enum10==1
 				replace pred_power_sample_ML=.	if !e(sample)
 				
 			*	Specify which sample to use
@@ -1183,9 +1278,9 @@
 							
 				*	All sample
 				cap drop pred_power_sample
-				reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_ols	if year_enum10==1
+				reg	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*l.rho1_foodexp_pc_thrifty_ols*/	if year_enum10==1
 				gen pred_power_sample=1		if e(sample)
-				reg	fs_scale_fam_rescale	l.fs_scale_fam_rescale	if	pred_power_sample==1
+				reg	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*l.fs_scale_fam_rescale*/	if	pred_power_sample==1
 				
 				svy, subpop(pred_power_sample): proportion valid_result_USDA valid_result_ols
 				
@@ -1212,7 +1307,7 @@
 			foreach	type	in	ols	ls	rf	{
 				
 				*	All sample
-				reg	fs_scale_fam_rescale	l.rho1_foodexp_pc_thrifty_`type'	if	`pred_power_sample'==1
+				reg	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'	/*l.rho1_foodexp_pc_thrifty_`type'*/	if	`pred_power_sample'==1
 				local	`type'_rmse_all	=	e(rmse)
 				local	`type'_rmse_all_bymean	=	e(rmse)	/	USDA_mean
 				
@@ -1327,21 +1422,475 @@
 								"and the higher the scale, the more likely a household is food secure")
 			*/
 			
-			graph	export	"${PSID_outRaw}/dist_indicators_TFP.png", replace
+			graph	export	"${PSID_outRaw}/Density_USDA_PFS.png", replace
 	
 
 			drop	indicator_group indicator_thrifty indicator_low indicator_moderate indicator_liberal
 			duplicates drop
 	}	//	supplement_analysis		
 				
+		
+	/****************************************************************
+		SECTION 5: Regression of Indicators on Correlates
+	****************************************************************/
+	
+	local	USDA_PFS_correlates	1	//	Regression of indicators on correlates
+	
+		*	Regression of USDA/PFS on correlates
+	if	`USDA_PFS_correlates'==1	{
+	
+		cap	drop	USDA_PFS_available_years
+		gen		USDA_PFS_available_years=0
+		replace	USDA_PFS_available_years=1	if	inlist(year,2,3,9,10)
+		
+		
+		*local	depvar		rho1_foodexp_pc_thrifty_ols
+		*local	lagdepvar	l.`depvar'
+		local	demovars	c.age_head_fam##c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat
+		local	econvars	c.ln_income_pc	/*wealth_pc	wealth_pc_sq*/
+		local	familyvars	c.num_FU_fam c.ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
+		local	eduvars		/*attend_college_head*/ highdegree_NoHS highdegree_somecol highdegree_col
+		local	empvars		emp_HH_simple
+		local	healthvars	phys_disab_head
+		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
+		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	regionvars	/*ib0.state_resid_fam*/		state_group? state_group1? state_group2?
+		local	interactvars	c.ln_income_pc#c.HH_female	///
+								c.ln_income_pc#c.age_over65	///
+								c.HH_female#c.age_over65	///
+								c.ln_income_pc#c.HH_female#c.age_over65	///
+								c.no_longer_married#c.HH_female
+		local	timevars	year_enum3-year_enum10
+		
+		local	MEvars	c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'	// c.age_over65	
+			
+			
+		*	Regression of 4 different indicators on food security correlates
+		
+		local	depvar	fs_scale_fam_rescale
+		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
+		est	store	USDA_continuous
+		*eststo	USDA_cont_ME: margins,	dydx(`MEvars')	post	
+		
+		local	depvar	rho1_foodexp_pc_thrifty_ols
+		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
+		est	store	CB_continuous
+		coefplot, keep(`regionvars')
+		eststo	CB_cont_ME: margins,	dydx(`MEvars')	post	
+		
+		local	depvar	fs_cat_fam_simp
+		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
+		est	store	USDA_binary
+		*eststo	USDA_bin_ME: margins,	dydx(`MEvars')	post	
+		
+		local	depvar	rho1_thrifty_FS_ols
+		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
+		est	store	CB_binary
+		*eststo	CB_bin_ME: margins,	dydx(`MEvars')	post	
+		
+		
+		*	Output
+			
+			*	Food Security Indicators and Their Correlates (Table 4 of 2020/11/16 draft)
+			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Effect of Correlates on Food Security Status) replace
+					
+					
+			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.tex", ///
+					/*cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
+					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Effect of Correlates on Food Security Status) replace
+				
+			/*
+			esttab	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_ME.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Average Marginal Effects on Food Security Status) replace
+					
+			esttab	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_ME.tex", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Average Marginal Effects on Food Security Status) replace
+					
+			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	/*USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME*/	using "${PSID_outRaw}/USDA_CB_all.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Average Marginal Effects on Food Security Status) replace
+			*/
+			
+		/*
+		*	State-FE (base category is "Inappropriate; foreign country")
+		est	restore	CB_continuous
+									
+			coefplot, keep(${state_Northeast})	xline(0)	graphregion(color(white)) bgcolor(white)	///
+									title(Northeast)	name(state_FE_NE, replace)
+			coefplot, keep(${state_Ncentral})	xline(0)	graphregion(color(white)) bgcolor(white)	///
+									title(North Central)	name(state_FE_NC, replace)
+			coefplot, keep(${state_South})		xline(0)	graphregion(color(white)) bgcolor(white)	///
+									title(South)	name(state_FE_South, replace)
+			coefplot, keep(${state_West})		xline(0)	graphregion(color(white)) bgcolor(white)	///
+									title(West)		name(state_FE_West, replace)
+			
+			graph combine		state_FE_NE	state_FE_NC	state_FE_South	state_FE_West, title(PFS State FE)
+			graph	export	"${PSID_outRaw}/PFS_State_FE.png", replace
+			graph	close
+		*/
+		
+		
+		*	Grouped-state FE (without controls)
+		
+		
+		*	Regress PFS on grouped-state FE (no controls, no time FE)
+		local	depvar	rho1_foodexp_pc_thrifty_ols
+		svy, subpop(if ${study_sample}): reg	`depvar'	`regionvars'		//	NY is omitted as a reference state
+		est	store	PFS_regionFE_nocontrols
+		
+		local	depvar	rho1_foodexp_pc_thrifty_ols
+		svy, subpop(if ${study_sample}): reg	`depvar'	`regionvars'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		`timevars'	//	NY is omitted as a reference state
+		est	store	PFS_regionFE_controls
+
+		*	Plot grouped-state FE
+
+		coefplot	PFS_regionFE_nocontrols	PFS_regionFE_controls, keep(state_group1)		xline(0)	xscale(range(-0.05(0.05) 0.15))	graphregion(color(white)) bgcolor(white)	///
+								title(Northeast)		name(state_group_NE, replace)
+		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE_NE.png", replace
+		graph	close
+		
+		coefplot	PFS_regionFE_nocontrols	PFS_regionFE_controls, keep(state_group2	state_group3	state_group4	state_group5)		xline(0)	xscale(range(-0.05(0.05) 0.15))	graphregion(color(white)) bgcolor(white)	///
+								title(Mid-Atlantic)	name(state_group_MA, replace)
+		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE_MA.png", replace
+		graph	close
+		
+		coefplot	PFS_regionFE_nocontrols	PFS_regionFE_controls, keep(state_group6 state_group7 state_group8 state_group9 state_group10 state_group11)		xline(0)	xscale(range(-0.05(0.05) 0.15))	graphregion(color(white)) bgcolor(white)	///
+								title(South)	name(state_group_South, replace)
+		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE_South.png", replace
+		graph	close
+		
+		coefplot	PFS_regionFE_nocontrols	PFS_regionFE_controls, keep(state_group12 state_group13 state_group14 state_group15 state_group16 state_group17)		xline(0)	xscale(range(-0.05(0.05) 0.15))	graphregion(color(white)) bgcolor(white)	///
+								title(Mid-West)	name(state_group_Midwest, replace)
+		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE_MW.png", replace
+		graph	close
+		
+		
+		coefplot	PFS_regionFE_nocontrols	PFS_regionFE_controls, keep(state_group18 state_group19 state_group20 state_group21)		xline(0)	xscale(range(-0.05(0.05) 0.15))	graphregion(color(white)) bgcolor(white)	///
+								title(West)	name(state_group_West, replace)
+		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE_West.png", replace
+		graph	close
+								
+		graph combine		state_group_NE	state_group_MA		state_group_South	state_group_Midwest	state_group_West, title(PFS State(Grouped) FE)
+		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE.png", replace
+		graph	close
+	}
+	
+
+	
 	
 	/****************************************************************
-		SECTION 6: Dynamics
+		SECTION 6: Aggregation at Sub-Population Level
+	****************************************************************/	
+	local	run_pfs_agg_HH	1
+	
+	* Generate the squared food insecurty gap (SFIG)	
+	if	`run_pfs_agg_HH'==1	{
+		
+		cap	drop	FIG_indiv
+		cap	drop	SFIG_indiv
+		gen	FIG_indiv=.
+		gen	SFIG_indiv	=.
+				
+		foreach	type	in	ols	/*ls	rf*/	{
+				
+			cap	drop	pfs_`type'_normal
+			gen pfs_`type'_normal	=.
+				
+				
+			*	Normalized PFS (PFS/threshold PFS)	(PFSit/PFS_underbar_t)
+			replace	pfs_`type'_normal	=	rho1_foodexp_pc_thrifty_`type'	/	PFS_threshold_`type'
+			
+			*	Inner term of the food securit gap (FIG) and the squared food insecurity gap (SFIG)
+			replace	FIG_indiv	=	(1-pfs_`type'_normal)	if	!mi(pfs_`type'_normal)	&	pfs_`type'_normal<1	//	rho1_foodexp_pc_thrifty_`type'<PFS_threshold_`type'
+			replace	FIG_indiv	=	0						if	!mi(pfs_`type'_normal)	&	pfs_`type'_normal>=1	//	rho1_foodexp_pc_thrifty_`type'>=PFS_threshold_`type'
+			replace	SFIG_indiv	=	(1-pfs_`type'_normal)^2	if	!mi(pfs_`type'_normal)	&	pfs_`type'_normal<1	//	rho1_foodexp_pc_thrifty_`type'<PFS_threshold_`type'
+			replace	SFIG_indiv	=	0						if	!mi(pfs_`type'_normal)	&	pfs_`type'_normal>=1	//	rho1_foodexp_pc_thrifty_`type'>=PFS_threshold_`type'
+			
+
+			
+		}	//	type
+		
+		*	Limit the sample to non-missing observations in ALL categories (gender, race, education, region)
+		*	It is because when we use "subpop()" option in "svy:" prefix, the command includes missing values outside the defined subpopulation in the population estimate (number of obs)
+		*	For example, let's say the variable "race" has missing values, both for male and female.
+		*	If we use "svy: tab race", the number of population includes only the observations with non-missing race values.
+		*	However, if we use "svy, subpop(if male==1): tab race", the the number of observations includes observations with non-missing race values AND missing race values in "female==1"
+			* More details: https://www.stata.com/statalist/archive/2010-03/msg01263.html, https://www.stata.com/statalist/archive/2010-03/msg01264.html
+		*	This can be remedied by restricting subpopulation to observations with non-missing values in all categories of interest.
+		global	nonmissing_FGT	!mi(rho1_thrifty_FI_ols) & !mi(FIG_indiv) & !mi(SFIG_indiv)
+					
+		
+		
+		*	Aggregate over households to generate population-level statistics
+		*	Input for Figure 2 (Food Security Status by Group) in Dec 2020 draft.
+			* Graph can be found in "FGT_year" sheet in "Min_report" Excel file
+		
+		foreach	group	in	all	male	female	white	black	other	NoHS	HS	somecol	col	NE	MidAt	South	MidWest	West metro nonmetro	{
+			cap	mat	drop	sampleno_`group'	HCR_`group'	FIG_`group'	SFIG_`group'
+		}
+		
+		
+			*	Yearly decomposition
+			forval	year=2/10	{
+				
+				
+				*	Overall
+					
+				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+				mat	sampleno_all	=	nullmat(HCR_all),	e(N_sub)
+				mat	HCR_all			=	nullmat(HCR_all),	e(b)[1,1]
+				mat	FIG_all			=	nullmat(FIG_all),	e(b)[1,2]
+				mat	SFIG_all		=	nullmat(SFIG_all),	e(b)[1,3]
+
+				*	Gender
+					
+					*	Male
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	&	${nonmissing_FGT} & HH_female==0	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_male	=	nullmat(sampleno_male),	e(N_sub)
+					mat	HCR_male		=	nullmat(HCR_male),	e(b)[1,1]
+					mat	FIG_male		=	nullmat(FIG_male),	e(b)[1,2]
+					mat	SFIG_male		=	nullmat(SFIG_male),	e(b)[1,3]
+					
+					*	Female
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	&	${nonmissing_FGT} & HH_female==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_female	=	nullmat(sampleno_female),	e(N_sub)
+					mat	HCR_female		=	nullmat(HCR_female),	e(b)[1,1]
+					mat	FIG_female		=	nullmat(FIG_female),	e(b)[1,2]
+					mat	SFIG_female		=	nullmat(SFIG_female),	e(b)[1,3]
+					
+				*	Race
+				  
+					*	White
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_race_white==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_white	=	nullmat(sampleno_white),	e(N_sub)
+					mat	HCR_white		=	nullmat(HCR_white),	e(b)[1,1]
+					mat	FIG_white		=	nullmat(FIG_white),	e(b)[1,2]
+					mat	SFIG_white		=	nullmat(SFIG_white),	e(b)[1,3]
+					
+					*	Black
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_race_black==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_black	=	nullmat(sampleno_black),	e(N_sub)
+					mat	HCR_black		=	nullmat(HCR_black),	e(b)[1,1]
+					mat	FIG_black		=	nullmat(FIG_black),	e(b)[1,2]
+					mat	SFIG_black		=	nullmat(SFIG_black),	e(b)[1,3]
+					
+					*	Other
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_race_other==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_other	=	nullmat(sampleno_other),	e(N_sub)
+					mat	HCR_other		=	nullmat(HCR_other),	e(b)[1,1]
+					mat	FIG_other		=	nullmat(FIG_other),	e(b)[1,2]
+					mat	SFIG_other		=	nullmat(SFIG_other),	e(b)[1,3]	
+					
+				*	Education
+				
+					*	Less than High School
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& highdegree_NoHS==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_NoHS	=	nullmat(sampleno_NoHS),	e(N_sub)
+					mat	HCR_NoHS		=	nullmat(HCR_NoHS),	e(b)[1,1]
+					mat	FIG_NoHS		=	nullmat(FIG_NoHS),	e(b)[1,2]
+					mat	SFIG_NoHS		=	nullmat(SFIG_NoHS),	e(b)[1,3]
+					
+					*	High School
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& highdegree_HS==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_HS	=	nullmat(sampleno_HS),	e(N_sub)
+					mat	HCR_HS		=	nullmat(HCR_HS),	e(b)[1,1]
+					mat	FIG_HS		=	nullmat(FIG_HS),	e(b)[1,2]
+					mat	SFIG_HS		=	nullmat(SFIG_HS),	e(b)[1,3]
+					
+					*	Some College
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& highdegree_somecol==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_somecol	=	nullmat(sampleno_somecol),	e(N_sub)
+					mat	HCR_somecol		=	nullmat(HCR_somecol),	e(b)[1,1]
+					mat	FIG_somecol		=	nullmat(FIG_somecol),	e(b)[1,2]
+					mat	SFIG_somecol		=	nullmat(SFIG_somecol),	e(b)[1,3]
+					
+					*	College
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& highdegree_col==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_col	=	nullmat(sampleno_col),	e(N_sub)
+					mat	HCR_col		=	nullmat(HCR_col),	e(b)[1,1]
+					mat	FIG_col		=	nullmat(FIG_col),	e(b)[1,2]
+					mat	SFIG_col		=	nullmat(SFIG_col),	e(b)[1,3]
+				
+				*	Region (based on John's suggestion)
+					
+					foreach	stategroup	in	NE	MidAt	South	MidWest	West	{
+						
+						svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& state_group_`stategroup'==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+						mat	sampleno_`stategroup'	=	nullmat(sampleno_`stategroup'),	e(N_sub)
+						mat	HCR_`stategroup'		=	nullmat(HCR_`stategroup'),	e(b)[1,1]
+						mat	FIG_`stategroup'		=	nullmat(FIG_`stategroup'),	e(b)[1,2]
+						mat	SFIG_`stategroup'		=	nullmat(SFIG_`stategroup'),	e(b)[1,3]
+						
+					}
+					
+					
+				*	Metropolitan Area
+				 
+					*	Metro
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& resid_metro==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_metro	=	nullmat(sampleno_metro),	e(N_sub)
+					mat	HCR_metro		=	nullmat(HCR_metro),	e(b)[1,1]
+					mat	FIG_metro		=	nullmat(FIG_metro),	e(b)[1,2]
+					mat	SFIG_metro		=	nullmat(SFIG_metro),	e(b)[1,3]
+					
+					*	Non-metro
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& resid_nonmetro==1	&	year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+					mat	sampleno_nonmetro	=	nullmat(sampleno_nonmetro),	e(N_sub)
+					mat	HCR_nonmetro		=	nullmat(HCR_nonmetro),	e(b)[1,1]
+					mat	FIG_nonmetro		=	nullmat(FIG_nonmetro),	e(b)[1,2]
+					mat	SFIG_nonmetro		=	nullmat(SFIG_nonmetro),	e(b)[1,3]
+				
+				   
+			}
+			
+			mat	define	blankrow_1by9	=	J(1,9,.)
+			mat list blankrow_1by9
+			foreach measure in HCR FIG SFIG	{
+				
+				cap	mat	drop	`measure'_year_combined
+				mat	`measure'_year_combined	=	`measure'_all	\	blankrow_1by9	 \	`measure'_male	\	`measure'_female	\	blankrow_1by9	 \	///
+											 	`measure'_white	\	`measure'_black	\	`measure'_other	\	blankrow_1by9 	 \		`measure'_NoHS	 \	///
+												 `measure'_HS	\	`measure'_somecol	\	`measure'_col	\	blankrow_1by9	\	///
+												 `measure'_NE	\	`measure'_MidAt	\	`measure'_South	\	`measure'_MidWest	\	`measure'_West	\	blankrow_1by9	\	///
+												 `measure'_metro	\	`measure'_nonmetro
+				
+			}
+			cap	mat	drop	FGT_year_combined
+			mat	FGT_year_combined	=	blankrow_1by9	\	HCR_year_combined	\	blankrow_1by9	\	blankrow_1by9	\	FIG_year_combined	\	blankrow_1by9	\	blankrow_1by9	\	SFIG_year_combined
+			
+			putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(year) replace	/*modify*/
+			putexcel	A3	=	matrix(FGT_year_combined), names overwritefmt nformat(number_d1)
+			
+			*esttab matrix(Jalan_Rav_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/Jalan_Rav_combined.tex", replace
+			
+		   *	Categorical decomposition
+		   *	Input for Figure 3 in Dec 2020 draft (Food Insecurity Prevalence and Severity by Group).
+			*	Data and Graph can be found in "FGT_group" sheet in "Min_report" Excel file.
+		  
+			*	Aggregate some categories (collapse 4 educational categories into two)
+			cap	drop	highdegree_HSorbelow	//	binary for HS or below, or beyond HS.
+			gen		highdegree_HSorbelow=0	if	inlist(1,highdegree_somecol,highdegree_col)
+			replace	highdegree_HSorbelow=1	if	inlist(1,highdegree_NoHS, highdegree_HS)
+			
+		   *	Generate group-level aggregates.
+		   *	We need to do it twice - one for main graph and one for supplement graph. The latter use more detailed educational category.
+		   
+		   *	Total population size, which is needed to get the share of each sub-group population to total population later
+			qui	svy, subpop(if ${study_sample} & ${nonmissing_FGT}): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+			local	sample_popsize_total=e(N_subpop)
+		   
+		   
+				*	Main graph
+				cap	mat	drop	Pop_ratio_all
+				cap	mat	drop	HCR_cat	FIG_cat	SFIG_cat
+				cap mat drop	HCR_weight_cat	FIG_weight_cat	SFIG_weight_cat
+				cap	mat	drop	HCR_weight_cat_all	FIG_weight_cat_all	SFIG_weight_cat_all
+
+			   /*foreach	edu	in	1	2	3	4	{	//	No HS, HS, some col, col*/
+			   foreach	edu	in	1	0	{	//	HS or below, beyond HS	   
+					foreach	race	in	0	1	{	//	People of colors, white
+						foreach	gender	in	1	0	{	//	Female, male
+							
+							*	FGT measures across all years (Figure 3 in Dec 2020 draft)
+							
+							qui svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'):	///
+								mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+							
+							local	Pop_ratio_all	=	e(N_subpop)/`sample_popsize_total'	//	Share of sub-group pop to total pop.
+							mat		Pop_ratio_all	=	nullmat(Pop_ratio_all)	\	`Pop_ratio_all'
+							mat	HCR_cat			=	nullmat(HCR_cat)	\	e(b)[1,1]
+							mat	FIG_cat			=	nullmat(FIG_cat)	\	e(b)[1,2]
+							mat	SFIG_cat		=	nullmat(SFIG_cat)	\	e(b)[1,3]
+							
+							*	Weighted average for stacked bar graph, by year					
+							
+							forval	year=2/10	{
+								
+								*	Generate population size estimate of the sample, which will be used to calculate weighted average.
+								qui	svy, subpop(if ${study_sample} & ${nonmissing_FGT} & year==`year'): mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+								local	sample_popsize_year=e(N_subpop)
+								
+								*	Estimate FGT measures
+								qui	svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'	&	year==`year'):	///
+									mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+									
+								local	Pop_ratio	=	e(N_subpop)/`sample_popsize_year'
+								local	HCR_weighted_`year'		=	e(b)[1,1]*`Pop_ratio'
+								local	FIG_weighted_`year'		=	e(b)[1,2]*`Pop_ratio'
+								local	SFIG_weighted_`year'	=	e(b)[1,3]*`Pop_ratio'
+								macro list _HCR_weighted_`year'
+								
+								mat	HCR_weight_cat	=	nullmat(HCR_weight_cat),	`HCR_weighted_`year''
+								mat	FIG_weight_cat	=	nullmat(FIG_weight_cat),	`FIG_weighted_`year''
+								mat	SFIG_weight_cat	=	nullmat(SFIG_weight_cat),	`SFIG_weighted_`year''	
+				
+							}	//	year
+							
+							mat	HCR_weight_cat_all	=	nullmat(HCR_weight_cat_all)	\	HCR_weight_cat
+							mat	FIG_weight_cat_all	=	nullmat(FIG_weight_cat_all)	\	FIG_weight_cat
+							mat	SFIG_weight_cat_all	=	nullmat(SFIG_weight_cat_all)	\	SFIG_weight_cat
+							
+							cap	mat	drop	HCR_weight_cat	FIG_weight_cat	SFIG_weight_cat
+							
+						}	// gender			
+					}	//	race	
+			   }	//	edu
+			   
+				cap	mat	drop	FGT_cat_combined
+				mat	FGT_cat_combined	=	Pop_ratio_all,	HCR_cat,	FIG_cat,	SFIG_cat
+				
+				
+				*	Supplementary graph - use 4 educational categories, across all years, no weighted
+				cap	mat	drop	Pop_ratio_all_sup	HCR_cat_sup	FIG_cat_sup	SFIG_cat_sup	
+				
+				 foreach	edu	in	1	2	3	4	{	//	No HS, HS, some col, col
+			   /*foreach	edu	in	1	0	{	//	HS or below, beyond HS*/	   
+					foreach	race	in	0	1	{	//	People of colors, white
+						foreach	gender	in	1	0	{	//	Female, male
+							
+							*	FGT measures across all years
+							
+							qui svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_female==`gender' & HH_race_white==`race' & grade_comp_cat==`edu'):	///
+								mean rho1_thrifty_FI_ols FIG_indiv	SFIG_indiv
+							
+							local	Pop_ratio_all_sup	=	e(N_subpop)/`sample_popsize_total'	//	Share of sub-group pop to total pop.
+							mat		Pop_ratio_all_sup	=	nullmat(Pop_ratio_all_sup)	\	`Pop_ratio_all_sup'
+							mat	HCR_cat_sup			=	nullmat(HCR_cat_sup)	\	e(b)[1,1]
+							mat	FIG_cat_sup			=	nullmat(FIG_cat_sup)	\	e(b)[1,2]
+							mat	SFIG_cat_sup		=	nullmat(SFIG_cat_sup)	\	e(b)[1,3]
+							
+						}	// gender			
+					}	//	race	
+			   }	//	edu
+			   
+				cap	mat	drop	FGT_cat_combined_sup
+				mat	FGT_cat_combined_sup	=	Pop_ratio_all_sup,	HCR_cat_sup,	FIG_cat_sup,	SFIG_cat_sup
+				
+			   
+				putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(categorical) /*replace*/	modify
+				putexcel	A3	=	matrix(FGT_cat_combined), names overwritefmt nformat(number_d1)
+				putexcel	A14	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)
+				putexcel	A24	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)
+				putexcel	A34	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)
+				putexcel	M3	=	matrix(FGT_cat_combined_sup), names overwritefmt nformat(number_d1)
+				
+				*esttab matrix(Jalan_Rav_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/Jalan_Rav_combined.tex", replace
+	}
+				
+	
+	/****************************************************************
+		SECTION 7: Dynamics
 	****************************************************************/	
 		
 	local	run_transition_matrix	0	//	Transition matrix
 	local	run_spell_length	0	//	Spell length
 	local	run_FS_chron_trans	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
+		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
 	
 	
 	*	Transition matrices	
@@ -1361,60 +1910,123 @@
 				gen	f`diff'_rho1_thrifty_`category'_ols	=	f`diff'.rho1_thrifty_`category'_ols	//	Forward
 			}
 		}
-
+		
+		*	Restrict sample to the observations with non-missing PFS and lagged PFS
+		global	nonmissing_PFS_lags	!mi(l1_rho1_thrifty_FS_ols)	&	!mi(rho1_thrifty_FS_ols)
+		
 		*	2 X 2 (FS, FI)	-	FS status over two subsequent periods
 			
 			*	Year
-			cap	mat	drop	trans_2by2_year
+			cap	mat	drop	trans_2by2_year	trans_change_year
 			forvalues	year=3/10	{			
-					
+				
+				
 				*	Joint distribution	(two-way tabulate)
-				svy, subpop(year_enum`year'): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & year_enum`year'): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols
 				mat	trans_2by2_joint_`year' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
 				scalar	samplesize_`year'	=	e(N_sub)	//	Sample size
 				
 				*	Marginal distribution (for persistence and entry)
-				svy, subpop(year_enum`year'): proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & year_enum`year'): proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
 				scalar	persistence_`year'	=	e(b)[1,1]
-				svy, subpop(year_enum`year'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+				svy, subpop(if ${study_sample}==1 & year_enum`year'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
 				scalar	entry_`year'	=	e(b)[1,1]
 				
 				mat	trans_2by2_`year'	=	samplesize_`year',	trans_2by2_joint_`year',	persistence_`year',	entry_`year'	
 				mat	trans_2by2_year	=	nullmat(trans_2by2_year)	\	trans_2by2_`year'
-			}
+				
+				
+				*	Change in Status (For Figure 3 of 2020/11/16 draft)
+				**	Note: here we do NOT limit our sample to non-missing values, as we need the ratio of those with missing values.
+				svy, subpop(if ${study_sample} /*& ${nonmissing_PFS_lags}*/	 & !mi(rho1_thrifty_FI_ols)	&	year==`year'): tab 	l1_rho1_thrifty_FI_ols rho1_thrifty_FI_ols, missing
+				local	sample_popsize_total=e(N_subpop)
+				mat	trans_change_`year' = e(b)[1,5], e(b)[1,2], e(b)[1,8]
+				mat	trans_change_year	=	nullmat(trans_change_year)	\	trans_change_`year'
+				
+				cap	mat	drop	Pop_ratio
+				cap	mat	drop	FI_still_`year'	FI_newly_`year'	
+				
+				foreach	edu	in	1	0	{	//	HS or below, beyond HS	   
+					foreach	race	in	0	1	{	//	People of colors, white
+						foreach	gender	in	1	0	{	//	Female, male
+							
+								
+							qui	svy, subpop(if	${study_sample} /*& ${nonmissing_PFS_lags}*/	& !mi(rho1_thrifty_FI_ols)	///
+												& HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'	&	year==`year'):	///
+												tab l1_rho1_thrifty_FI_ols rho1_thrifty_FI_ols, missing
+												
+							local	Pop_ratio	=	e(N_subpop)/`sample_popsize_total'
+							local	FI_still_`year'		=	e(b)[1,5]*`Pop_ratio'
+							local	FI_newly_`year'		=	e(b)[1,2]*`Pop_ratio'
+							
+							mat	Pop_ratio	=	nullmat(Pop_ratio)	\	`Pop_ratio'
+							mat	FI_still_`year'	=	nullmat(FI_still_`year')	\	`FI_still_`year''
+							mat	FI_newly_`year'	=	nullmat(FI_newly_`year')	\	`FI_newly_`year''
+							
+						}	//	gender
+					}	//	race
+				}	//	education
+				
+				mat	FI_still_year_all	=	nullmat(FI_still_year_all),	FI_still_`year'
+				mat	FI_newly_year_all	=	nullmat(FI_newly_year_all),	FI_newly_`year'
+							
+			}	//	year
 
 			
 			/*
-			*	Age
-			cap drop age_below65
-			gen		age_below65=1	if	age_over65==0
-			replace	age_below65=0	if	age_over65==1
-			svy, subpop(age_below65): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols
-			svy, subpop(age_over65): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+			*	Age (Income-to-Poverty Ratio less than 2)
+			cap	drop	age_group
+			gen		age_group=0	if	inrange(age_head_fam,25,44)
+			replace	age_group=1	if	inrange(age_head_fam,45,59)
+			replace	age_group=2	if	inrange(age_head_fam,60,64)
+			replace	age_group=3	if	inrange(age_head_fam,65,69)
+			replace	age_group=4	if	inrange(age_head_fam,70,105)
+			
+			foreach	type	in	0	1	2	3	4	{	//	55~64/65~74
+					
+					*	Joint
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & age_group==`type' & inrange(income_to_poverty_cat,1,2)): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols
+					mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+					scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+					
+					*	Marginal
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & age_group==`type' & inrange(income_to_poverty_cat,1,2)):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+					scalar	persistence_`type'	=	e(b)[1,1]
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & age_group==`type' & inrange(income_to_poverty_cat,1,2)):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+					scalar	entry_`type'	=	e(b)[1,1]
+					
+					mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'		
+				}
+				
+				mat	trans_2by2_age	=	trans_2by2_0	\	trans_2by2_1	\	trans_2by2_2	\	trans_2by2_3	\	trans_2by2_4
+				mat list trans_2by2_age
+			
 			*/
+			
+			
 			
 			*	Gender
 			
 				*	Male, Joint
-				svy, subpop(gender_head_fam_enum2): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & gender_head_fam_enum2): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
 				mat	trans_2by2_joint_male = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
 				scalar	samplesize_male	=	e(N_sub)	//	Sample size
 				
 				*	Female, Joint
-				svy, subpop(HH_female): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_female): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
 				mat	trans_2by2_joint_female = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
 				scalar	samplesize_female	=	e(N_sub)	//	Sample size
 				
 				*	Male, Marginal distribution (for persistence and entry)
-				svy, subpop(gender_head_fam_enum2):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & gender_head_fam_enum2):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
 				scalar	persistence_male	=	e(b)[1,1]
-				svy, subpop(gender_head_fam_enum2):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & gender_head_fam_enum2):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
 				scalar	entry_male	=	e(b)[1,1]
 				
 				*	Female, Marginal distribution (for persistence and entry)
-				svy, subpop(HH_female):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_female):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
 				scalar	persistence_female	=	e(b)[1,1]
-				svy, subpop(HH_female):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_female):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
 				scalar	entry_female	=	e(b)[1,1]
 				
 				mat	trans_2by2_male		=	samplesize_male,	trans_2by2_joint_male,	persistence_male,	entry_male	
@@ -1424,37 +2036,57 @@
 				
 			*	Race
 							
-				foreach	racetype	in	white black other	{
+				foreach	type	in	1	0	{	//	white/color
 					
 					*	Joint
-					svy, subpop(HH_race_`racetype'): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
-					mat	trans_2by2_joint_`racetype' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
-					scalar	samplesize_`racetype'	=	e(N_sub)	//	Sample size
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_race_white==`type'): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+					mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+					scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
 					
 					*	Marginal
-					svy, subpop(HH_race_`racetype'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
-					scalar	persistence_`racetype'	=	e(b)[1,1]
-					svy, subpop(HH_race_`racetype'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
-					scalar	entry_`racetype'	=	e(b)[1,1]
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_race_white==`type'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+					scalar	persistence_`type'	=	e(b)[1,1]
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_race_white==`type'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+					scalar	entry_`type'	=	e(b)[1,1]
 					
-					mat	trans_2by2_`racetype'	=	samplesize_`racetype',	trans_2by2_joint_`racetype',	persistence_`racetype',	entry_`racetype'		
+					mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'		
 				}
 				
-				mat	trans_2by2_race	=	trans_2by2_white	\	trans_2by2_black	\	trans_2by2_other
+				mat	trans_2by2_race	=	trans_2by2_1	\	trans_2by2_0
 
+			*	Region (based on John's suggestion)
+			
+				foreach	type	in	NE MidAt South MidWest	West	{
+				
+					*	Joint
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & state_group_`type'==1): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+					mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+					scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+					
+					*	Marginal
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & state_group_`type'==1):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+					scalar	persistence_`type'	=	e(b)[1,1]
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & state_group_`type'==1):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+					scalar	entry_`type'	=	e(b)[1,1]
+					
+					mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'		
+				}
+				
+				mat	trans_2by2_region	=	trans_2by2_NE	\	trans_2by2_MidAt	\	trans_2by2_South	\	trans_2by2_MidWest	\		trans_2by2_West
+			
 			*	Education
 			
 			foreach	type	in	NoHS	HS	somecol	col	{
 				
 				*	Joint
-				svy, subpop(highdegree_`type'): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & highdegree_`type'): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
 				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
 				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
 				
 				*	Marginal
-				svy, subpop(highdegree_`type'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & highdegree_`type'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
 				scalar	persistence_`type'	=	e(b)[1,1]
-				svy, subpop(highdegree_`type'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & highdegree_`type'):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
 				scalar	entry_`type'	=	e(b)[1,1]
 				
 				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
@@ -1471,14 +2103,14 @@
 			foreach	type	in	nodisab	disab	{
 				
 				*	Joint
-				svy, subpop(phys_`type'_head): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & phys_`type'_head): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
 				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
 				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
 				
 				*	Marginal
-				svy, subpop(phys_`type'_head):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & phys_`type'_head):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
 				scalar	persistence_`type'	=	e(b)[1,1]
-				svy, subpop(phys_`type'_head):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & phys_`type'_head):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
 				scalar	entry_`type'	=	e(b)[1,1]
 				
 				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
@@ -1495,14 +2127,14 @@
 			foreach	type	in	nostamp	stamp	{
 				
 				*	Joint
-				svy, subpop(food_`type'_used_1yr): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & food_`type'_used_1yr): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
 				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
 				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
 				
 				*	Marginal
-				svy, subpop(food_`type'_used_1yr):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & food_`type'_used_1yr):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
 				scalar	persistence_`type'	=	e(b)[1,1]
-				svy, subpop(food_`type'_used_1yr):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & food_`type'_used_1yr):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
 				scalar	entry_`type'	=	e(b)[1,1]
 				
 				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
@@ -1534,14 +2166,14 @@
 			foreach	type	in	/*noemp*/ emp /*nomarriage*/ marriage /*nodisab*/ disab /*nonewstamp*/ newstamp	{
 				
 				*	Joint
-				svy, subpop(`type'_shock): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & `type'_shock): tabulate l1_rho1_thrifty_FS_ols	rho1_thrifty_FS_ols	
 				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
 				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
 				
 				*	Marginal
-				svy, subpop(`type'_shock):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & `type'_shock):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==0	&	!mi(rho1_thrifty_FS_ols)	//	Previously FI
 				scalar	persistence_`type'	=	e(b)[1,1]
-				svy, subpop(`type'_shock):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & `type'_shock):qui proportion	rho1_thrifty_FS_ols	if	l1_rho1_thrifty_FS_ols==1	&	!mi(rho1_thrifty_FS_ols)	//	Previously FS
 				scalar	entry_`type'	=	e(b)[1,1]
 				
 				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
@@ -1553,7 +2185,7 @@
 		
 		mat	define	blankrow	=	J(1,7,.)
 		mat	trans_2by2_combined	=	trans_2by2_year	\	blankrow	\	trans_2by2_gender	\	blankrow	\	///
-									trans_2by2_race	\	blankrow	\	trans_2by2_degree	\	blankrow	\	///
+									trans_2by2_race	\	blankrow	\	trans_2by2_region	\	blankrow	\	trans_2by2_degree	\	blankrow	\	///
 									trans_2by2_disability	\	blankrow	\	trans_2by2_foodstamp	\	blankrow	\	///
 									trans_2by2_shock
 		
@@ -1563,6 +2195,11 @@
 		putexcel	A3	=	matrix(trans_2by2_combined), names overwritefmt nformat(number_d1)
 		
 		esttab matrix(trans_2by2_combined, fmt(%9.2f)) using "${PSID_outRaw}/Transition_2by2_combined.tex", replace	
+		
+		putexcel	set "${PSID_outRaw}/Transition_Matrices", sheet(change) /*replace*/	modify
+		putexcel	A3	=	matrix(trans_change_year), names overwritefmt nformat(number_d1)
+		putexcel	A13	=	matrix(FI_still_year_all), names overwritefmt nformat(number_d1)
+		putexcel	A23	=	matrix(FI_newly_year_all), names overwritefmt nformat(number_d1)
 			
 	}
 	
@@ -1579,12 +2216,12 @@
 		*mat	summ_spell_length	=	J(9,2,.)	
 		cap drop	_seq	_spell	_end
 		tsspell, cond(year>=2 & rho1_thrifty_FI_ols==1)
-		svy: mean _seq if _end==1 & balanced_PFS==1	//	Mean of spell lengths (To get length as an year, multiply spell length by 2)
-		svy: tab _seq if _end==1 & balanced_PFS==1	//	Tabulation of spell lengths.
+		svy, subpop(if	${study_sample} & _end==1 & balanced_PFS==1): mean _seq //	Mean of spell lengths (To get length as an year, multiply spell length by 2)
+		svy, subpop(if	${study_sample}	& _end==1 & balanced_PFS==1): tab _seq 	//	Tabulation of spell lengths.
 		*mat	summ_spell_length	=	e(N),	e(b)
-		mat	summ_spell_length	=	e(b)'
+		mat	summ_spell_length	=	e(b)[1..1,2..10]'
 
-		*	Persistence rate conditional upon spell length
+		*	Persistence rate conditional upon spell length (Table 7 of 2020/11/16 draft)
 		mat	persistence_upon_spell	=	J(9,2,.)	
 		forvalues	i=1/8	{
 			svy: proportion rho1_thrifty_FS_ols	if	l._seq==`i'	&	!mi(rho1_thrifty_FS_ols) &	balanced_PFS==1	//	Previously FI
@@ -1626,7 +2263,7 @@
 		forval	wave=2/9	{
 			
 			local	row=`wave'-1
-			svy, subpop(if year==`wave'): tab FI_duration
+			svy, subpop(if year==`wave'	&	!mi(FI_duration)): tab FI_duration
 			mat	dist_spell_length_byyear[`row',1]	=	e(N_sub), e(b)
 			
 		}
@@ -1641,12 +2278,14 @@
 	*	FS_Chronic_Transient	
 	if	`run_FS_chron_trans'==1	{
 		
-		cap	drop	pfs_ols_normal
-		cap	drop	SFIG_indiv
+		*cap	drop	pfs_ols_normal
 		cap	drop	SFIG
-		cap	drop	pfs_ols_mean
-		cap	drop	pfs_ols_mean_normal
-		cap	drop	pfs_ols_normal_mean
+		cap	drop	PFS_ols_mean
+		cap	drop	PFS_ols_total
+		cap	drop	PFS_threshold_ols_total
+		cap	drop	PFS_ols_mean_normal
+		cap	drop	PFS_threshold_ols_mean
+		cap	drop	PFS_ols_normal_mean
 		cap	drop	SFIG_mean_indiv
 		cap	drop	SFIG_mean
 		cap	drop	SFIG_transient
@@ -1654,24 +2293,69 @@
 		cap	drop	Total_FI
 		cap	drop	Transient_FI
 		cap	drop	Chronic_FI
-		gen pfs_ols_normal	=.
-		gen	SFIG_indiv	=.
+		*gen pfs_ols_normal	=.
+		
+		
 		
 		
 		foreach	type	in	ols	/*ls	rf*/	{
 				
-				gen	pfs_`type'_mean_normal=.
-				gen	SFIG_mean_indiv=.
+				*gen	pfs_`type'_mean_normal=.
+				*gen	SFIG_mean_indiv=.
 				
-				*	Mean PFS over time
+				
+				*	To construct CFI (Chronic Food Insecurity), we need average PFS over time at household-level.
+				*	Since households have different number of non-missing PFS and our cut-off probability varies over time, we cannot simply use "mean" function.
+				*	We add-up all non-missing PFS over time at household-level, and divide it by cut-off PFS of those non-missing years.
+				
+				*	Aggregate PFS over time (numerator)
+				bys	fam_ID_1999:	egen	PFS_`type'_total	=	total(rho1_foodexp_pc_thrifty_ols)	if	inrange(year,2,10)
+				
+				*	Aggregate cut-off PFS over time. To add only the years with non-missing PFS, we replace the cut-off PFS of missing PFS years as missing.
+				replace	PFS_threshold_`type'=.	if	mi(rho1_foodexp_pc_thrifty_`type')
+				bys	fam_ID_1999:	egen	PFS_threshold_`type'_total	=	total(PFS_threshold_`type')	if	inrange(year,2,10)
+				
+				*	Generate (normalized) mean-PFS by dividing the numerator into the denominator (Check Calvo & Dercon (2007), page 19)
+				gen	PFS_`type'_mean_normal	=	PFS_`type'_total	/	PFS_threshold_`type'_total
+				
+					
+				*	Total, Transient and Chronic FI
+
+				
+					*	Total FI	(Average SFIG over time)
+					bys	fam_ID_1999:	egen	Total_FI		=	mean(SFIG_indiv)	if	inrange(year,2,10)	/*!mi(SFIG_indiv)*/
+
+					*	Chronic FI (SFIG(with mean PFS))					
+					gen		Chronic_FI=.
+					replace	Chronic_FI	=	(1-PFS_`type'_mean_normal)^2	if	!mi(PFS_`type'_mean_normal)	&	PFS_`type'_mean_normal<1
+					replace	Chronic_FI	=	0								if	!mi(PFS_`type'_mean_normal)	&	PFS_`type'_mean_normal>=1
+					
+					**** In several households, CFI is greater than TFI. I assume it is because the threshold probability varies, but need to thoroughly check why.
+					**** For now, in that case we treat CFI as equal to the TFI
+					replace	Chronic_FI	=	Total_FI	if	Chronic_FI>Total_FI
+					
+					*	Transient FI (TFI - CFI)
+					gen	Transient_FI	=	Total_FI	-	Chronic_FI	
+							
+				
+				/*
+				*	Mean PFS over time. It will be the input argument for the Chronic Poverty.
 				bys	fam_ID_1999: egen	pfs_`type'_mean	=	mean(rho1_foodexp_pc_thrifty_`type')	if	!mi(rho1_foodexp_pc_thrifty_`type')
+				
 				
 				*	First loop
 				local	num_years	=	0
-				global	thresval_`type'_total=0
+				global	PFS_threshold_total=0
 				
 				forval	year=2/10	{		
+							
 					
+					global	PFS_threshold_total	=	${PFS_threshold_total}	+	${PFS_threshold_`year'}	//	To calculate mean cut-off threshold${PFS_threshold_`year'}
+					
+					di "threshold of year `year' is ${PFS_threshold_`year'}"
+					local	num_years	=	`num_years'+1
+					
+					/*
 					*	Set threshold PFS value for year, which is the average of the maximum PFS of FI households and the minimum PFS of the FS households
 					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==0	&	year==`year'	//	Maximum PFS of households categorized as food insecure
 					local	max_pfs_thrifty_`type'_`year'	=	r(max)
@@ -1681,12 +2365,18 @@
 					global	thresval_`type'_`year'	=	(`max_pfs_thrifty_`type'_`year''	+	`min_pfs_thrifty_`type'_`year'')/2	//	Average of the two scores above is a threshold value.
 					global	thresval_`type'_total	=	${thresval_`type'_total}	+	${thresval_`type'_`year'}	//	To calculate mean cut-off threshold
 					
+					
 					*	Normalized PFS (PFS/threshold PFS)	(yit)
 					replace	pfs_`type'_normal	=	rho1_foodexp_pc_thrifty_`type'	/	${thresval_`type'_`year'}	if	year==`year'
 					
 					*	Squared Food Insecurity Gap (SFIG) at each year
 					replace	SFIG_indiv	=	(1-pfs_`type'_normal)^2	if	year==`year'	&	!mi(pfs_`type'_normal)	&	rho1_foodexp_pc_thrifty_`type'<${thresval_`type'_`year'}	
 					replace	SFIG_indiv	=	0						if	year==`year'	&	!mi(pfs_`type'_normal)	&	rho1_foodexp_pc_thrifty_`type'>=${thresval_`type'_`year'}
+					
+					
+					di "threshold of year `year' is ${thresval_`type'_`year'}"
+					local	num_years	=	`num_years'+1
+					*/
 					
 					/*	Outdated code
 					*	Normalized Mean PFS
@@ -1697,18 +2387,17 @@
 					replace	SFIG_mean_indiv	=	0								if	year==`year'	&	!mi(pfs_`type'_mean_normal)	&	pfs_`type'_mean>=${thresval_`type'_`year'}
 					*/
 					
-					di "threshold of year `year' is ${thresval_`type'_`year'}"
-					local	num_years	=	`num_years'+1
 					
 				}	//	year
 				
-				global	thresval_`type'_mean	=	${thresval_`type'_total} / `num_years'
-				di "Total threshold is ${thresval_ols_total}, num_years is `num_years' and mean threshold is ${thresval_`type'_mean}"
+				global	PFS_threshold_mean	=	${PFS_threshold_total} / `num_years'
+				di "Total threshold is ${PFS_threshold_total}, num_years is `num_years' and mean threshold is ${PFS_threshold_mean}"
 				
 				
+				** This code is wrong. We should get the average PFS first and then normalize it, NOT the other way around (Calvo and Dercon, 2007)
 				*	Household-level mean of normalized PFS over time (yi_bar)
 				** The difference between "normalized mean PFS" below is that, this one normalize first and then gets them mean, so household i has the same value across time.
-				bys	fam_ID_1999:	egen	pfs_`type'_normal_mean	=	mean(pfs_`type'_normal)
+				*bys	fam_ID_1999:	egen	pfs_`type'_normal_mean	=	mean(pfs_`type'_normal)
 				
 				
 				
@@ -1721,8 +2410,8 @@
 				forval	year=2/10	{	
 							
 					*	Squared Food Insecurity Gap (SFIG) at each year using Mean normalized PFS
-					replace	SFIG_mean_indiv	=	(1-pfs_`type'_normal_mean)^2	if	year==`year'	&	!mi(pfs_`type'_normal_mean)	&	pfs_`type'_mean<${thresval_`type'_`year'}
-					replace	SFIG_mean_indiv	=	0								if	year==`year'	&	!mi(pfs_`type'_normal_mean)	&	pfs_`type'_mean>=${thresval_`type'_`year'}
+					replace	SFIG_mean_indiv	=	(1-pfs_`type'_normal_mean)^2	if	year==`year'	&	!mi(pfs_`type'_normal_mean)	&	pfs_`type'_mean<${PFS_threshold_`year'}
+					replace	SFIG_mean_indiv	=	0								if	year==`year'	&	!mi(pfs_`type'_normal_mean)	&	pfs_`type'_mean>=${PFS_threshold_`year'}
 					
 				}	
 				
@@ -1745,60 +2434,155 @@
 				gen	SFIG_transient	=	SFIG	-	SFIG_mean
 				*/
 				
+			*/
+			
 			}	//	type
 		
 		
+			*	Restrict sample to non_missing TFI and CFI
+			global	nonmissing_TFI_CFI	!mi(Total_FI)	&	!mi(Chronic_FI)
+		
 		*	Descriptive stats
-		**	Only include households with the balanced PFS.
 			
-			cap	drop	num_nonmissing_PFS	balanced_PFS
+			**	For now we include households with 5+ PFS.
+			cap	drop	num_nonmissing_PFS
+			cap	drop	dyn_sample
 			bys fam_ID_1999: egen num_nonmissing_PFS=count(rho1_foodexp_pc_thrifty_ols)
-			gen	balanced_PFS=1	if	num_nonmissing_PFS==9
+			gen	dyn_sample=1	if	num_nonmissing_PFS>=5	&	inrange(year,2,10)
 			
-			*	Overall
-			svy: mean Total_FI Transient_FI Chronic_FI if	balanced_PFS==1
+			*	For time-variance categories (ex. education, region), we use the first year (2001) value (as John suggested)
+			local	timevar_cat	highdegree_NoHS highdegree_HS highdegree_somecol highdegree_col	///
+								state_group_NE state_group_MidAt state_group_South state_group_MidWest state_group_West	resid_metro resid_nonmetro
+			foreach	type	of	local	timevar_cat		{
+				
+				gen		`type'_temp	=	1	if	year==2	&	`type'==1
+				replace	`type'_temp	=	0	if	year==2	&	`type'!=1	&	!mi(`type')
+				replace	`type'_temp	=	.n	if	year==2	&	mi(`type')
+				
+				cap	drop	`type'_2001
+				bys	fam_ID_1999:	egen	`type'_2001	=	max(`type'_temp)
+				drop	`type'_temp
+				
+			}				
+			
+			*	If 2001 education is missing, use the earliest available education information
+			cap	drop	tempyear
+			bys fam_ID_1999: egen tempyear = min(year) if (${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1 & mi(highdegree_NoHS_2001))
+
+			foreach edu in NoHS HS somecol col	{
+				
+				cap	drop	highdegree_`edu'_2001_temp?
+				gen	highdegree_`edu'_2001_temp1	=	highdegree_`edu'	if	year==tempyear
+				bys fam_ID_1999: egen highdegree_`edu'_2001_temp2	=	max(highdegree_`edu'_2001_temp1) if !mi(tempyear)
+				replace	highdegree_`edu'_2001	=	highdegree_`edu'_2001_temp2	if	!mi(tempyear)
+				drop	highdegree_`edu'_2001_temp?
+			}
+			drop	tempyear
+
+
+			
+			*	Overall			
+			svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	& ${nonmissing_TFI_CFI} 	&	dyn_sample==1 ): mean Total_FI Chronic_FI Transient_FI	
 			scalar	prop_trans_all	=	e(b)[1,2]/e(b)[1,1]
-			scalar	samplesize_all	=	e(N)
-			mat	Jalan_Rav_2000_all	=	e(N),	e(b), prop_trans_all
+			*scalar	samplesize_all	=	e(N_sub)
+			mat	Jalan_Rav_2000_all	=	e(N_sub),	e(b), prop_trans_all
 			
 			*	Gender
-			svy, subpop(gender_head_fam_enum2): mean Total_FI Transient_FI Chronic_FI  if	balanced_PFS==1
+			svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols) & ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	gender_head_fam_enum2==1): mean Total_FI Chronic_FI Transient_FI  	
 			scalar	prop_trans_male	=	e(b)[1,2]/e(b)[1,1]
 			mat	Jalan_Rav_2000_male	=	e(N_sub),	e(b), prop_trans_male
 			
-			svy, subpop(HH_female): mean Total_FI Transient_FI Chronic_FI  if	balanced_PFS==1
+			svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols) & ${nonmissing_TFI_CFI} 	&	dyn_sample==1 	&	HH_female==1): mean Total_FI Chronic_FI Transient_FI  	
 			scalar	prop_trans_female	=	e(b)[1,2]/e(b)[1,1]
 			mat	Jalan_Rav_2000_female	=	e(N_sub),	e(b), prop_trans_female
 			
 			mat	Jalan_Rav_2000_gender	=	Jalan_Rav_2000_male	\	Jalan_Rav_2000_female
 			
 			*	Race
-			foreach	type	in	white	black	other	{
+			foreach	type	in	1	0	{
 				
-				svy, subpop(HH_race_`type'): mean Total_FI Transient_FI Chronic_FI  if	balanced_PFS==1
+				svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	HH_race_white==`type'): mean Total_FI Chronic_FI Transient_FI 
 				scalar	prop_trans_race_`type'	=	e(b)[1,2]/e(b)[1,1]
 				mat	Jalan_Rav_2000_race_`type'	=	e(N_sub),	e(b), prop_trans_race_`type'
 				
 			}
 			
-			mat	Jalan_Rav_2000_race	=	Jalan_Rav_2000_race_white	\	Jalan_Rav_2000_race_black	\	Jalan_Rav_2000_race_other
+			mat	Jalan_Rav_2000_race	=	Jalan_Rav_2000_race_1	\	Jalan_Rav_2000_race_0
 
+			*	Region (based on John's suggestion)
+			foreach	type	in	NE	MidAt South MidWest West	{
+				
+				svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	state_group_`type'==1	): mean Total_FI Chronic_FI Transient_FI 
+				scalar	prop_trans_region_`type'	=	e(b)[1,2]/e(b)[1,1]
+				mat	Jalan_Rav_2000_region_`type'	=	e(N_sub),	e(b), prop_trans_region_`type'
+				
+			}
+		
+			mat	Jalan_Rav_2000_region	=	Jalan_Rav_2000_region_NE	\	Jalan_Rav_2000_region_MidAt	\	Jalan_Rav_2000_region_South	\	///
+											Jalan_Rav_2000_region_MidWest	\	Jalan_Rav_2000_region_West
+			
+			*	Metropolitan Area
+			foreach	type	in	metro	nonmetro	{
+				
+				svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	resid_`type'==1): mean Total_FI Chronic_FI Transient_FI 
+				scalar	prop_trans_metro_`type'	=	e(b)[1,2]/e(b)[1,1]
+				mat	Jalan_Rav_2000_metro_`type'	=	e(N_sub),	e(b), prop_trans_metro_`type'
+				
+			}
+		
+			mat	Jalan_Rav_2000_metro	=	Jalan_Rav_2000_metro_metro	\	Jalan_Rav_2000_metro_nonmetro
+			
+			*	Education degree (Based on 2001 degree)
+			foreach	degree	in	NoHS	HS	somecol	col	{
+				
+				svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	highdegree_`degree'_2001==1): mean Total_FI Chronic_FI Transient_FI 
+				scalar	prop_trans_edu_`degree'	=	e(b)[1,2]/e(b)[1,1]
+				mat	Jalan_Rav_2000_edu_`degree'	=	e(N_sub),	e(b), prop_trans_edu_`degree'
+				
+			}
+			
+			mat	Jalan_Rav_2000_edu	=	Jalan_Rav_2000_edu_NoHS	\	Jalan_Rav_2000_edu_HS	\	Jalan_Rav_2000_edu_somecol	\	Jalan_Rav_2000_edu_col
+
+			
+			 *	Further decomposition
+		   cap	mat	drop	Jalan_Rav_2000_decomp
+		   cap	mat	drop	Pop_ratio
+		   svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1): mean Total_FI Chronic_FI Transient_FI 
+		   local	subsample_tot=e(N_subpop)		   
+		   
+		   foreach	race	in	 HH_race_color	HH_race_white	{	//	Black, white
+				foreach	gender	in	HH_female	gender_head_fam_enum2	{	//	Female, male
+					foreach	edu	in	NoHS	HS	somecol	col   	{	//	No HS, HS, some col, col
+						svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1  & `gender'==1 & `race'==1 & highdegree_`edu'_2001==1): mean Total_FI Chronic_FI Transient_FI
+						local	Pop_ratio	=	e(N_subpop)/`subsample_tot'
+						scalar	prop_trans_edu_race_gender	=	e(b)[1,2]/e(b)[1,1]
+						mat	Jalan_Rav_2000_decomp	=	nullmat(Jalan_Rav_2000_decomp)	\	`Pop_ratio',	e(b), prop_trans_edu_race_gender
+					}	// edu			
+				}	//	gender	
+		   }	//	race
+
+			
 			*	Combine results (Table 8 of 2020/11/16 draft)
 			mat	define	blankrow	=	J(1,5,.)
-			mat	Jalan_Rav_2000_combined	=	Jalan_Rav_2000_all	\	blankrow	\	Jalan_Rav_2000_gender	\	blankrow	\	Jalan_Rav_2000_race
-											
-											/*Jalan_Rav_2000_degree	\	blankrow	\	Jalan_Rav_2000_disability	\	blankrow	\	///
-											Jalan_Rav_2000_foodstamp*/	
-			
-			mat	list	Jalan_Rav_2000_combined
-			
+			mat	Jalan_Rav_2000_allcat	=	Jalan_Rav_2000_all	\	blankrow	\	Jalan_Rav_2000_gender	\	blankrow	\	Jalan_Rav_2000_race	\	///
+											blankrow	\	Jalan_Rav_2000_region	\	blankrow	\	Jalan_Rav_2000_metro	\	blankrow \	///
+											Jalan_Rav_2000_edu	//	To be combined with category later.
+			mat	Jalan_Rav_2000_combined	=	Jalan_Rav_2000_allcat	\	blankrow	\	blankrow	\	Jalan_Rav_2000_decomp
+
 			putexcel	set "${PSID_outRaw}/Jalan_Rav", sheet(2by2) replace	/*modify*/
 			putexcel	A3	=	matrix(Jalan_Rav_2000_combined), names overwritefmt nformat(number_d1)
 			
-			esttab matrix(Jalan_Rav_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/Jalan_Rav_combined.tex", replace	
+			esttab matrix(Jalan_Rav_2000_combined, fmt(%9.3f)) using "${PSID_outRaw}/Jalan_Rav_combined.tex", replace	
 			
 			
 			*	Categorize HH into four categories
+				
+				*	Generate mean PFS and mean threshold PFS over time.
+				*	Since each household has different years of PFS available, this becomes household-specific
+				*	(it would be the same for the households with the same years of the PFS available)
+				cap	drop	PFS_ols_mean PFS_threshold_ols_mean
+				bys	fam_ID_1999:	egen	PFS_ols_mean	=	mean(rho1_foodexp_pc_thrifty_ols)	if	inrange(year,2,10)	// Intertemporal mean PFS
+				bys	fam_ID_1999:	egen	PFS_threshold_ols_mean	=	mean(PFS_threshold_ols)		if	inrange(year,2,10)	// Intertemporal mean threshold PFS
 				
 				/*
 				*	HH PFS is below mean PFS cut-off
@@ -1813,6 +2597,7 @@
 				loc	var1	PFS_FI_always_ols
 				loc	var2	PFS_FI_never_ols
 				cap	drop	`var1'
+				cap	drop	`var2'
 				bys	fam_ID_1999:	egen	`var1'	=	min(rho1_thrifty_FI_ols)	//	1 if always below (persistently poor), 0 if sometimes below (not persistently poor)
 				bys	fam_ID_1999:	egen	`var2'	=	min(rho1_thrifty_FS_ols)	//	1 if never poor, 0 if sometimes poor (transient)
 				
@@ -1820,9 +2605,9 @@
 				* HH's mean PFS is below mean PFS cut-off
 				loc	var	PFSmean_belowmean_ols
 				cap	drop	`var'
-				gen		`var'	=	0	if	pfs_ols_mean>${thresval_ols_mean}
-				replace	`var'	=	1	if	pfs_ols_mean<${thresval_ols_mean}
-				replace	`var'	=	.	if	mi(pfs_ols_mean)
+				gen		`var'	=	0	if	PFS_ols_mean>PFS_threshold_ols_mean
+				replace	`var'	=	1	if	PFS_ols_mean<=PFS_threshold_ols_mean
+				replace	`var'	=	.	if	mi(PFS_ols_mean)
 
 				
 				*	Categorize households
@@ -1831,7 +2616,7 @@
 				replace	PFS_perm_FI=2	if	PFS_FI_always_ols==0	&	PFSmean_belowmean_ols==1	//	Mean PFS is below mean cut-off, but not always poor
 				replace	PFS_perm_FI=3	if	PFS_FI_always_ols==0	&	PFSmean_belowmean_ols==0	//	Mean PFS is above mean cut-off, but sometimes poor
 				replace	PFS_perm_FI=4	if	PFS_FI_never_ols==1		//	Never poor
-				replace	PFS_perm_FI=.	if	balanced_PFS!=1	//	Treat as missing if not balanced.
+				*replace	PFS_perm_FI=.	if	dyn_sample!=1	//	Treat as missing if not balanced.
 				
 				label	define	PFS_perm_FI	1	"Persistently poor"	///
 											2	"Chronically, but not persistently poor"	///
@@ -1843,31 +2628,64 @@
 			*	Descriptive stats
 			
 				*	Overall
-				svy: proportion	PFS_perm_FI	if	balanced_PFS==1
-				mat	PFS_perm_FI_all	=	e(N),	e(b)
+				svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): proportion	PFS_perm_FI
+				mat	PFS_perm_FI_all	=	e(N_sub),	e(b)
 				
 				*	Gender
-				svy, subpop(gender_head_fam_enum2): proportion PFS_perm_FI	if	balanced_PFS==1
+				svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	gender_head_fam_enum2): proportion PFS_perm_FI
 				mat	PFS_perm_FI_male	=	e(N_sub),	e(b)
-				svy, subpop(HH_female): proportion PFS_perm_FI	if	balanced_PFS==1
+				svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	HH_female): proportion PFS_perm_FI
 				mat	PFS_perm_FI_female	=	e(N_sub),	e(b)
 				
 				mat	PFS_perm_FI_gender	=	PFS_perm_FI_male	\	PFS_perm_FI_female
 				
 			
 				*	Race
-				foreach	type	in	white	black	other	{
+				foreach	type	in	1	0	{
 					
-					svy, subpop(HH_race_`type'): proportion PFS_perm_FI	if	balanced_PFS==1
+					svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	HH_race_white==`type'): proportion PFS_perm_FI
 					mat	PFS_perm_FI_race_`type'	=	e(N_sub),	e(b)
 					
 				}
 				
-				mat	PFS_perm_FI_race	=	PFS_perm_FI_race_white	\	PFS_perm_FI_race_black	\	PFS_perm_FI_race_other
+				mat	PFS_perm_FI_race	=	PFS_perm_FI_race_1	\	PFS_perm_FI_race_0
+				
+				*	Region
+				foreach	type	in	NE	MidAt	South	MidWest West	{
+					
+					svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	state_group_`type'==1): proportion PFS_perm_FI
+					mat	PFS_perm_FI_region_`type'	=	e(N_sub),	e(b)
+					
+				}
+				
+				mat	PFS_perm_FI_region	=	PFS_perm_FI_region_NE	\	PFS_perm_FI_region_MidAt	\	PFS_perm_FI_region_South	\	///
+											PFS_perm_FI_region_MidWest	\	PFS_perm_FI_region_West
+				
+				*	Metropolitan
+				foreach	type	in	metro	nonmetro	{
+					
+					svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	resid_`type'==1): proportion PFS_perm_FI
+					mat	PFS_perm_FI_metro_`type'	=	e(N_sub),	e(b)
+					
+				}
+				
+				mat	PFS_perm_FI_metro	=	PFS_perm_FI_metro_metro	\	PFS_perm_FI_metro_nonmetro
+				
+				
+				*	Education
+				foreach	degree	in	NoHS	HS	somecol	col	{
+				    
+					svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	highdegree_`degree'_2001==1): proportion PFS_perm_FI
+					mat	PFS_perm_FI_edu_`degree'	=	e(N_sub),	e(b)
+					
+				}
+				mat	PFS_perm_FI_edu	=	PFS_perm_FI_edu_NoHS	\	PFS_perm_FI_edu_HS	\	PFS_perm_FI_edu_somecol	\	PFS_perm_FI_edu_col
+				
 
 				*	Combine results (Table 9 of 2020/11/16 draft)
 				mat	define	blankrow	=	J(1,5,.)
-				mat	PFS_perm_FI_combined	=	PFS_perm_FI_all	\	blankrow	\	PFS_perm_FI_gender	\	blankrow	\	PFS_perm_FI_race
+				mat	PFS_perm_FI_combined	=	PFS_perm_FI_all	\	blankrow	\	PFS_perm_FI_gender	\	blankrow	\	PFS_perm_FI_race	\	blankrow	\	///
+												PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro	\	blankrow	\	PFS_perm_FI_edu
 				
 				mat	list	PFS_perm_FI_combined
 				
@@ -1876,6 +2694,153 @@
 			
 				esttab matrix(PFS_perm_FI_combined, fmt(%9.2f)) using "${PSID_outRaw}/PFS_perm_FI.tex", replace	
 				
+				*	Table 5 & 6 (combined) of Dec 20 draft
+				mat	define Table_5	=	Jalan_Rav_2000_allcat,	PFS_perm_FI_combined[.,2...]
+				
+				putexcel	set "${PSID_outRaw}/Jalan_Rav", sheet(Table5) /*replace*/	modify
+				putexcel	A3	=	matrix(Table_5), names overwritefmt nformat(number_d1)
+			
+				esttab matrix(Table_5, fmt(%9.3f)) using "${PSID_outRaw}/Table_5.tex", replace	
+		
+		*	Group State-FE of TFI and CFI
+		local	demovars	age_head_fam age_head_fam_sq	HH_female	HH_race_black HH_race_other	marital_status_cat
+		local	econvars	ln_income_pc	/*wealth_pc	wealth_pc_sq*/
+		local	familyvars	num_FU_fam ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
+		local	eduvars		/*attend_college_head*/ highdegree_NoHS highdegree_somecol highdegree_col	
+		local	empvars		emp_HH_simple
+		local	healthvars	phys_disab_head
+		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
+		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	regionvars	state_group?	state_group1?	state_group2?	//	excluding NY (state_bgroup) as reference state group.
+		local	interactvars	c.ln_income_pc#c.HH_female	///
+								c.ln_income_pc#c.age_over65	///
+								c.HH_female#c.age_over65	///
+								c.ln_income_pc#c.HH_female#c.age_over65	///
+								c.no_longer_married#c.HH_female
+		local	timevars	year_enum3-year_enum10
+		
+			*	Regression of TFI/CFI on Group state FE
+			
+			foreach	depvar	in	Total_FI	Chronic_FI	Transient_FI	{
+				
+				/*
+				*	Without controls/time FE
+				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' `regionvars'
+				est	store	`depvar'_nocontrols
+				*/
+				
+				*	With controls/time FE
+				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' 	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	`shockvars'	`regionvars'	`timevars'
+				est	store	`depvar'
+			}
+			
+			*	Output
+			esttab	Total_FI	Chronic_FI	Transient_FI	using "${PSID_outRaw}/TFI_CFI_regression.csv", ///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Regression of TFI/CFI on Characteristics) 	///
+					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
+					replace
+					
+			esttab	Total_FI	Chronic_FI		using "${PSID_outRaw}/TFI_CFI_regression.tex", ///
+					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Regression of TFI/CFI on Characteristics) 	///
+					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
+					replace		
+			
+			
+			
+			*	Shapley Decomposition
+			local	shapley_decomposition=0
+			if	`shapley_decomposition'==1	{
+				
+				ds	state_group?	state_group1?	state_group2?
+				local groupstates `r(varlist)'
+				
+				
+				foreach	depvar	in	Total_FI	Chronic_FI	{
+					
+					*	Unadjusted
+					cap	drop	_mysample
+					regress `depvar' 	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	`shockvars'	`regionvars'	`timevars'	 if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1
+					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head no_longer_employed	no_longer_married	no_longer_own_house	became_disabled) 
+					
+					mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
+					mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
+					
+					mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
+					
+					
+					*	Survey-adjusted
+					cap	drop	_mysample
+					svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar'  	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	`shockvars'	`regionvars'	`timevars'		
+					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head no_longer_employed	no_longer_married	no_longer_own_house	became_disabled)
+				
+				}	//	depvar			
+			}	//	shapley
+			
+			mat	TFI_CFI_shapley	=	Total_FI_shapley,	Chronic_FI_shapley
+			
+			putexcel	set "${PSID_outRaw}/Jalan_Rav", sheet(shapley) /*replace*/	modify
+			putexcel	A3	=	matrix(TFI_CFI_shapley), names overwritefmt nformat(number_d1)
+			
+			esttab matrix(TFI_CFI_shapley, fmt(%9.3f)) using "${PSID_outRaw}/TFI_CFI_shapley.tex", replace	
+		
+			*	Northeast & Mid-Atlantic
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group1	state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
+										title(Northeast and Mid-Atlantic)	name(TFI_CFI_FE_NE_MA, replace) /*xscale(range(-0.05(0.05) 0.10))*/
+				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_NE.png", replace
+				graph	close
+
+			/*
+			*	Mid-Atlantic
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
+										title(TFI_CFI_Mid_Atlantic)	name(TFI_CFI_FE_MA, replace)	xscale(range(-0.05(0.05) 0.10))
+				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_MA.png", replace
+				graph	close
+			*/
+			
+			*	South
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group6 state_group7 state_group8 state_group9 state_group10 state_group11)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+										title(South)	name(TFI_CFI_FE_South, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_South.png", replace
+				graph	close
+				
+			*	Mid-West
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group12 state_group13 state_group14 state_group15 state_group16 state_group17)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+										title(Mid-West)	name(TFI_CFI_FE_MW, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_MW.png", replace
+				graph	close
+			
+			*	West
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group18 state_group19 state_group20 state_group21)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+										title(West)		name(TFI_CFI_FE_West, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_West.png", replace
+				graph	close
+	
+		/*
+			graph combine	TFI_CFI_FE_NE_MA	TFI_CFI_FE_South	TFI_CFI_FE_MW	TFI_CFI_FE_West, title(Region Fixed Effects)
+			graph	export	"${PSID_outRaw}/TFI_CFI_region_FE.png", replace
+			graph	close
+		*/
+		
+	
+		
+		grc1leg2		TFI_CFI_FE_NE_MA	TFI_CFI_FE_South	TFI_CFI_FE_MW	TFI_CFI_FE_West,	///
+											title(Region Fixed Effects) legendfrom(TFI_CFI_FE_NE_MA)	///
+											graphregion(color(white))	/*xtob1title	*/
+											/*	note(Vertical line is the average retirement age of the year in the sample)	*/
+							graph	export	"${PSID_outRaw}/TFI_CFI_region_FE.png", replace
+							graph	close
+		
+		
+		
+		coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+										title(Regional Fixed Effects)		name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_All.png", replace
+				graph	close
 			
 		/*
 		preserve
@@ -1892,12 +2857,11 @@
 	
 	
 	/****************************************************************
-		SECTION 5: Associations
+		SECTION 8: Associations
 	****************************************************************/		
 	
-	local	specification_check	1	//	varying RHS
+	local	specification_check	0	//	varying RHS
 	local	stationary_check	0	//	Testing stationary of the data
-	local	USDA_PFS_correlates	0	//	Regression of indicators on correlates
 	local	pre_post	0			//	Pre- and Post- Great Recession
 	local	pred_PFS_over_age	0	//	Predicted PFS over age
 	local	ME_income_level		0	//	Marginal effect over different income level
@@ -2048,7 +3012,7 @@
 		*	Chris' suggestion
 				
 				*	Testing whether dependent variable is stationary (warning: takes some time)
-						xtunitroot fisher	rho1_foodexp_pc_thrifty_ols if sample_source_SRC==1,	dfuller	lags(1)	trend
+						xtunitroot fisher	rho1_foodexp_pc_thrifty_ols if ${study_sample}==1,	dfuller	lags(1)	trend
 					
 				*	Testing whether there exist serial correlation
 				xtserial	rho1_foodexp_pc_thrifty_ols	///	//	depvar
@@ -2165,83 +3129,6 @@
 				esttab	resid_atcr_lag_nocluster	resid_atcr_lag_cluster	using "${PSID_outRaw}/resid_lagdep_autocorr.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels drop(_cons)	title(Residual Autocorrelation) replace
 		*/
-	}
-	
-	*	Regression of USDA/PFS on correlates
-	if	`USDA_PFS_correlates'==1	{
-	
-		cap	drop	USDA_PFS_available_years
-		gen		USDA_PFS_available_years=0
-		replace	USDA_PFS_available_years=1	if	inlist(year,2,3,9,10)
-		
-		
-		*local	depvar		rho1_foodexp_pc_thrifty_ols
-		*local	lagdepvar	l.`depvar'
-		local	demovars	c.age_head_fam##c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat
-		local	econvars	c.ln_income_pc	/*wealth_pc	wealth_pc_sq*/
-		local	familyvars	c.num_FU_fam c.ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
-		local	eduvars		/*attend_college_head*/ ib2.grade_comp_cat	
-		local	empvars		emp_HH_simple
-		local	healthvars	phys_disab_head
-		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
-		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	ib0.state_resid_fam	
-		local	interactvars	c.ln_income_pc#c.HH_female	///
-								c.ln_income_pc#c.age_over65	///
-								c.HH_female#c.age_over65	///
-								c.ln_income_pc#c.HH_female#c.age_over65	///
-								c.no_longer_married#c.HH_female
-		local	timevars	i.year
-		
-		local	MEvars	c.age_head_fam	HH_female	ib1.race_head_cat	marital_status_cat	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'	// c.age_over65	
-			
-		*	Regression of 4 different indicators on food security correlates
-		
-		local	depvar	fs_scale_fam_rescale
-		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	USDA_continuous
-		*eststo	USDA_cont_ME: margins,	dydx(`MEvars')	post	
-		
-		local	depvar	rho1_foodexp_pc_thrifty_ols
-		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	CB_continuous
-		eststo	CB_cont_ME: margins,	dydx(`MEvars')	post	
-		
-		local	depvar	fs_cat_fam_simp
-		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	USDA_binary
-		*eststo	USDA_bin_ME: margins,	dydx(`MEvars')	post	
-		
-		local	depvar	rho1_thrifty_FS_ols
-		svy, subpop(USDA_PFS_available_years): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	CB_binary
-		*eststo	CB_bin_ME: margins,	dydx(`MEvars')	post	
-		
-		
-		*	Output
-			
-			*	Table 4 of 2020/11/16 draft
-			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Effect of Correlates on Food Security Status) replace
-					
-			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.tex", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Effect of Correlates on Food Security Status) replace
-				
-			/*
-			esttab	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_ME.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Average Marginal Effects on Food Security Status) replace
-					
-			esttab	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_ME.tex", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Average Marginal Effects on Food Security Status) replace
-					
-			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	/*USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME*/	using "${PSID_outRaw}/USDA_CB_all.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Average Marginal Effects on Food Security Status) replace
-			*/
 	}
 	
 	*	Pre- and Post- Great Recession
@@ -3131,7 +4018,7 @@
 	local	regionvars	ib0.state_resid_fam	
 	*local	changevars	no_longer_employed	no_longer_married	no_longer_own_house
 	
-	summ	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars' if in_sample==1 & year==10
+	summ	`depvar'	`statevars'	`healthvars'	`demovars'	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`regionvars' /*if in_sample==1 & year==10*/
 	
 	cap	drop	pre_recession post_recession
 	gen		pre_recession	=	0

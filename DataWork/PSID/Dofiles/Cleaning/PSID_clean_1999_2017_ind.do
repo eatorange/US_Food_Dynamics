@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	1
+	local	retrieve_vars	0
 	local	clean_vars		1
 	
 	
@@ -147,6 +147,27 @@
 		
 			tempfile	age_head_fam
 			save		`age_head_fam'
+			
+			*	Region
+			psid use || region_residence [99]ER16430 [01]ER20376 [03]ER24143 [05]ER28042 [07]ER41032 [09]ER46974 [11]ER52398 [13]ER58215 [15]ER65451 [17]ER71530	///
+								using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+		
+			tempfile	region_residence
+			save		`region_residence'
+			
+			*	Urbanicity (1999-2013)
+			psid use || urbanicity [99]ER16431C [01]ER20377C [03]ER24144A [05]ER28043A [07]ER41033A [09]ER46975A [11]ER52399A [13]ER58216	///
+								using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+		
+			tempfile	urbanicity
+			save		`urbanicity'
+			
+			*	Metropolitan Area (2015-2017), can be combined with the Urbanicity variable above.
+			psid use || metro_area [15]ER65452 [17]ER71531	///
+								using "${PSID_dtRaw}/Main", keepnotes design(any) clear							
+		
+			tempfile	metro_area
+			save		`metro_area'
 			
 			*	Race of head (fam)
 			psid use || race_head_fam [68]V181 [69]V801 [99]ER15928 [01]ER19989 [03]ER23426 [05]ER27393 [07]ER40565 [09]ER46543 [11]ER51904 [13]ER57659 [15]ER64810 [17]ER70882	///
@@ -271,6 +292,22 @@
 			
 			tempfile	food_stamp_used_1yr
 			save		`food_stamp_used_1yr'
+			
+			*	Food Stamp Value (amount) (previous year)
+			psid use || food_stamp_value_1yr	[99]ER14256 [01]ER18387 [03]ER21653 [05]ER25655 [07]ER36673 [09]ER42692 [11]ER48008 [13]ER53705 [15]ER60720 [17]ER66767	///
+					using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+					
+			tempfile	food_stamp_value_1yr
+			save		`food_stamp_value_1yr'
+							
+							
+			*	Food Stamp Value (time unit)  (previous year)
+			psid use || food_stamp_freq_1yr	[99]ER14257 [01]ER18388 [03]ER21654 [05]ER25656 [07]ER36674 [09]ER42693 [11]ER48009 [13]ER53706 [15]ER60721 [17]ER66768	///
+					using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+					
+			tempfile	food_stamp_freq_1yr
+			save		`food_stamp_freq_1yr'
+			
 			
 			*	Child received free or reduced cost meal (lunch)
 			psid use || child_lunch_assist	[99]ER16418 [01]ER20364 [03]ER24069 [05]ER25626 [07]ER36631 [09]ER42650 [11]ER47968	///
@@ -784,6 +821,8 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `fs_cat_fam', keepusing(fs_cat_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `food_stamp_used_2yr', keepusing(food_stamp_used_2yr*) nogen assert(3)
 		merge 1:1 x11101ll using `food_stamp_used_1yr', keepusing(food_stamp_used_1yr*) nogen assert(3)
+		merge 1:1 x11101ll using `food_stamp_value_1yr', keepusing(food_stamp_value_1yr*) nogen assert(3)
+		merge 1:1 x11101ll using `food_stamp_freq_1yr', keepusing(food_stamp_freq_1yr*) nogen assert(3)
 		merge 1:1 x11101ll using `child_bf_assist_fam', keepusing(child_bf_assist*) nogen assert(3)
 		merge 1:1 x11101ll using `child_lunch_assist_fam', keepusing(child_lunch_assist*) nogen assert(3)
 		merge 1:1 x11101ll using `child_meal_assist_fam', keepusing(child_meal_assist*) nogen assert(3)
@@ -852,7 +891,10 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `emp_status_spouse', keepusing(emp_status_spouse*) nogen assert(3)
 		merge 1:1 x11101ll using `retire_year_head', keepusing(retire_year_head*) nogen assert(3)
 		merge 1:1 x11101ll using `indiv_gender', keepusing(indiv_gender) nogen assert(3)
-		
+		merge 1:1 x11101ll using `region_residence', keepusing(region_residence*) nogen assert(3)
+		merge 1:1 x11101ll using `urbanicity', keepusing(urbanicity*) nogen assert(3)
+		merge 1:1 x11101ll using `metro_area', keepusing(metro_area*) nogen assert(3)
+					
 		qui		compress
 		save	"${PSID_dtInt}/PSID_raw_1999_2017_ind.dta", replace
 	}	
@@ -937,6 +979,15 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 			
 			qui ds	WIC_received_last*	
 			lab	val	`r(varlist)'	YNDRI
+			
+			*	Food stamp valuee
+			qui	ds	food_stamp_value_1yr1999-food_stamp_value_1yr2017
+			foreach	var	in	`r(varlist)'	{
+				
+				replace	`var'=.d	if	`var'==999998
+				replace	`var'=.r	if	`var'==999999
+				
+			}
 			
 			/*	For now, use the entire categorical variables without recoding non-responses as missing.
 			qui ds	food_stamp_used_1yr1999-food_stamp_used_1yr2017 WIC_received_last1999-WIC_received_last2017
