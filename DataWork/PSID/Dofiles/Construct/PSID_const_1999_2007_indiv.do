@@ -110,8 +110,13 @@
 											3	"Immigrant Refresher (1997,1999)"	///
 											4	"Immigrant Refresher (2017)"	///
 											5	"Latino Sample (1990-1992)"
-		label	values	sample_source		sample_source
+		label	values		sample_source		sample_source
 		label	variable	sample_source	"Source of Sample"	
+		
+		gen		sample_source_SRC_SEO=1	if	inlist(sample_source,1,2)	//	SRC or SEO
+		replace	sample_source_SRC_SEO=0	if	mi(sample_source_SRC_SEO)
+		
+		label	values	sample_source_SRC_SEO	yesno
 			
 		
 		*	Family Composition Change
@@ -471,7 +476,23 @@
 			label	define	income_cat_FPL	1	"<1.0"		2	"1.0~2.0"	3	"2.0~3.0"	4	"3.0~4.0"	5	"4.0~5.0"	6	"5.0~6.0"	///
 											7	"6.0~7.0"	8	"7.0~8.0"	9	"8.0~9.0"	10	"9.0~10.0"	11	"10.0"		0	"Inappropriate"
 			label	values	income_to_poverty_cat*	income_cat_FPL
+			
+		*	Region
+		label define	region_residence	0	"Wide Code"	1	"Northeast"	2	"North Central"	3	"South"	4	"West"	///
+											5	"Alaska/Hawaii"	6	"Foreign Country"	9	"NA/DK"
+		label	values	region_residence*	region_residence
 		
+		
+		*	Combine Urbanicity (99-13) and Metropolitan Area (15-17)
+		forvalues	year=1999(2)2013	{
+			gen		metro_area`year'	=	1	if	inrange(urbanicity`year',1,3)	//	Metropolitan Area
+			replace	metro_area`year'	=	2	if	inrange(urbanicity`year',4,9)	//	Non-metropolitan Area
+			replace	metro_area`year'	=	9	if	inrange(urbanicity`year',99,99)	//	NA
+			replace	metro_area`year'	=	0	if	inrange(urbanicity`year',0,0)	//	Inapp-foreign country
+		}
+		
+		label define	metro_area	1	"Metroplitan Area"	2	"NOT Metroplitan area"	9	"NA" 	0	"Inapp-foreign country"
+		label	values	metro_area*	metro_area
 		
 		*	Race (category)
 		forval	year=1999(2)2017	{
@@ -730,6 +751,23 @@
 		}
 		
 		
+		*	Food stamp value (previous year)
+		*	Annualize food stamp value redeemed (in thousands)
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+			
+			gen		food_stamp_val`year'	=	food_stamp_value_1yr`year'	*	52	if	food_stamp_freq_1yr`year'==3	//	If response was weekly, multiply by 52
+			replace	food_stamp_val`year'	=	food_stamp_value_1yr`year'	*	26	if	food_stamp_freq_1yr`year'==4	//	If response was bi-weekly, multiply by 26
+			replace	food_stamp_val`year'	=	food_stamp_value_1yr`year'	*	12	if	food_stamp_freq_1yr`year'==5	//	If response was monthly, multiply by 12
+			replace	food_stamp_val`year'	=	food_stamp_value_1yr`year'			if	food_stamp_freq_1yr`year'==6	//	If response was year, just copy the value
+			replace	food_stamp_val`year'	=	0									if	food_stamp_freq_1yr`year'==0	//	If stamp is not used, assign 0
+			
+			replace	food_stamp_val`year'	=	food_stamp_val`year'/1000 // Divide into 1,000 to make thousands as a unit.
+			
+			label	variable	food_stamp_val`year'	"Annual food stamp value of the last year in `year' (K)"
+			
+		}
+		
+		
 		
 		*	Food expenditure
 		tempfile temp
@@ -805,7 +843,7 @@
 					drop	foodexp_W_`plan'`year'
 					rename	foodexp_W_`plan'`year'_temp	foodexp_W_`plan'`year'
 					
-					label	var	foodexp_W_`plan'`year'	"`plan' Food Plan (annual per capita) in `year'"
+					label	var	foodexp_W_`plan'`year'	"`plan' Food Plan (annual per capita) in `year' (K)"
 				
 				}
 	
@@ -816,7 +854,7 @@
 			drop	foodcost_monthly_????
 		
 
-		*	The code below using "simplified" food price data is no longer used as of Sep 26, 2017
+		*	The code below using "simplified" food price data is no longer used as of Sep 26, 2020
 		{
 		/*
 		use	"${PSID_dtInt}/PSID_clean_1999_2017_ind.dta", clear
@@ -979,7 +1017,7 @@
 		*	Drop individual level variables
 		drop	x11101ll weight_long_ind* weight_cross_ind* respondent???? relat_to_head* age_ind* edu_years????	relat_to_current_head*	indiv_gender
 		*	Keep	relevant years
-		keep	*1999	*2001	*2003	*2005	*2007	*2009	*2011	*2013	*2015	*2017	/*fam_comp**/	sample_source	ER31996 ER31997		
+		keep	*1999	*2001	*2003	*2005	*2007	*2009	*2011	*2013	*2015	*2017	/*fam_comp**/	sample_*	ER31996 ER31997		
 		
 		duplicates drop	
 		
@@ -1000,7 +1038,7 @@
 		qui	ds	*	//	All variables
 		local	allvar	`r(varlist)'
 
-		ds	sample_source	fam_ID_1999	ER31996 ER31997
+		ds	sample_source sample_source_SRC_SEO	fam_ID_1999	ER31996 ER31997
 		local	uniqvars	`r(varlist)'	//	Variables that are not time-series (not to be reshaped)
 		
 		local	allrelevars:	list	allvar	-	uniqvars	//	Keep time-series variables only
@@ -1149,12 +1187,16 @@
 		label	var	ratio_child			"\% of children population"
 		label	var	grade_comp_cat_spouse	"Highest Grade Completed (Spouse)"
 		label	var	foodexp_W_thrifty	"Thrifty Food Plan (TFP) cost (annual per capita)"
+		label	var	region_residence	"Region of Residence"
+		label	var	metro_area			"Residence in Metropolitan Area"
 
 		*label	var	cloth_exp_total		"Total cloth expenditure"
 		
 		label	var	FPL_		"Federal Poverty Line"
 		label	var	income_to_poverty		"Income to Poverty Ratio"
 		label	var	income_to_poverty_cat		"Income to Poverty Ratio (category)"
+		
+		label 	var	food_stamp_val	"Annual food stamp value of the last year"
 			      
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
 				house_exp_total	property_tax	transport_exp	wealth_total	/*cloth_exp_total*/
@@ -1200,7 +1242,7 @@
 		qui	ds	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse	veteran_head	veteran_spouse	tax_item_deduct	///
 				retire_plan_head	retire_plan_spouse	annuities_IRA	attend_college_head	attend_college_spouse	hs_completed_head	hs_completed_spouse	///
 				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	child_meal_assist	WIC_received_last	elderly_meal	///
-				child_daycare_any	child_daycare_FSP	child_daycare_snack	emp_HH_simple emp_spouse_simple
+				child_daycare_any	child_daycare_FSP	child_daycare_snack	emp_HH_simple emp_spouse_simple	food_stamp_val	
 		label values	`r(varlist)'	yes1no0
 		recode	`r(varlist)'	(0	5	8	9	.d	.r=0)
 	}
@@ -1256,7 +1298,7 @@
 		gen	age_head_fam_sq		=	(age_head_fam)^2
 		label	var	age_head_fam_sq	"Age$^2$"
 		gen	age_spouse_sq		=	(age_spouse)^2
-		label	var	age_head_fam_sq	"Age$^2$ (spouse)"
+		label	var	age_spouse_sq	"Age$^2$ (spouse)"
 		gen	income_pc_orig	=	income_pc*1000	//	Non-scaled, unit is dollars
 		gen	invhyp_age	=	asinh(age_head_fam)	//	Inverse hyperbolic transformation of age
 		gen	asinh_income	=	asinh(income_pc*1000)	//	Inverse hyperbolic transformation of income
@@ -1268,7 +1310,7 @@
 		label	var	income_pc_sq	"(Income per capita)$^3$"
 		
 		*	Decompose unordered categorical variables
-		local	catvars	race_head_cat	marital_status_fam	gender_head_fam	state_resid_fam	housing_status	family_comp_change	couple_status	grade_comp_cat	grade_comp_cat_spouse	year	sample_source
+		local	catvars	race_head_cat	marital_status_fam	gender_head_fam	state_resid_fam	housing_status	family_comp_change	couple_status	grade_comp_cat	grade_comp_cat_spouse	year	sample_source	region_residence metro_area
 		foreach	var	of	local	catvars	{
 			tab	`var',	gen(`var'_enum)
 		}
@@ -1279,6 +1321,9 @@
 		label	variable	HH_race_white	"Race: White"
 		label	variable	HH_race_black	"Race: Black"
 		label	variable	HH_race_other	"Race: Other"
+		gen		HH_race_color=1	if	inlist(1,HH_race_black,HH_race_other)
+		replace	HH_race_color=0	if	HH_race_color!=1	&	!mi(HH_race_white)
+		label	variable	HH_race_color	"Race: Person of Color"
 		
 		rename	(grade_comp_cat_enum1	grade_comp_cat_enum2	grade_comp_cat_enum3	grade_comp_cat_enum4)	///
 				(highdegree_NoHS	highdegree_HS		highdegree_somecol	highdegree_col)
@@ -1302,6 +1347,101 @@
 		label	variable	sample_source_SRC	"Sample: SRC"
 		label	variable	sample_source_SEO	"Sample: SEO"
 		label	variable	sample_source_IMM	"Sample: Immigrants"
+		
+		rename	(region_residence_enum1 region_residence_enum2 region_residence_enum3 region_residence_enum4 region_residence_enum5)	///
+				(region_NE	region_Ncentral	region_South	region_West	region_ALHA)
+				
+		label	variable	region_NE		"Region: Northeast"
+		label	variable	region_Ncentral	"Region: North Central"
+		label	variable	region_South	"Region: South"
+		label	variable	region_West		"Region: West"
+		label	variable	region_ALHA		"Region: Alaska/Hawaii"
+		
+		rename	(metro_area_enum2 metro_area_enum3)	///
+				(resid_metro	resid_nonmetro)
+		label	variable	resid_metro		"Residence: Metropolitan Area"
+		label	variable	resid_nonmetro	"Residence: Non-Metropolitan Area"
+		
+		*	Create a group of state variables, based on John's suggestion (2020/12)
+			
+			*	Reference state group (New York state)
+			gen 	state_bgroup	=	state_resid_fam_enum32	//	NY, reference state
+			
+			*	Excluded states (AK, HI, Other U.S. territories, Don't know/refuse to answer)
+			egen	state_group0	=	rowmax(state_resid_fam_enum1	state_resid_fam_enum50	state_resid_fam_enum51	state_resid_fam_enum52)	//	Inapp, DK/NA, AK, HI
+			
+			*	Northeast
+			egen	state_group1	=	rowmax(	state_resid_fam_enum19 state_resid_fam_enum29 state_resid_fam_enum44	///	//	ME, NH, VT
+												state_resid_fam_enum21 state_resid_fam_enum7)	//	MA, CT	
+			gen		state_group_NE	=	inlist(1,state_bgroup,state_group1)	//	including NY.
+			
+			*	Mid-Atlantic
+			egen	state_group2	=	rowmax(state_resid_fam_enum38)	//	PA
+			egen	state_group3	=	rowmax(state_resid_fam_enum30)	//	NJ
+			egen	state_group4	=	rowmax(state_resid_fam_enum9	state_resid_fam_enum8	state_resid_fam_enum20)	//	DC, DE, MD
+			egen	state_group5	=	rowmax(state_resid_fam_enum45)	//	VA
+			gen		state_group_MidAt	=	inlist(1,state_group2,state_group3,state_group4,state_group5)
+			
+			*	South
+			egen	state_group6	=	rowmax(state_resid_fam_enum33	state_resid_fam_enum39)	//	NC, SC
+			egen	state_group7	=	rowmax(state_resid_fam_enum11)	//	GA
+			egen	state_group8	=	rowmax(state_resid_fam_enum17	state_resid_fam_enum41	state_resid_fam_enum47)	//	KT, TN, WV
+			egen	state_group9	=	rowmax(state_resid_fam_enum10)	//	FL
+			egen	state_group10	=	rowmax(state_resid_fam_enum2	state_resid_fam_enum4	state_resid_fam_enum24 state_resid_fam_enum18)	//	AL, AR, MS, LA
+			egen	state_group11	=	rowmax(state_resid_fam_enum42)	//	TX
+			gen		state_group_South	=	inlist(1,state_group6,state_group7,state_group8,state_group9,state_group10,state_group11)
+			
+			*	Mid-west
+			egen	state_group12	=	rowmax(state_resid_fam_enum35)	//	OH
+			egen	state_group13	=	rowmax(state_resid_fam_enum14)	//	IN
+			egen	state_group14	=	rowmax(state_resid_fam_enum22)	//	MI
+			egen	state_group15	=	rowmax(state_resid_fam_enum13)	//	IL
+			egen	state_group16	=	rowmax(state_resid_fam_enum23 state_resid_fam_enum48)	//	MN, WI
+			egen	state_group17	=	rowmax(state_resid_fam_enum15	state_resid_fam_enum25)	//	IA, MO
+			gen		state_group_MidWest	=	inlist(1,state_group12,state_group13,state_group14,state_group15,state_group16,state_group17)
+			
+			*	West
+			egen	state_group18	=	rowmax(	state_resid_fam_enum16	state_resid_fam_enum27	///	//	KS, NE
+												state_resid_fam_enum34	state_resid_fam_enum40	///	//	ND, SD
+												state_resid_fam_enum36)	//	OK
+			egen	state_group19	=	rowmax(	state_resid_fam_enum3	state_resid_fam_enum6	///	//	AZ, CO
+												state_resid_fam_enum12	state_resid_fam_enum26	///	//	ID, MT
+												state_resid_fam_enum28	state_resid_fam_enum31	///	//	NV, NM
+												state_resid_fam_enum43	state_resid_fam_enum49)		//	UT, WY
+			egen	state_group20	=	rowmax(	state_resid_fam_enum37	state_resid_fam_enum46)	//	OR, WA
+			egen	state_group21	=	rowmax(	state_resid_fam_enum5)	//	CA	
+			gen		state_group_West	=	inlist(1,state_group18,state_group19,state_group20,state_group21)
+			
+			label var	state_bgroup	"NY"
+			label var	state_group0	"AK/HI/U.S. territory/DK/NA"
+			label var	state_group1	"ME/NH/VT/MA/CT"
+			label var	state_group2	"PA"
+			label var	state_group3	"NJ"
+			label var	state_group4	"DC/DE/MD"
+			label var	state_group5	"VA"
+			label var	state_group6	"NC/SC"
+			label var	state_group7	"GA"
+			label var	state_group8	"KT/TN/WV"
+			label var	state_group9	"FL"
+			label var	state_group10	"AL/AR/MS/LA"
+			label var	state_group11	"TX"
+			label var	state_group12	"OH"
+			label var	state_group13	"IN"
+			label var	state_group14	"MI"
+			label var	state_group15	"IL"
+			label var	state_group16	"MN/WI"
+			label var	state_group17	"IA/MO"
+			label var	state_group18	"KS/NE/ND/SD/OK"
+			label var	state_group19	"AZ/CO/ID/MT/NV/NM/UT/WY"
+			label var	state_group20	"OR/WA"
+			label var	state_group21	"CA"
+			
+			label var	state_group_NE		"Region: NorthEast"
+			label var	state_group_MidAt	"Region: Mid-Atlantic"
+			label var	state_group_South	"Region: South"
+			label var	state_group_MidWest	"Region: MidWest"
+			label var	state_group_West	"Region: West"
+			
 		
 		*	Interaction variables
 			
