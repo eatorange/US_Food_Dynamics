@@ -770,14 +770,25 @@
 		
 		
 		*	Food expenditure
+			
+			*	Generate temporary state code variable, as food cost vary by some states (AL, HA, all others)
+			forval	year=1999(2)2017	{
+				
+				gen		state_region_temp`year'	=	1	if	inrange(state_resid_fam`year',0,49)	//	48 states
+				replace	state_region_temp`year'	=	2	if	state_resid_fam`year'==50	//	AK
+				replace	state_region_temp`year'	=	3	if	state_resid_fam`year'==51	//	HA
+				
+			}
+			
+		
 		tempfile temp
 		save	`temp'
 		
 			*	Import monthly food plan cost data, which has cost per gender-age
 			import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("thrifty") firstrow clear
 
-			*	Make sure each gender-age uniquly identifies observation
-			isid	gender	age
+			*	Make sure each gender-age-state uniquly identifies observation
+			isid	gender	age	state
 
 			rename	gender	indiv_gender
 
@@ -790,7 +801,8 @@
 				use	`foodprice_raw', clear
 				
 				rename	age	age_ind`year'
-				keep	indiv_gender	age_ind`year'	foodcost_monthly_`year'
+				rename	state	state_region_temp`year'
+				keep	indiv_gender	age_ind`year'	state_region_temp`year'	foodcost_monthly_`year'
 				
 				tempfile	foodcost_`year'
 				save	`foodcost_`year''
@@ -818,7 +830,7 @@
 			
 			forvalues	year=1999(2)2017	{
 				
-				merge m:1 indiv_gender age_ind`year' using `foodcost_`year'', keepusing(foodcost_monthly_`year')	nogen keep(1 3)
+				merge m:1 indiv_gender age_ind`year'	state_region_temp`year' using `foodcost_`year'', keepusing(foodcost_monthly_`year')	nogen keep(1 3)
 				replace	foodcost_monthly_`year' = foodcost_monthly_avgadult_`year'	if	mi(age_ind`year')
 				
 				foreach	plan	in	thrifty	/*low	moderate	liberal*/	{
@@ -851,7 +863,7 @@
 			}
 			
 			*	Drop variables no longer needed
-			drop	foodcost_monthly_????
+			drop	foodcost_monthly_????	state_region_temp????
 		
 
 		*	The code below using "simplified" food price data is no longer used as of Sep 26, 2020
@@ -1456,6 +1468,31 @@
 			}	
 	
 	sort	fam_ID_1999 year,	stable
+	
+	*	Re-label variables so they correspond to the variable description table (Also need to copy and paste regression result)
+	label	var	HH_female			"Female"
+	label	var	HH_race_white		"White"
+	label	var	HH_race_color		"Color"
+	label	var	marital_status_cat	"Married"
+	label	var	income_pc			"Income per capita"
+	label	var	ln_income_pc		"ln(income per capita)"
+	label	var	food_exp_pc			"Food expenditure per capita"
+	label	var	emp_HH_simple		"Employed"
+	label	var	phys_disab_head		"Disabled"
+	label	var	num_FU_fam			"Family size"
+	label	var	ratio_child			"\% of children"
+	label	var	highdegree_NoHS		"Less than high school"
+	label	var	highdegree_HS		"High school"
+	label	var	highdegree_somecol	"Some college"
+	label	var	highdegree_col		"College"
+	label	var	food_stamp_used_1yr	"Food stamp"
+	label	var	child_meal_assist	"Child meal"
+	label	var	WIC_received_last	"WIC"
+	label	var	elderly_meal		"Elderly meal"
+	label	var	no_longer_employed	"No longer employed"
+	label	var	no_longer_married	"No longer married"
+	label 	var	no_longer_own_house	"No longer owns house"
+	label	var	became_disabled		"Became disabled"
 	
 	*	Codebook (To share with John, Chris and Liz)
 	local	codebook	0
