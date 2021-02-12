@@ -11,6 +11,6 @@ The study analyzes Panel Study of Income Dynamics (PSID) and Current Population 
 The folder structure of the repository is based on the template suggested by Development Impact Evaluation (DIME) at World Bank. Please find [DIME Wiki page](https://dimewiki.worldbank.org/wiki/DataWork_Folder) for the detailed instruction of the template.
 
 ## Point of Contact
-* [Liz Bageant](http://barrett.dyson.cornell.edu/research/group/liz-bageant.html)(erb32@cornell.edu) - Research Support Specialist at Cornell University
+* [Christopher B. Barrett](http://barrett.dyson.cornell.edu/) - Principal Investigator, Professor at Cornell University
+* [John F. Hoddinot](https://www.human.cornell.edu/people/jfh246) - Co-Investigator, Professor at Cornell University
 * Seungmin Lee(sl3235@cornell.edu) - Research Assistant, Ph.D. Student at Cornell University
-* Elizabeth Heffern(ewh76@cornell.edu) - Research Assistant, undergraduate student at Cornell University
