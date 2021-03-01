@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	0
+	local	retrieve_vars	1
 	local	clean_vars		1
 	
 	
@@ -120,8 +120,8 @@
 			
 			qui ds age_ind*
 			foreach var in `r(varlist)'	{
-				replace	`var'=.d	if	inlist(`var',999)
-				replace	`var'=.n	if	inlist(`var',0)
+				replace	`var'=.d	if	inlist(`var',999)	//	NA/DK
+				replace	`var'=.n	if	inlist(`var',0)		//	Inappropriate (Latino-sample, non-response, etc.)
 			}
 			
 			tempfile	main_age_ind
@@ -133,8 +133,8 @@
 		
 			qui ds edu_years*
 			foreach var in `r(varlist)'	{
-				replace	`var'=.d	if	`var'==98
-				replace	`var'=.n	if	inlist(`var',0,99)
+				replace	`var'=.d	if	inlist(`var',98,99)	//	NA/DK
+				replace	`var'=.n	if	inlist(`var',0)	//	Inap
 			}
 			
 			
@@ -262,6 +262,7 @@
 			psid use || fs_scale_fam	[99]ER14331T [01]ER18470T [03]ER21735T [15]ER60798 [17]ER66846	///
 								using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
 								
+			//	Round the digits
 			foreach	year	in	1999	2001	2003	2015	2017	{
 			    gen	double	fs_scale_fam`year'_temp	=	round(fs_scale_fam`year',0.01)
 				drop	fs_scale_fam`year'
@@ -788,7 +789,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
 		gen	x11101ll	=	(ER30001*1000) + ER30002 // Personal identifier
 		isid	x11101ll
-		clonevar indiv_gender	=	ER32000
+		clonevar indiv_gender	=	ER32000	//	Gender variable
 		
 		tempfile indiv_gender
 		save	 `indiv_gender'
@@ -955,22 +956,21 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 			qui	ds	age_head_fam1999-age_head_fam2017 age_spouse1997-age_spouse2017
 			foreach	var in `r(varlist)'	{
 				replace	`var'=.d	if	`var'==999
-				*replace	`var'=.n	if	`var'==0
 			}
 			
 			
 			*	Marital status of head
 			qui ds marital_status_fam1999-marital_status_fam2017
 			foreach	var in `r(varlist)'	{
-				replace	`var'=.d	if	`var'==8
-				replace	`var'=.n	if	`var'==9
+				replace	`var'=.d	if	`var'==8	//	DK
+				replace	`var'=.n	if	`var'==9	//	NA, refused.
 			}
 			
 			
 			*	Grade completed of household head (fam)
 			qui ds grade_comp_head_fam1999-grade_comp_head_fam2017 grade_comp_spouse1997-grade_comp_spouse2017
 			foreach	var	in	`r(varlist)'	{
-				replace	`var'=.n	if	`var'==99	//	Recode it as they are continuous variables
+				replace	`var'=.n	if	`var'==99	//	NA/DK/Refuse (Recode it as they are continuous variables)
 			}
 			
 			*	Food Stamp & WIC			
@@ -989,15 +989,6 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 				
 			}
 			
-			/*	For now, use the entire categorical variables without recoding non-responses as missing.
-			qui ds	food_stamp_used_1yr1999-food_stamp_used_1yr2017 WIC_received_last1999-WIC_received_last2017
-			foreach	var	in	`r(varlist)'	{
-				replace	`var'=.d	if	`var'==8
-				replace	`var'=.r	if	`var'==9
-				replace	`var'=.n	if	`var'==0	//	Treat "inappropriate" as "no"
-				replace	`var'=0		if	`var'==5
-			}
-			*/	
 			
 			*	Location
 			
@@ -1035,8 +1026,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 											8	"DK"	///
 											9	"NA; refused"	///
 											0 	"Inap.: no wife in FU"
-				*label	val	race_head_fam1999 race_head_fam2001 race_head_fam2003	race_spouse1999-race_spouse2003	race_99_03
-				
+			
 				*	2005-2017
 				label	define	race_05_17	1 	"White"	///
 											2	"Black, African-American or Negro"	///
@@ -1046,12 +1036,11 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 											7	"Other"	///
 											9	"DK; NA; refused"	///
 											0 	"Inap.: no wife in FU"
-				*label	val	race_head_fam2005-race_head_fam2017	race_spouse2005-race_spouse2017 race_05_17
-				
+
 				*	Recode race variables to be compatible across the years
 				
 					*	In	1999-2003, (1) merge "Color other than black or white"	into "Other" (2) Merge "DK" into "NA;refused"	(3)	"Latino origin" to "white"
-					**	(3) is very rough recoding, as 1/3 of the respondents in that categories in 2003 answered as "other" in 2005. Still, 2/3 of the respondents answered as "white"
+					**	(3) is very rough recoding, as 1/3 of the respondents in that categories in 2003 answered as "other" in 2005. Still, 2/3 of the respondents answered as "white" so we categorize them as "white". We can modify later if needed.
 						recode	race_head_fam1999 race_head_fam2001 race_head_fam2003	race_spouse1999-race_spouse2003	(6=7)	(8=9)	(5=1)
 					
 					*	In	2005-2017 data, (i) Merge "Asian" and "Native Hawaiian and Pacific Islander"
