@@ -154,11 +154,11 @@
 		
 	*	OLS
 	local	run_GLM	1
-		local	model_selection	1
+		local	model_selection	0
 		local	run_ME	0
 		
 	*	LASSO
-	local	run_lasso	1
+	local	run_lasso	0
 		local	run_lasso_step1	1
 		local	run_lasso_step2	1
 		local	run_lasso_step3	1
@@ -180,8 +180,8 @@
 
 		*	Declare variables
 		local	depvar		food_exp_pc
-		local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	/*##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	lag_food_exp_pc_1-lag_food_exp_pc_5*/
-		local	demovars	c.age_head_fam##c.age_head_fam	/*HH_race_black	HH_race_other*/	HH_race_color	marital_status_cat	HH_female	/*ib1.race_head_cat*/	/*ib1.gender_head_fam*/		
+		local	statevars	lag_food_exp_pc_1##lag_food_exp_pc_1##lag_food_exp_pc_1	/*##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	lag_food_exp_pc_1-lag_food_exp_pc_5*/
+		local	demovars	age_head_fam age_head_fam_sq	/*HH_race_black	HH_race_other*/	HH_race_color	marital_status_cat	HH_female	/*ib1.race_head_cat*/	/*ib1.gender_head_fam*/		
 		local	econvars	ln_income_pc	/*ln_wealth_pc*/	/*income_pc	income_pc_sq	wealth_pc	wealth_pc_sq*/	
 		local	healthvars	phys_disab_head
 		local	empvars		emp_HH_simple
@@ -191,6 +191,13 @@
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	/*ib0.state_resid_fam*/	state_group? state_group1? state_group2?
 		local	timevars	i.year
+		
+		local	depvar	e1_foodexp_sq_ols
+		local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
+		br alpha1_foodexp_pc_ols var1_foodexp_ols rho1_foodexp_pc_thrifty_ols `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars' if var1_foodexp_ols<0	// `regionvars'	`timevars'	
+		
+		svy, subpop(if ${study_sample}): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
+		svy, subpop(if ${study_sample}	&	var1_foodexp_ols<0): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
 		
 		local	MEvars	c.lag_food_exp_pc_1	`healthvars'	c.age_head_fam	/*ib1.race_head_cat*/	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
 		
@@ -248,7 +255,7 @@
 			*	All sample
 			*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
 			*	SRC/SEO only
-			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
 			
 			svy, subpop(${study_sample}): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 		
