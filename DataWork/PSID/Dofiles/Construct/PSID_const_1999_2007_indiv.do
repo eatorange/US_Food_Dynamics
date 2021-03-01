@@ -117,7 +117,8 @@
 		replace	sample_source_SRC_SEO=0	if	mi(sample_source_SRC_SEO)
 		
 		label	values	sample_source_SRC_SEO	yesno
-			
+		label	variable	sample_source_SRC_SEO	"Sample = SRC or SEO"	
+		
 		
 		*	Family Composition Change
 		
@@ -128,7 +129,7 @@
 			
 			foreach	year	in	1999	2001	2003	2015	2017	{			
 				cap	drop	max_sequence_no`year'
-				bys	x11102_`year':	egen	max_sequence_no`year'	=	max(xsqnr_`year')
+				bys	x11102_`year':	egen	max_sequence_no`year'	=	max(xsqnr_`year')	//	x11102_`year' is household ID per each year. Thus it records the largest sequence number of a family member.
 				label	var	max_sequence_no`year'	"Maximum sequence number of FU in `year'"
 			}
 			
@@ -137,7 +138,7 @@
 			local	var	fam_comp_nochange_99_03
 			cap	drop	`var'
 			gen		`var'=.
-			replace	`var'=0		if	inrange(xsqnr_1999,1,89)
+			replace	`var'=0		if	inrange(xsqnr_1999,1,89)	//	Excluding inappropriate (xsqnr_1999==0), thus all individuals as of 1999
 			replace	`var'=1		if	inrange(xsqnr_1999,1,89)	///	/*	All individuals	as of 1999	*/
 								&	family_comp_change2001==0	&	inrange(max_sequence_no2001,1,20)	///	/*	No member change in 2001	*/
 								&	family_comp_change2003==0	&	inrange(max_sequence_no2003,1,20)	//	/*	No member change in 2003	*/
@@ -172,6 +173,7 @@
 			drop	max_sequence_no*			
 		
 		*	Family Spllit-off (1999-2003)
+		** As of 2021/1/31, I did not verify this code as we don't use this code. I later plan to move the codes below to a separate do-file for further verification, when needed.
 		
 			*	1999 Family ID (base-year)
 			assert !mi( splitoff_indicator1999) if !mi( x11102_1999)
@@ -415,7 +417,7 @@
 
 		*	Calculate FPL
 
-			*	1999-2003, 2015
+			*	1999-2015
 			forval	year=1999(2)2015	{
 				gen 	FPL_`year'	=	FPL_base_48_`year'	+	(num_FU_fam`year'-1)*FPL_mult_48_`year'	if	inrange(state_resid_fam`year',1,49)
 				replace	FPL_`year'	=	FPL_base_AL_`year'	+	(num_FU_fam`year'-1)*FPL_mult_AL_`year'	if	state_resid_fam`year'==50
@@ -478,6 +480,7 @@
 			label	values	income_to_poverty_cat*	income_cat_FPL
 			
 		*	Region
+		**	 This region uses the classificaton the PSID uses, different from this study uses.
 		label define	region_residence	0	"Wide Code"	1	"Northeast"	2	"North Central"	3	"South"	4	"West"	///
 											5	"Alaska/Hawaii"	6	"Foreign Country"	9	"NA/DK"
 		label	values	region_residence*	region_residence
@@ -497,9 +500,9 @@
 		*	Race (category)
 		forval	year=1999(2)2017	{
 			gen		race_head_cat`year'=.
-			replace	race_head_cat`year'=1	if	inlist(race_head_fam`year',1,5)
-			replace	race_head_cat`year'=2	if	race_head_fam`year'==2
-			replace	race_head_cat`year'=3	if	inlist(race_head_fam`year',3,4,6,7)
+			replace	race_head_cat`year'=1	if	inlist(race_head_fam`year',1,5)	//	White
+			replace	race_head_cat`year'=2	if	race_head_fam`year'==2	//	Black
+			replace	race_head_cat`year'=3	if	inlist(race_head_fam`year',3,4,6,7)	//	Native American, Alskat Native, Asian, etc.
 			replace	race_head_cat`year'=.n	if	inrange(race_head_fam`year',8,9)
 			
 			*	Dummy for each variable
@@ -512,8 +515,8 @@
 		*	Marital Status (Binary)
 		forval	year=1999(2)2017	{
 			gen		marital_status_cat`year'=.
-			replace	marital_status_cat`year'=1	if	marital_status_fam`year'==1
-			replace	marital_status_cat`year'=0	if	inrange(marital_status_fam`year',2,5)
+			replace	marital_status_cat`year'=1	if	marital_status_fam`year'==1	//	Married
+			replace	marital_status_cat`year'=0	if	inrange(marital_status_fam`year',2,5)	//	Never married, widowed, divorced/annulled, separated
 			replace	marital_status_cat`year'=.n	if	inrange(marital_status_fam`year',8,9)
 			
 			label variable	marital_status_cat`year'	"Head Married, `year'"
@@ -582,18 +585,13 @@
 		**	Let "N/A (no child)" as 0 for now.
 	
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	{
-			foreach	meal	in	bf	lunch	{
-				*replace	child_`meal'_assist`year'	=.n	if	child_`meal'_assist`year'==0
-				*replace	child_`meal'_assist`year'	=.d	if	child_`meal'_assist`year'==8
-				*replace	child_`meal'_assist`year'	=.r	if	child_`meal'_assist`year'==9
-				*replace	child_`meal'_assist`year'	=0	if	child_`meal'_assist`year'==5
-			}
+		
 			generate	child_meal_assist`year'	=.
 			
 			*	Merge breakfast and lunch in to one variable, to be compatible with 2013-2017 data.
 			*replace		child_meal_assist`year'	=.n	if	child_bf_assist`year'==.n	&	child_lunch_assist`year'==.n
-			replace		child_meal_assist`year'	=8	if	child_bf_assist`year'==8	|	child_lunch_assist`year'==8	//	"Don't know" if either lunch or breakfast is "don't know'"
-			replace		child_meal_assist`year'	=9	if	child_bf_assist`year'==9	|	child_lunch_assist`year'==9	//	"Refuse to answer" if either lunch or breakfast is "refuse to answer"
+			replace		child_meal_assist`year'	=8	if	inlist(8,child_bf_assist`year',child_lunch_assist`year')	//	"Don't know" if either lunch or breakfast is "don't know'"
+			replace		child_meal_assist`year'	=9	if	inlist(9,child_bf_assist`year',child_lunch_assist`year')	//	"Refuse to answer" if either lunch or breakfast is "refuse to answer"
 			replace		child_meal_assist`year'	=0	if	child_bf_assist`year'==0	&	child_lunch_assist`year'==0	//	"Inapp" if both breakfast and lunch are inapp.
 			replace		child_meal_assist`year'	=5	if	child_bf_assist`year'==5	&	child_lunch_assist`year'==5	//	"No" if both breakfast and lunch are "No".
 			replace		child_meal_assist`year'	=1	if	inlist(1,child_bf_assist`year',child_lunch_assist`year')	//	"Yes" if either breakfast or lunch is "Yes"
@@ -620,6 +618,7 @@
 		}
 		
 		*	Body Mass Index (BMI)
+		**	(2021-1-31 NOT verified, as we do not use BMI in our study)
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			
 			*	Convert units into metrics
@@ -655,7 +654,6 @@
 					
 					*	Income per capita
 					gen	income_pc`year'	=	total_income_fam`year'/num_FU_fam`year'
-					label	variable	income_pc`year'	"Family income per capita, `year'"
 					
 					*	Expenditures, tax, debt and wealth per capita
 					
@@ -669,18 +667,8 @@
 					*gen	other_debts_pc`year'		=	other_debts`year'/num_FU_fam`year'
 					gen	wealth_pc`year'				=	wealth_total`year'/num_FU_fam`year'
 					
-					label	variable	food_exp_pc`year'	"Food expenditure per capita, `year'"
-					label	variable	child_exp_pc`year'	"Child expenditure per capita, `year'"
-					label	variable	edu_exp_pc`year'	"Education expenditure per capita, `year'"
-					label	variable	health_exp_pc`year'	"Health expenditure per capita, `year'"
-					label	variable	house_exp_pc`year'	"House expenditure per capita, `year'"
-					label	variable	property_tax_pc`year'	"Property tax per capita, `year'"
-					label	variable	transport_exp_pc`year'	"Transportation expenditure per capita, `year'"
-					*label	variable	other_debts_pc`year'	"Other debts per capita, `year'"
-					label	variable	wealth_pc`year'			"Wealth per capita, `year'"
 					
-					
-					if	inrange(`year',2005,2017)	{	//	Cloth
+					if	inrange(`year',2005,2017)	{	//	Cloth (2021-1-31: NOT verified)
 						gen	cloth_exp_pc`year'	=	cloth_exp_total`year'/num_FU_fam`year'
 						label	variable	cloth_exp_pc`year'	"Cloth expenditure per capita, `year'"
 					}
@@ -726,6 +714,18 @@
 				*	Scale to thousand-dollars
 				replace	`var'`year'	=	`var'`year'/1000
 			}	//	var	
+			
+			label	variable	income_pc`year'	"Family income per capita (K) - `year'"
+			label	variable	food_exp_pc`year'	"Food expenditure per capita (K) - `year'"
+			label	variable	child_exp_pc`year'	"Child expenditure per capita (K) - `year'"
+			label	variable	edu_exp_pc`year'	"Education expenditure per capita (K) - `year'"
+			label	variable	health_exp_pc`year'	"Health expenditure per capita (K) - `year'"
+			label	variable	house_exp_pc`year'	"House expenditure per capita (K) - `year'"
+			label	variable	property_tax_pc`year'	"Property tax per capita (K) - `year'"
+			label	variable	transport_exp_pc`year'	"Transportation expenditure per capita (K) - `year'"
+			*label	variable	other_debts_pc`year'	"Other debts per capita (K) - `year'"
+			label	variable	wealth_pc`year'			"Wealth per capita (K) - `year'"
+			
 		}	//	year
 		
 		
@@ -850,7 +850,7 @@
 					replace foodexp_W_`plan'`year'	=	((foodexp_W_`plan'`year'*12) / num_FU_fam`year' ) /	1000	//	Total household annual cost per capita in thousands
 					
 					*	Make the food plan cost non-missing for household member NOT in the household (i.e. sequence number is outside 1 to 20)
-					*	This step makes all members in a household have the same non-missing value, so they can be treated as duplicates and be dropped when constructing household-level data
+					*	This step makes all members in a household have the same non-missing value, so they can be treated as duplicates and be dropped when later constructing household-level data
 					bys	x11102_`year': egen foodexp_W_`plan'`year'_temp = mean(foodexp_W_`plan'`year')
 					drop	foodexp_W_`plan'`year'
 					rename	foodexp_W_`plan'`year'_temp	foodexp_W_`plan'`year'
@@ -865,86 +865,12 @@
 			*	Drop variables no longer needed
 			drop	foodcost_monthly_????	state_region_temp????
 		
-
-		*	The code below using "simplified" food price data is no longer used as of Sep 26, 2020
-		{
-		/*
-		use	"${PSID_dtInt}/PSID_clean_1999_2017_ind.dta", clear
-		tempfile temp2
-		save `temp2'
-		
-		*	clean food price data
-		import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("food_cost_month") firstrow clear
-		replace	year=year+1
-		
-		*	calculate adult expenditure by average male and female
-			foreach	plan	in	thrifty low moderate liberal	{
-				egen	adult_`plan'	=	rowmean(male_`plan' female_`plan')
-			}
-			
-		*	Reshape to me merged
-		gen	temptag=1
-		reshape	wide	child_thrifty-adult_liberal,	i(temptag)	j(year)
-				
-		tempfile monthly_foodprice
-		save 	`monthly_foodprice'
-
-		*	Merge food price data into the main data
-		use	`temp2', clear
-		gen	temptag=1
-		merge m:1 temptag using `monthly_foodprice', assert(1	3) nogen
-		drop	temptag
-
-		*	Calculate annual household food expenditure per each 
-			
-			*	Yearly food expenditure = monthly food expenditure * 12
-			*	Monthly food expenditure is calculated by the (# of children * children cost) + (# of adult * adult cost)
-			foreach	plan	in	thrifty /*low moderate liberal*/	{
-				
-				foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
-				
-					*	Unadjusted
-					gen	double	foodexp_W_`plan'`year'	=	((num_child_fam`year'*child_`plan'`year')	+	((num_FU_fam`year'-num_child_fam`year')*adult_`plan'`year'))*12
-					
-					*	Adjust by the number of families
-					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.2	if	num_FU_fam`year'==1	//	1 person family
-					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.1	if	num_FU_fam`year'==2	//	2 people family
-					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*1.05	if	num_FU_fam`year'==3	//	3 people family
-					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*0.95	if	inlist(num_FU_fam`year',5,6)	//	5-6 people family
-					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'*0.90	if	num_FU_fam`year'>=7	//	7+ people family
-					
-					*	Divide by the number of families to get the threshold value(W) per capita
-					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'/num_FU_fam`year'
-					
-					*	Scale it to thousand-dollars
-					replace	foodexp_W_`plan'`year'	=	foodexp_W_`plan'`year'/1000
-					
-					/*
-					*	Get the average value per capita (SL: This variable would no longer needed as of June 14, 2020)
-					sort	fam_ID_1999
-					if	!inlist(`year',1999)	{
-						local	prevyear=`year'-2
-						gen	avg_foodexp_W_`plan'`year'	=	(foodexp_W_`plan'`year'+foodexp_W_`plan'`prevyear')/2
-					}
-					*/
-					
-				}
-			}
-	
-		
-		*	Drop variables no longer needed
-		drop child_thrifty2013-adult_liberal2017
-		*/
-		}
-		
 		
 		*	Food security category (simplified)
 		*	This simplified category is based on Tiehen(2019)
 		foreach	year	in	1999	2001	2003	2015	2017	{
 			
 			clonevar	fs_cat_fam_simp`year'	=	fs_cat_fam`year'
-			*label	define	fs_cat_simp	1	"High Secure"	2	"Marginal Secure"	3	"Insecure"
-			*recode		fs_cat_fam_simp`year'	(2 3 4=0) (1=1)
 			recode		fs_cat_fam_simp`year'	(3 4=0) (1 2=1)
 
 		}
@@ -986,14 +912,7 @@
 			label	var	fs_cat_MS`year'		"Any Insecure (cum) - `year'"
 		}
 		
-		
-		/*
-		*	Recode child-related variables from missing to zero, to be included in the regression model
-		forval	year=1999(2)2017	{
-				replace	WIC_received_last`year'=0	if	child_meal_assist`year'==2
-				replace	child_meal_assist`year'=0	if	child_meal_assist`year'==2
-		}
-		*/
+
 		tempfile	dta_constructed
 		save		`dta_constructed'
 		

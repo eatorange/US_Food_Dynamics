@@ -853,19 +853,22 @@
 		*/
 			
 		
-		esttab *Total SRC SEO using "${PSID_outRaw}/Sumstats.csv", replace ///
+		*	Table 1 (Summary Statistics)
+		esttab *Total SRC SEO using "${PSID_outRaw}/Table1_Sumstats.csv", replace ///
 		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
 		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
 		title (Summary Statistics) ///
 		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
 		/*addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)*/
 		
-		esttab *Total SRC SEO using "${PSID_outRaw}/Sumstats.tex", replace ///
+		esttab *Total SRC SEO using "${PSID_outRaw}/Table1_Sumstats.tex", replace ///
 		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
 		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
 		title (Summary Statistics) ///
 		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ tex ///
 		/*addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)*/
+		
+		
 		
 	}			
 	
@@ -1277,6 +1280,15 @@
 			/*	note("* The sample includes the waves where both measures are available ('01,'03,'15,'17))"	///
 								"* (Unadjusted) Mean/SD: 0.97/0.10(USDA), 0.82/0.22(PFS)")	*/				
 			graph	export	"${PSID_outRaw}/Density_USDA_PFS.png", replace
+			
+			
+			*	Scatterplot and Fitted value of the USDA on PFS
+			graph	twoway (qfitci fs_scale_fam_rescale rho1_foodexp_pc_thrifty_ols)	(scatter fs_scale_fam_rescale rho1_foodexp_pc_thrifty_ols) if ${study_sample},	///
+				xtitle(PFS)	ytitle(USDA Measure)	///
+				legend(order(1 "95% CI" 2 "Fitted Value"))
+				
+			graph	export	"${PSID_outRaw}/qfitci_USDA_PFS.png", replace
+			graph	close
 		}		
 	}		
 	
@@ -1911,6 +1923,64 @@
 				putexcel	M3	=	matrix(FGT_cat_combined_sup), names overwritefmt nformat(number_d1)
 				
 				*esttab matrix(Jalan_Rav_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/Jalan_Rav_combined.tex", replace
+				
+				
+		*	Food Security Prevalence over different groups	
+		cap	mat	drop	HCR_group_PFS_3 HCR_group_PFS_7 HCR_group_PFS_10 HCR_group_PFS_all
+		//cap	mat	drop	HCR_group_HFSM_3	HCR_group_HFSM_10	HCR_group_HFSM_all
+		//cap drop	HFSM_FI	
+		
+		//gen	 	HFSM_FI	=	0	if	fs_cat_fam_simp==1
+		//replace	HFSM_FI	=	1	if	fs_cat_fam_simp==0
+		
+		foreach year in	3	7	10	{	// 2001, 2011, 2017
+		   foreach	edu	in	1	0	{	//	HS or below, beyond HS	   
+				foreach	race	in	0	1	{	//	People of colors, white
+					foreach	gender	in	1	0	{	//	Female, male
+							
+					*	FS prevalence
+							
+					qui svy, subpop(if ${study_sample} & year==`year'	&	HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'):	mean rho1_thrifty_FI_ols 
+							
+					mat	HCR_group_PFS_`year'	=	nullmat(HCR_group_PFS_`year')	\	e(b)[1,1]
+					
+					/*
+					if	inlist(`year',3,10)	{
+						
+						qui svy, subpop(if ${study_sample} & year==`year'	&	HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'):	mean HFSM_FI 
+						
+						mat	HCR_group_HFSM_`year'	=	nullmat(HCR_group_HFSM_`year')	\	e(b)[1,1]
+						
+					}
+					*/								
+					}	// gender			
+				}	//	race	
+		   }	//	edu	 
+		   
+		   *	Overall prevalence (should be equal to the USDA prevalence)
+		   		
+			qui svy, subpop(if ${study_sample} & year==`year'):	mean rho1_thrifty_FI_ols 
+			mat	HCR_group_PFS_`year'	=	nullmat(HCR_group_PFS_`year')	\	e(b)[1,1]
+			
+			/*
+			if	inlist(`year',3,10)	{
+				qui svy, subpop(if ${study_sample} & year==`year'):	mean HFSM_FI 
+			}
+			mat	HCR_group_HFSM_`year'	=	nullmat(HCR_group_HFSM_`year')	\	e(b)[1,1]
+			*/
+			
+		}	// year
+		
+		mat	HCR_group_PFS_all	=	HCR_group_PFS_3,	HCR_group_PFS_7,	HCR_group_PFS_10
+		//mat	HCR_group_HFSM_all	=	HCR_group_HFSM_3,	HCR_group_HFSM_10
+		
+		putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(HCR_desc) replace	/*modify*/
+		putexcel	A3	=	matrix(HCR_group_PFS_all), names overwritefmt nformat(number_d1)
+		//putexcel	F3	=	matrix(HCR_group_HFSM_all), names overwritefmt nformat(number_d1)
+			
+		esttab matrix(HCR_group_PFS_all, fmt(%9.3f)) using "${PSID_outRaw}/HCR_group_PFS_all.tex", replace
+		//esttab matrix(HCR_group_HFSM_all, fmt(%9.3f)) using "${PSID_outRaw}/HCR_group_HFSM_all.tex", replace
+		
 	}
 				
 	
@@ -2237,7 +2307,7 @@
 	*	Spell length
 	if	`run_spell_length'==1	{
 		
-		*	Tag balanced sample (Households with at least one missing PFS throughout the study period)
+		*	Tag balanced sample (Households without any missing PFS throughout the study period)
 		*	These households will be dropped from spell length analyses not to underestimate spell lengths
 		capture	drop	num_nonmissing_PFS	balanced_PFS
 		bys fam_ID_1999: egen num_nonmissing_PFS=count(rho1_thrifty_FI_ols)
@@ -2774,7 +2844,9 @@
 		
 			*	Regression of TFI/CFI on Group state FE
 			
-			foreach	depvar	in	Total_FI	Chronic_FI	Transient_FI	{
+			local measure SFIG
+			
+			foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	{
 				
 				/*
 				*	Without controls/time FE
@@ -2789,13 +2861,13 @@
 			}
 			
 			*	Output
-			esttab	Total_FI	Chronic_FI	Transient_FI	using "${PSID_outRaw}/TFI_CFI_regression.csv", ///
+			esttab	Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	using "${PSID_outRaw}/TFI_CFI_regression.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace
 					
-			esttab	Total_FI	Chronic_FI		using "${PSID_outRaw}/TFI_CFI_regression.tex", ///
+			esttab	Total_FI_`measure'	Chronic_FI_`measure'		using "${PSID_outRaw}/TFI_CFI_regression.tex", ///
 					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
@@ -2810,7 +2882,7 @@
 				local groupstates `r(varlist)'
 				
 				
-				foreach	depvar	in	Total_FI	Chronic_FI	{
+				foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	{
 					
 					*	Unadjusted
 					cap	drop	_mysample
@@ -2833,15 +2905,17 @@
 				}	//	depvar			
 			}	//	shapley
 			
-			mat	TFI_CFI_shapley	=	Total_FI_shapley,	Chronic_FI_shapley
+			mat	TFI_CFI_`measure'_shapley	=	Total_FI_`measure'_shapley,	Chronic_FI_`measure'_shapley
 			
 			putexcel	set "${PSID_outRaw}/Jalan_Rav", sheet(shapley) /*replace*/	modify
-			putexcel	A3	=	matrix(TFI_CFI_shapley), names overwritefmt nformat(number_d1)
+			putexcel	A3	=	matrix(TFI_CFI_`measure'_shapley), names overwritefmt nformat(number_d1)
 			
-			esttab matrix(TFI_CFI_shapley, fmt(%9.3f)) using "${PSID_outRaw}/TFI_CFI_shapley.tex", replace	
+			esttab matrix(TFI_CFI_`measure'_shapley, fmt(%9.3f)) using "${PSID_outRaw}/TFI_CFI_`measure'_shapley.tex", replace	
 		
+
+				
 			*	Northeast & Mid-Atlantic
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group1	state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1	state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(Northeast and Mid-Atlantic)	name(TFI_CFI_FE_NE_MA, replace) /*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_NE.png", replace
 				graph	close
@@ -2855,19 +2929,19 @@
 			*/
 			
 			*	South
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group6 state_group7 state_group8 state_group9 state_group10 state_group11)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group6 state_group7 state_group8 state_group9 state_group10 state_group11)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(South)	name(TFI_CFI_FE_South, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_South.png", replace
 				graph	close
 				
 			*	Mid-West
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group12 state_group13 state_group14 state_group15 state_group16 state_group17)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group12 state_group13 state_group14 state_group15 state_group16 state_group17)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(Mid-West)	name(TFI_CFI_FE_MW, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_MW.png", replace
 				graph	close
 			
 			*	West
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group18 state_group19 state_group20 state_group21)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group18 state_group19 state_group20 state_group21)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(West)		name(TFI_CFI_FE_West, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_West.png", replace
 				graph	close
@@ -2876,7 +2950,7 @@
 			graph combine	TFI_CFI_FE_NE_MA	TFI_CFI_FE_South	TFI_CFI_FE_MW	TFI_CFI_FE_West, title(Region Fixed Effects)
 			graph	export	"${PSID_outRaw}/TFI_CFI_region_FE.png", replace
 			graph	close
-		*/
+		
 		
 	
 		
@@ -2884,14 +2958,14 @@
 											title(Region Fixed Effects) legendfrom(TFI_CFI_FE_NE_MA)	///
 											graphregion(color(white))	/*xtob1title	*/
 											/*	note(Vertical line is the average retirement age of the year in the sample)	*/
-							graph	export	"${PSID_outRaw}/TFI_CFI_region_FE.png", replace
+							graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_region_FE.png", replace
 							graph	close
 		
+		*/
 		
-		
-		coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+		coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(Regional Fixed Effects)		name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_All.png", replace
+				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All.png", replace
 				graph	close
 			
 		/*
@@ -3498,6 +3572,8 @@
 
 	
 /* Junk Code */
+
+
 /* The following codes are old codes used when outcome variable are non-negative discrete variables (FS score) */		
 
 /*
