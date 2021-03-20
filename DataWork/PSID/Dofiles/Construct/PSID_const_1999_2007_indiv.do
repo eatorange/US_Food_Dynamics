@@ -1404,7 +1404,7 @@
 	label	var	highdegree_HS		"High school"
 	label	var	highdegree_somecol	"Some college"
 	label	var	highdegree_col		"College"
-	label	var	food_stamp_used_1yr	"Food stamp"
+	label	var	food_stamp_used_1yr	"Food stamp/SNAP"
 	label	var	child_meal_assist	"Child meal"
 	label	var	WIC_received_last	"WIC"
 	label	var	elderly_meal		"Elderly meal"
