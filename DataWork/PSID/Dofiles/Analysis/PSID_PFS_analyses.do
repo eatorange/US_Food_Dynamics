@@ -164,7 +164,7 @@
 		local	run_lasso_step3	1
 		
 	*	Random Forest
-	local	run_rf	1	
+	local	run_rf	0	
 		local	tune_iter	0	//	Tuning iteration
 		local	tune_numvars	0	//	Tuning numvars
 		local	run_rf_step1	1
@@ -191,18 +191,19 @@
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	/*ib0.state_resid_fam*/	state_group? state_group1? state_group2?
 		local	timevars	i.year
-		
+			
+		/*
 		local	depvar	e1_foodexp_sq_ols
 		local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
+		
 		br alpha1_foodexp_pc_ols var1_foodexp_ols rho1_foodexp_pc_thrifty_ols `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars' if var1_foodexp_ols<0	// `regionvars'	`timevars'	
 		
 		svy, subpop(if ${study_sample}): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
 		svy, subpop(if ${study_sample}	&	var1_foodexp_ols<0): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
+		*/
 		
 		local	MEvars	c.lag_food_exp_pc_1	`healthvars'	c.age_head_fam	/*ib1.race_head_cat*/	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
-		
-		*summ `depvar'	`lag_food_exp_pc_1'	`age_head_fam'	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
-		
+	
 		*	Model selection (highest order)
 		if	`model_selection'==1	{
 			
@@ -801,7 +802,7 @@
 		local	healthvars	phys_disab_head
 		local	familyvars	num_FU_fam ratio_child
 		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
-		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
+		local	foodvars	food_stamp_used_1yr	child_meal_assist /*WIC_received_last	elderly_meal*/
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		
 		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'
