@@ -922,7 +922,7 @@
 		
 			*	Categorize food security status based on the PFS.
 			 quietly	{
-				foreach	type	in	ols	ls	rf	{
+				foreach	type	in	ols	/*ls	rf*/	{
 					foreach	plan	in	thrifty /*low moderate liberal*/	{
 						
 						gen	rho1_`plan'_FS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Food secure
@@ -1099,7 +1099,7 @@
 				*/
 				
 				*	GLM, LASSO and RF
-				foreach	type	in	ols	ls	rf	{
+				foreach	type	in	ols	/*ls	rf*/	{
 					
 					*	All sample
 					
@@ -1139,7 +1139,7 @@
 				
 				sort	fam_ID_1999	year
 				
-				foreach	type	in	ols	ls	rf	{
+				foreach	type	in	ols	/*ls	rf*/	{
 					
 					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==0	&	year==9	//	Maximum PFS of households categorized as food insecure
 					local	max_pfs_thrifty_`type'	=	r(max)
@@ -1169,10 +1169,12 @@
 				*/
 				
 			*	Validation table
+			** (As of 2021/3 draft, we don't do any validation)
+			/* // validation
 			
 			eststo drop	valid_result*
 			
-			foreach	type in USDA	ols	ls	rf	{
+			foreach	type in USDA	ols	/*ls	rf*/	{
 				
 				di "Validation result of `type' in pooled sample"
 				svy: proportion valid_result_`type' if !mi(valid_result_USDA)	&	!mi(valid_result_ols)	&	!mi(valid_result_ls)	&	!mi(valid_result_rf)
@@ -1212,7 +1214,9 @@
 		title (Validation of 2017 Food Security Prediction) ///
 		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ tex ///
 		addnotes(Sample include households surveyed in 2017)
-
+		
+		*/ // validation
+		
 	}	//	Categorization			
 
 	
@@ -1253,9 +1257,9 @@
 		*	Spearman's rank correlation
 			
 			*	Pooled
-			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	///
+			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf*/	///
 				if ${study_sample}	&	inlist(year,2,3,9,10),	stats(rho obs p)
-			ktau 	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	///
+			ktau 	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf*/	///
 				if ${study_sample}	&	inlist(year,2,3,9,10), stats(taua taub p)
 			
 			*	By year
