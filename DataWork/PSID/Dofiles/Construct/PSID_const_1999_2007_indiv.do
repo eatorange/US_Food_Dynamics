@@ -1226,8 +1226,8 @@
 		label	var	income_pc_sq	"(Income per capita)$^2$ (thousands)"
 		gen	wealth_pc_sq	=	(wealth_pc)^2
 		label	var	wealth_pc_sq	"(Wealth per capita)$^2$ (thousands)"
-		gen	age_head_fam_sq		=	(age_head_fam)^2
-		label	var	age_head_fam_sq	"Age$^2$"
+		gen	age_head_fam_sq		=	((age_head_fam)^2)/1000
+		label	var	age_head_fam_sq	"Age$^2$/1000"
 		gen	age_spouse_sq		=	(age_spouse)^2
 		label	var	age_spouse_sq	"Age$^2$ (spouse)"
 		gen	income_pc_orig	=	income_pc*1000	//	Non-scaled, unit is dollars
@@ -1391,7 +1391,7 @@
 	*	Re-label variables so they correspond to the variable description table (Also need to copy and paste regression result)
 	label	var	HH_female			"Female"
 	label	var	HH_race_white		"White"
-	label	var	HH_race_color		"Color"
+	label	var	HH_race_color		"Non-White"
 	label	var	marital_status_cat	"Married"
 	label	var	income_pc			"Income per capita"
 	label	var	ln_income_pc		"ln(income per capita)"
@@ -1404,7 +1404,7 @@
 	label	var	highdegree_HS		"High school"
 	label	var	highdegree_somecol	"Some college"
 	label	var	highdegree_col		"College"
-	label	var	food_stamp_used_1yr	"Food stamp/SNAP"
+	label	var	food_stamp_used_1yr	"SNAP/food stamp"
 	label	var	child_meal_assist	"Child meal"
 	label	var	WIC_received_last	"WIC"
 	label	var	elderly_meal		"Elderly meal"
