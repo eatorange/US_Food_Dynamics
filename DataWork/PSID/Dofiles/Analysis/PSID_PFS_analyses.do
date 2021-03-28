@@ -1281,7 +1281,7 @@
 								(kdensity rho1_foodexp_pc_thrifty_ols	if	inlist(year,2,3,9,10)	&	!mi(fs_scale_fam_rescale)),	///
 								/*title (Density Estimates of the USDA scale and the PFS)*/	xtitle(Scale) ytitle(Density)		///
 								name(thrifty, replace) graphregion(color(white)) bgcolor(white)		///
-								legend(lab (1 "USDA scale") lab(2 "PFS") rows(1))				
+								legend(lab (1 "HFSM (rescaled)") lab(2 "PFS") rows(1))				
 			/*	note("* The sample includes the waves where both measures are available ('01,'03,'15,'17))"	///
 								"* (Unadjusted) Mean/SD: 0.97/0.10(USDA), 0.82/0.22(PFS)")	*/				
 			graph	export	"${PSID_outRaw}/Density_USDA_PFS.png", replace
@@ -1289,7 +1289,7 @@
 			
 			*	Scatterplot and Fitted value of the USDA on PFS
 			graph	twoway (qfitci fs_scale_fam_rescale rho1_foodexp_pc_thrifty_ols)	(scatter fs_scale_fam_rescale rho1_foodexp_pc_thrifty_ols) if ${study_sample},	///
-				xtitle(PFS)	ytitle(USDA Measure)	///
+				xtitle(PFS)	ytitle(HFSM (rescaled))	///
 				legend(order(1 "95% CI" 2 "Fitted Value"))
 				
 			graph	export	"${PSID_outRaw}/qfitci_USDA_PFS.png", replace
@@ -2437,6 +2437,9 @@
 					*	Total FI	(Average SFIG over time)
 					bys	fam_ID_1999:	egen	Total_FI_HCR	=	mean(rho1_thrifty_FI_ols)	if	inrange(year,2,10)	//	HCR
 					bys	fam_ID_1999:	egen	Total_FI_SFIG	=	mean(SFIG_indiv)			if	inrange(year,2,10)	/*!mi(SFIG_indiv)*/	//	SFIG
+					
+					label	var	Total_FI_HCR	"TFI (HCR)"
+					label	var	Total_FI_SFIG	"TFI (SFIG)"
 
 					*	Chronic FI (SFIG(with mean PFS))					
 					gen		Chronic_FI_HCR=.
@@ -2445,6 +2448,9 @@
 					replace	Chronic_FI_SFIG	=	(1-PFS_`type'_mean_normal)^2	if	!mi(PFS_`type'_mean_normal)	&	PFS_`type'_mean_normal<1	//	Avg PFS < Avg cut-off PFS
 					replace	Chronic_FI_HCR	=	0								if	!mi(PFS_`type'_mean_normal)	&	PFS_`type'_mean_normal>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
 					replace	Chronic_FI_SFIG	=	0								if	!mi(PFS_`type'_mean_normal)	&	PFS_`type'_mean_normal>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
+					
+					lab	var		Chronic_FI_HCR	"CFI (HCR)"
+					lab	var		Chronic_FI_SFIG	"CFI (SFIG)"
 					
 					**** In several households, CFI is greater than TFI. I assume it is because the threshold probability varies, but need to thoroughly check why.
 					**** For now, in that case we treat CFI as equal to the TFI
