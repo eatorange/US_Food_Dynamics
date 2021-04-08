@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	0
+	local	retrieve_vars	1
 	local	clean_vars		1
 	
 	
@@ -784,6 +784,49 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		tempfile	retire_year_head
 		save		`retire_year_head'
 		
+*	Food expenditure recall period (at home, no food stamp)
+		psid use || foodexp_athome_nostamp 	 	[99]ER14296 [01]ER18432 [03]ER21697 [05]ER25699 [07]ER36717 [09]ER42723 [11]ER48039 [13]ER53736 [15]ER60751 [17]ER66798 	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	foodexp_athome_nostamp
+		save		`foodexp_athome_nostamp'
+		
+*	Food expenditure recall period (at home, food stamp)
+		psid use || foodexp_athome_stamp 	 	[99]ER14289 [01]ER18422 [03]ER21687 [05]ER25689 [07]ER36707 [09]ER42713 [11]ER48029 [13]ER53726 [15]ER60741 [17]ER66788	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	foodexp_athome_stamp
+		save		`foodexp_athome_stamp'
+		
+*	Food expenditure recall period (away from home, no food stamp)
+		psid use || foodexp_awayhome_nostamp 	 	[99]ER14301 [01]ER18439 [03]ER21704 [05]ER25706 [07]ER36724 [09]ER42730 [11]ER48046 [13]ER53743 [15]ER60758 [17]ER66805	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	foodexp_awayhome_nostamp
+		save		`foodexp_awayhome_nostamp'
+		
+*	Food expenditure recall period (at home, food stamp)
+		psid use || foodexp_awayhome_stamp 	 	[99]ER14294 [01]ER18429 [03]ER21694 [05]ER25696 [07]ER36714 [09]ER42720 [11]ER48036 [13]ER53733 [15]ER60748 [17]ER66795	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	foodexp_awayhome_stamp
+		save		`foodexp_awayhome_stamp'
+		
+*	Food expenditure recall period (delivered, no food stamp)
+		psid use || foodexp_delivered_nostamp 	 	[99]ER14299 [01]ER18436 [03]ER21701 [05]ER25703 [07]ER36721 [09]ER42727 [11]ER48043 [13]ER53740 [15]ER60755 [17]ER66802	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	foodexp_delivered_nostamp
+		save		`foodexp_delivered_nostamp'
+		
+*	Food expenditure recall period (delivered, food stamp)
+		psid use || foodexp_delivered_stamp 	 	[99]ER14292 [01]ER18426 [03]ER21691 [05]ER25693 [07]ER36711 [09]ER42717 [11]ER48033 [13]ER53730 [15]ER60745 [17]ER66792	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	foodexp_delivered_stamp
+		save		`foodexp_delivered_stamp'
+		
+		
 	*	Lastly, prepare individual gender variable which cannot be imported using "psidtools" command below, as it is uniform across the wave.
 	*	Individual gender variable will be used in constructing the thrifty food plan (TFP) variable
 		use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
@@ -895,6 +938,13 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `region_residence', keepusing(region_residence*) nogen assert(3)
 		merge 1:1 x11101ll using `urbanicity', keepusing(urbanicity*) nogen assert(3)
 		merge 1:1 x11101ll using `metro_area', keepusing(metro_area*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_athome_nostamp', keepusing(foodexp_athome_nostamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_athome_stamp', keepusing(foodexp_athome_stamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_awayhome_nostamp', keepusing(foodexp_awayhome_nostamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_awayhome_stamp', keepusing(foodexp_awayhome_stamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_delivered_nostamp', keepusing(foodexp_delivered_nostamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_delivered_stamp', keepusing(foodexp_delivered_stamp*) nogen assert(3)
+		
 					
 		qui		compress
 		save	"${PSID_dtInt}/PSID_raw_1999_2017_ind.dta", replace
