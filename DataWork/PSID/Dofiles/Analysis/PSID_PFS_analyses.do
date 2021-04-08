@@ -816,6 +816,9 @@
 		estadd scalar N = e(N_sub), replace
 		eststo	Total
 		
+		
+		*epctile age_head_fam, p( 5 10 25 50 75 90 95 ) /* over( obraz ) */ svy, if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)
+		
 		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)	&	sample_source_SRC==1): mean  `sumvars'
 		estat sd
 		estadd matrix mean = r(mean)
@@ -829,29 +832,6 @@
 		estadd matrix sd = r(sd)
 		estadd scalar N = e(N_sub), replace
 		eststo	SEO
-		
-		
-		/*
-		svy: mean income_pc if `estimation_sample'
-		estadd matrix mean = r(table)[1,1...]
-		estadd matrix sd = r(table)[2,1...]
-		eststo	Total
-		svy, subpop(${study_sample}): mean `sumvars'
-		estadd matrix mean = r(table)[1,1...]
-		estadd matrix sd = r(table)[2,1...]
-		estadd scalar N = e(N_sub), replace
-		eststo	SRC
-		svy, subpop(sample_source_SEO): mean `sumvars'
-		estadd matrix mean = r(table)[1,1...]
-		estadd matrix sd = r(table)[2,1...]
-		estadd scalar N = e(N_sub), replace
-		eststo	SEO
-		svy, subpop(sample_source_IMM): mean `sumvars'
-		estadd matrix mean = r(table)[1,1...]
-		estadd matrix sd = r(table)[2,1...]
-		estadd scalar N = e(N_sub), replace
-		eststo	Imm
-		*/
 			
 		
 		*	Table 1 (Summary Statistics)
