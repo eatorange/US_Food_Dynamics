@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	1
+	local	retrieve_vars	0
 	local	clean_vars		1
 	
 	
@@ -1039,9 +1039,19 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 
 				*	Recode race variables to be compatible across the years
 				
-					*	In	1999-2003, (1) merge "Color other than black or white"	into "Other" (2) Merge "DK" into "NA;refused"	(3)	"Latino origin" to "white"
-					**	(3) is very rough recoding, as 1/3 of the respondents in that categories in 2003 answered as "other" in 2005. Still, 2/3 of the respondents answered as "white" so we categorize them as "white". We can modify later if needed.
-						recode	race_head_fam1999 race_head_fam2001 race_head_fam2003	race_spouse1999-race_spouse2003	(6=7)	(8=9)	(5=1)
+					*	In	1999-2003, (1) merge "Color other than black or white"	into "Other" (2) Merge "DK" into "NA;refused"	
+						recode	race_head_fam1999 race_head_fam2001 race_head_fam2003	race_spouse1999-race_spouse2003	(6=7)	(8=9)	// (5=1)
+					
+					*	Replace "Latino origin" with other races, depending on their responses.
+						foreach	race	in	race_head_fam1999	race_head_fam2001	race_head_fam2003	{
+								replace	`race'	=	race_head_fam2005	if	`race'==5	//	Assign 2005 response to pre-2005 respones
+							
+						}
+						foreach	race	in	race_spouse1999	race_spouse2001	race_spouse2003	{
+								replace	`race'	=	race_head_fam2005	if	`race'==5	//	Assign 2005 response to pre-2005 respones
+							
+						}
+						
 					
 					*	In	2005-2017 data, (i) Merge "Asian" and "Native Hawaiian and Pacific Islander"
 						recode	race_head_fam2005-race_head_fam2017	race_spouse2005-race_spouse2017	(5=4)

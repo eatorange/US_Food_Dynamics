@@ -561,17 +561,19 @@
 		
 		*	Education	(category)
 			foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
-				gen		grade_comp_cat`year'	=1	if	inrange(grade_comp_head_fam`year',0,11)
-				replace	grade_comp_cat`year'	=2	if	inrange(grade_comp_head_fam`year',12,12)
-				replace	grade_comp_cat`year'	=3	if	inrange(grade_comp_head_fam`year',13,15)
-				replace	grade_comp_cat`year'	=4	if	grade_comp_head_fam`year'>=16 & !mi(grade_comp_head_fam`year')
+				gen		grade_comp_cat`year'	=1	if	inrange(grade_comp_head_fam`year',0,11)	//	Less than HS
+				replace	grade_comp_cat`year'	=2	if	inrange(grade_comp_head_fam`year',12,12)	//	HS
+				replace	grade_comp_cat`year'	=2	if	inrange(grade_comp_head_fam`year',0,11)	&	hs_completed_head`year'	==	1	//	Completed GED -> Treat as HS
+				replace	grade_comp_cat`year'	=3	if	inrange(grade_comp_head_fam`year',13,15)	//	Some college
+				replace	grade_comp_cat`year'	=4	if	grade_comp_head_fam`year'>=16 & !mi(grade_comp_head_fam`year')	//	College
 				replace	grade_comp_cat`year'	=.n	if	mi(grade_comp_head_fam`year')
 				label	var	grade_comp_cat`year'	"Grade Household Head Completed, `year'"
 				
-				gen		grade_comp_cat_spouse`year'	=1	if	inrange(grade_comp_spouse`year',0,11)
-				replace	grade_comp_cat_spouse`year'	=2	if	inrange(grade_comp_spouse`year',12,12)
-				replace	grade_comp_cat_spouse`year'	=3	if	inrange(grade_comp_spouse`year',13,15)
-				replace	grade_comp_cat_spouse`year'	=4	if	grade_comp_spouse`year'>=16 & !mi(grade_comp_spouse`year')
+				gen		grade_comp_cat_spouse`year'	=1	if	inrange(grade_comp_spouse`year',0,11)	//	Less than HS
+				replace	grade_comp_cat_spouse`year'	=2	if	inrange(grade_comp_spouse`year',12,12)	//	HS
+				replace	grade_comp_cat_spouse`year'	=2	if	inrange(grade_comp_spouse`year',0,11)	&	hs_completed_spouse`year'	==	1	//	Completed GED -> Treat as HS
+				replace	grade_comp_cat_spouse`year'	=3	if	inrange(grade_comp_spouse`year',13,15)	//	Some college
+				replace	grade_comp_cat_spouse`year'	=4	if	grade_comp_spouse`year'>=16 & !mi(grade_comp_spouse`year')	//	College
 				replace	grade_comp_cat_spouse`year'	=.n	if	mi(grade_comp_spouse`year')
 				label	var	grade_comp_cat_spouse`year'	"Grade Household Spouse Completed, `year'"
 			}
