@@ -294,12 +294,41 @@
 			tempfile	food_stamp_used_1yr
 			save		`food_stamp_used_1yr'
 			
+			*	Food Stamp Usage (Current year)
+			psid use || food_stamp_used_0yr	[99]ER14270 [01]ER18402 [03]ER21668 [05]ER25670 [07]ER36688	///
+								using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+			
+			tempfile	food_stamp_used_0yr
+			save		`food_stamp_used_0yr'
+			
+				
+			*	Food Stamp Usage (last month)
+			psid use || food_stamp_used_1month	[09]ER42707 [11]ER48023 [13]ER53720 [15]ER60735 [17]ER66782	///
+								using "${PSID_dtRaw}/Main", keepnotes design(any) clear		
+			
+			tempfile	food_stamp_used_1month
+			save		`food_stamp_used_1month'
+			
 			*	Food Stamp Value (amount) (previous year)
 			psid use || food_stamp_value_1yr	[99]ER14256 [01]ER18387 [03]ER21653 [05]ER25655 [07]ER36673 [09]ER42692 [11]ER48008 [13]ER53705 [15]ER60720 [17]ER66767	///
 					using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
 					
 			tempfile	food_stamp_value_1yr
 			save		`food_stamp_value_1yr'
+			
+			*	Food Stamp Value (amount) (current year, cumulative)
+			psid use || food_stamp_value_0yr	[99]ER14285 [01]ER18417 [03]ER21682 [05]ER25684 [07]ER36702	///
+					using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+					
+			tempfile	food_stamp_value_0yr
+			save		`food_stamp_value_0yr'
+			
+			*	Food Stamp Value (amount) (last month)
+			psid use || food_stamp_value_1month	[09]ER42709 [11]ER48025 [13]ER53722 [15]ER60737 [17]ER66784	///
+					using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+					
+			tempfile	food_stamp_value_1month
+			save		`food_stamp_value_1month'
 							
 							
 			*	Food Stamp Value (time unit)  (previous year)
@@ -308,6 +337,13 @@
 					
 			tempfile	food_stamp_freq_1yr
 			save		`food_stamp_freq_1yr'
+			
+			*	Food Stamp Value (time unit)  (current year)
+			psid use || food_stamp_freq_0yr	[99]ER14286 [01]ER18418 [03]ER21683 [05]ER25685 [07]ER36703	///
+					using "${PSID_dtRaw}/Main", keepnotes design(any) clear	
+					
+			tempfile	food_stamp_freq_0yr
+			save		`food_stamp_freq_0yr'
 			
 			
 			*	Child received free or reduced cost meal (lunch)
@@ -785,46 +821,46 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		save		`retire_year_head'
 		
 *	Food expenditure recall period (at home, no food stamp)
-		psid use || foodexp_athome_nostamp 	 	[99]ER14296 [01]ER18432 [03]ER21697 [05]ER25699 [07]ER36717 [09]ER42723 [11]ER48039 [13]ER53736 [15]ER60751 [17]ER66798 	///
+		psid use || foodexp_recall_home_nostamp 	 	[99]ER14296 [01]ER18432 [03]ER21697 [05]ER25699 [07]ER36717 [09]ER42723 [11]ER48039 [13]ER53736 [15]ER60751 [17]ER66798 	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
 							
-		tempfile	foodexp_athome_nostamp
-		save		`foodexp_athome_nostamp'
+		tempfile	foodexp_recall_home_nostamp
+		save		`foodexp_recall_home_nostamp'
 		
 *	Food expenditure recall period (at home, food stamp)
-		psid use || foodexp_athome_stamp 	 	[99]ER14289 [01]ER18422 [03]ER21687 [05]ER25689 [07]ER36707 [09]ER42713 [11]ER48029 [13]ER53726 [15]ER60741 [17]ER66788	///
+		psid use || foodexp_recall_home_stamp 	 	[99]ER14289 [01]ER18422 [03]ER21687 [05]ER25689 [07]ER36707 [09]ER42713 [11]ER48029 [13]ER53726 [15]ER60741 [17]ER66788	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
 							
-		tempfile	foodexp_athome_stamp
-		save		`foodexp_athome_stamp'
+		tempfile	foodexp_recall_home_stamp
+		save		`foodexp_recall_home_stamp'
 		
 *	Food expenditure recall period (away from home, no food stamp)
-		psid use || foodexp_awayhome_nostamp 	 	[99]ER14301 [01]ER18439 [03]ER21704 [05]ER25706 [07]ER36724 [09]ER42730 [11]ER48046 [13]ER53743 [15]ER60758 [17]ER66805	///
+		psid use || foodexp_recall_away_nostamp 	 	[99]ER14301 [01]ER18439 [03]ER21704 [05]ER25706 [07]ER36724 [09]ER42730 [11]ER48046 [13]ER53743 [15]ER60758 [17]ER66805	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
 							
-		tempfile	foodexp_awayhome_nostamp
-		save		`foodexp_awayhome_nostamp'
+		tempfile	foodexp_recall_away_nostamp
+		save		`foodexp_recall_away_nostamp'
 		
-*	Food expenditure recall period (at home, food stamp)
-		psid use || foodexp_awayhome_stamp 	 	[99]ER14294 [01]ER18429 [03]ER21694 [05]ER25696 [07]ER36714 [09]ER42720 [11]ER48036 [13]ER53733 [15]ER60748 [17]ER66795	///
+*	Food expenditure recall period (away from home, food stamp)
+		psid use || foodexp_recall_away_stamp 	 	[99]ER14294 [01]ER18429 [03]ER21694 [05]ER25696 [07]ER36714 [09]ER42720 [11]ER48036 [13]ER53733 [15]ER60748 [17]ER66795	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
 							
-		tempfile	foodexp_awayhome_stamp
-		save		`foodexp_awayhome_stamp'
+		tempfile	foodexp_recall_away_stamp
+		save		`foodexp_recall_away_stamp'
 		
 *	Food expenditure recall period (delivered, no food stamp)
-		psid use || foodexp_delivered_nostamp 	 	[99]ER14299 [01]ER18436 [03]ER21701 [05]ER25703 [07]ER36721 [09]ER42727 [11]ER48043 [13]ER53740 [15]ER60755 [17]ER66802	///
+		psid use || foodexp_recall_deliv_nostamp 	 	[99]ER14299 [01]ER18436 [03]ER21701 [05]ER25703 [07]ER36721 [09]ER42727 [11]ER48043 [13]ER53740 [15]ER60755 [17]ER66802	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
 							
-		tempfile	foodexp_delivered_nostamp
-		save		`foodexp_delivered_nostamp'
+		tempfile	foodexp_recall_deliv_nostamp
+		save		`foodexp_recall_deliv_nostamp'
 		
 *	Food expenditure recall period (delivered, food stamp)
-		psid use || foodexp_delivered_stamp 	 	[99]ER14292 [01]ER18426 [03]ER21691 [05]ER25693 [07]ER36711 [09]ER42717 [11]ER48033 [13]ER53730 [15]ER60745 [17]ER66792	///
+		psid use || foodexp_recall_deliv_stamp 	 	[99]ER14292 [01]ER18426 [03]ER21691 [05]ER25693 [07]ER36711 [09]ER42717 [11]ER48033 [13]ER53730 [15]ER60745 [17]ER66792	///
 							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
 							
-		tempfile	foodexp_delivered_stamp
-		save		`foodexp_delivered_stamp'
+		tempfile	foodexp_recall_deliv_stamp
+		save		`foodexp_recall_deliv_stamp'
 		
 		
 	*	Lastly, prepare individual gender variable which cannot be imported using "psidtools" command below, as it is uniform across the wave.
@@ -865,8 +901,13 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `fs_cat_fam', keepusing(fs_cat_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `food_stamp_used_2yr', keepusing(food_stamp_used_2yr*) nogen assert(3)
 		merge 1:1 x11101ll using `food_stamp_used_1yr', keepusing(food_stamp_used_1yr*) nogen assert(3)
+		merge 1:1 x11101ll using `food_stamp_used_0yr', keepusing(food_stamp_used_0yr*) nogen assert(3)
+		merge 1:1 x11101ll using `food_stamp_used_1month', keepusing(food_stamp_used_1month*) nogen assert(3)
 		merge 1:1 x11101ll using `food_stamp_value_1yr', keepusing(food_stamp_value_1yr*) nogen assert(3)
+		merge 1:1 x11101ll using `food_stamp_value_0yr', keepusing(food_stamp_value_0yr*) nogen assert(3)
+		merge 1:1 x11101ll using `food_stamp_value_1month', keepusing(food_stamp_value_1month*) nogen assert(3)
 		merge 1:1 x11101ll using `food_stamp_freq_1yr', keepusing(food_stamp_freq_1yr*) nogen assert(3)
+		merge 1:1 x11101ll using `food_stamp_freq_0yr', keepusing(food_stamp_freq_0yr*) nogen assert(3)
 		merge 1:1 x11101ll using `child_bf_assist_fam', keepusing(child_bf_assist*) nogen assert(3)
 		merge 1:1 x11101ll using `child_lunch_assist_fam', keepusing(child_lunch_assist*) nogen assert(3)
 		merge 1:1 x11101ll using `child_meal_assist_fam', keepusing(child_meal_assist*) nogen assert(3)
@@ -938,12 +979,12 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `region_residence', keepusing(region_residence*) nogen assert(3)
 		merge 1:1 x11101ll using `urbanicity', keepusing(urbanicity*) nogen assert(3)
 		merge 1:1 x11101ll using `metro_area', keepusing(metro_area*) nogen assert(3)
-		merge 1:1 x11101ll using `foodexp_athome_nostamp', keepusing(foodexp_athome_nostamp*) nogen assert(3)
-		merge 1:1 x11101ll using `foodexp_athome_stamp', keepusing(foodexp_athome_stamp*) nogen assert(3)
-		merge 1:1 x11101ll using `foodexp_awayhome_nostamp', keepusing(foodexp_awayhome_nostamp*) nogen assert(3)
-		merge 1:1 x11101ll using `foodexp_awayhome_stamp', keepusing(foodexp_awayhome_stamp*) nogen assert(3)
-		merge 1:1 x11101ll using `foodexp_delivered_nostamp', keepusing(foodexp_delivered_nostamp*) nogen assert(3)
-		merge 1:1 x11101ll using `foodexp_delivered_stamp', keepusing(foodexp_delivered_stamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_recall_home_nostamp', keepusing(foodexp_recall_home_nostamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_recall_home_stamp', keepusing(foodexp_recall_home_stamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_recall_away_nostamp', keepusing(foodexp_recall_away_nostamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_recall_away_stamp', keepusing(foodexp_recall_away_stamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_recall_deliv_nostamp', keepusing(foodexp_recall_deliv_nostamp*) nogen assert(3)
+		merge 1:1 x11101ll using `foodexp_recall_deliv_stamp', keepusing(foodexp_recall_deliv_stamp*) nogen assert(3)
 		
 					
 		qui		compress
