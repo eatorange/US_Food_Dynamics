@@ -253,12 +253,12 @@
 		
 		*	Step 1
 		
-			*	All sample
-			*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
-			*	SRC/SEO only
-			local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
-			
-			svy, subpop(${study_sample}): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
+		*	All sample
+		*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
+		*	SRC/SEO only
+		local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
+		
+		svy, subpop(${study_sample}): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
 		
 		est	sto	ols_step1
 		
@@ -852,6 +852,44 @@
 		
 		
 	}			
+	
+	
+	* Examining recall period.
+	
+		*	Frequency table
+		tab foodexp_recall_home if !mi(rho1_foodexp_pc_thrifty_ols) & foodexp_recall_home!=0	&	year!=1
+		
+		*	Count the number of non-missing PFS obs within household over time. We will restrict our analysis on households with non-missing PFS 
+		cap	drop	num_nonmissing_PFS
+		bys fam_ID_1999: egen num_nonmissing_PFS = count(rho1_foodexp_pc_thrifty_ols)
+				
+		*	Frequency table of recall period
+		tab	foodexp_recall_home	if	num_nonmissing_PFS!=0	&	year!=1	&	foodexp_recall_home!=0
+		
+		*	Stability of recall period within household over time
+		cap drop	num_period
+		cap	drop	num_period_temp
+		qui unique foodexp_recall_home if year!=1, by(fam_ID_1999) gen(num_period_temp)	//	Number of unique recall period. One non-missing obs per household.
+		bys fam_ID_1999: egen num_period = max(num_period_temp)
+		drop	num_period_temp	
+		tab	num_period if  	num_nonmissing_PFS!=0	&	year==2	//	"year==2" is to count only 1 obs per household.
+		*	We argue that household reported food expenditure stabley over time if the number of unique report period is low.
+		
+		*	Consistency of recall period within household over time.
+		*	We focus on at-home expenditure, as most households report it.
+		cap	drop	foodexp_recall_home_mean
+		bys fam_ID_1999: egen foodexp_recall_home_mean = mean(foodexp_recall_home) if year!=1	//	Exclude 1999 expenditure from analysis (1999 is NOT a sample year)
+		tab	foodexp_recall_home_mean	if	num_nonmissing_PFS!=0 & year==2 // count only 1 obs per household via !mi(num_period)
+		
+		*	Mean=3 & num_period=1 implies households reported weekly expenditure only over the study period.
+		cap	drop	foodexp_recall_home_weekonly
+		gen		foodexp_recall_home_weekonly	=	0
+		replace	foodexp_recall_home_weekonly	=	1	if	num_period==1	&	foodexp_recall_home_mean==3
+		tab		foodexp_recall_home_weekonly	if	num_nonmissing_PFS!=0 &	year==2
+		
+		
+		
+	
 	
 	/****************************************************************
 		SECTION 3: Categorization
