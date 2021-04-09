@@ -753,6 +753,21 @@
 		}
 		
 		
+		*	Food stamp usage (current year)
+		*	Merge "current year" (99-07) and "last month" (09-17)
+		*	Since very little households (less than 0.5% each year) survyed in Jan, we can create dummy for "current year" if household used stamp "last month" (if anyone said "yes" during Feb-Dec, it implies they used stamp in curent year)
+		foreach	year	in	2009	2011	2013	2015	2017	{
+			
+			gen		food_stamp_used_0yr`year'	=	0
+			replace	food_stamp_used_0yr`year'	=	1	if	food_stamp_used_1month`year'	==	1
+			replace	food_stamp_used_0yr`year'	=.		if	mi(food_stamp_used_1month`year')
+			
+			label	var	food_stamp_used_0yr`year'	"SNAP/food stamp"
+		}
+		
+		order	food_stamp_used_0yr2009-food_stamp_used_0yr2017, after(food_stamp_used_0yr2007)
+		
+		
 		*	Food stamp value (previous year)
 		*	Annualize food stamp value redeemed (in thousands)
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
@@ -769,8 +784,7 @@
 			
 		}
 		
-		
-		
+	
 		*	Food expenditure
 			
 			*	Generate temporary state code variable, as food cost vary by some states (AL, HA, all others)
@@ -866,6 +880,33 @@
 			
 			*	Drop variables no longer needed
 			drop	foodcost_monthly_????	state_region_temp????
+		
+		
+		*	Food expenditure recall period
+		*	They are separately collected from "used food stamp this year(or last monnth)" and from "didn't use...'". We can merge them as a single variable.
+		
+		lab	define	foodexp_recall_period	2	"Day"	///
+											3 	"Week"	///
+											4 	"Two weeks"	///
+											5 	"Month"	///
+											6 	"Year"	///
+											7 	"Other"	///
+											8 	"DK"	///
+											9 	"NA/refused"	///
+											0 	"Inap.", replace
+		
+		forval year=1999(2)2017	{
+			foreach	expcat	in	home	away	deliv	{
+				
+				gen		foodexp_recall_`expcat'`year'	=	foodexp_recall_`expcat'_stamp`year'		if	food_stamp_used_0yr`year'	==	1	//	Stamp users
+				replace	foodexp_recall_`expcat'`year'	=	foodexp_recall_`expcat'_nostamp`year'	if	food_stamp_used_0yr`year'	!=	1	//	Non-stamp users
+				
+				label	var	foodexp_recall_`expcat'`year'	"Food expenditure (`expcat') recall period in `year'"
+				label	val	foodexp_recall_`expcat'`year'	foodexp_recall_period
+				
+			}
+			
+		}
 		
 		
 		*	Food security category (simplified)
@@ -1122,6 +1163,10 @@
 		label	var	foodexp_W_thrifty	"Thrifty Food Plan (TFP) cost (annual per capita)"
 		label	var	region_residence	"Region of Residence"
 		label	var	metro_area			"Residence in Metropolitan Area"
+		label	var	foodexp_recall_home		"Food expenditure (at home) recall period"
+		label	var	foodexp_recall_away		"Food expenditure (away) recall period"
+		label	var	foodexp_recall_deliv	"Food expenditure (delivered) recall period"
+		
 
 		*label	var	cloth_exp_total		"Total cloth expenditure"
 		
@@ -1174,7 +1219,7 @@
 	if	`recode_vars'==1	{
 		qui	ds	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse	veteran_head	veteran_spouse	tax_item_deduct	///
 				retire_plan_head	retire_plan_spouse	annuities_IRA	attend_college_head	attend_college_spouse	hs_completed_head	hs_completed_spouse	///
-				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	child_meal_assist	WIC_received_last	elderly_meal	///
+				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	food_stamp_used_0yr	child_meal_assist	WIC_received_last	elderly_meal	///
 				child_daycare_any	child_daycare_FSP	child_daycare_snack	emp_HH_simple emp_spouse_simple	food_stamp_val	
 		label values	`r(varlist)'	yes1no0
 		recode	`r(varlist)'	(0	5	8	9	.d	.r=0)
