@@ -66,7 +66,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	1
+	local	retrieve_vars	0
 	local	clean_vars		1
 	
 	
@@ -113,6 +113,22 @@
 								
 			tempfile relat_to_head_ind
 			save	`relat_to_head_ind'
+			
+			*	Month of the interview
+			psid use || interview_month [99]ER13006 [01]ER17009 [03]ER21012 [05]ER25012 [07]ER36012 [09]ER42012 [11]ER47312 [13]ER53012 [15]ER60012 [17]ER66012 	///
+								using "${PSID_dtRaw}/Main", design(any) clear
+								
+			tempfile interview_month
+			save	`interview_month'
+			
+			*	Day of the interview
+			psid use || interview_day [99]ER13007 [01]ER17010 [03]ER21013 [05]ER25013 [07]ER36013 [09]ER42013 [11]ER47313 [13]ER53013 [15]ER60013 [17]ER66013	///
+								using "${PSID_dtRaw}/Main", design(any) clear
+								
+			tempfile interview_day
+			save	`interview_day'
+			
+			
 			
 			*	Age (indiv)
 			psid use || age_ind [68]ER30004 [69]ER30023 [70]ER30046 [71]ER30070 [72]ER30094 [73]ER30120 [74]ER30141 [75]ER30163 [76]ER30191 [77]ER30220 [78]ER30249 [79]ER30286 [80]ER30316 [81]ER30346 [82]ER30376 [83]ER30402 [84]ER30432 [85]ER30466 [86]ER30501 [87]ER30538 [88]ER30573 [89]ER30609 [90]ER30645 [91]ER30692 [92]ER30736 [93]ER30809 [94]ER33104 [95]ER33204 [96]ER33304 [97]ER33404 [99]ER33504 [01]ER33604 [03]ER33704 [05]ER33804 [07]ER33904 [09]ER34004 [11]ER34104 [13]ER34204 [15]ER34305 [17]ER34504	///
@@ -862,6 +878,13 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		tempfile	foodexp_recall_deliv_stamp
 		save		`foodexp_recall_deliv_stamp'
 		
+*	Mental health (emotional, nervous, or psychiatric problems)
+		psid use || mental_problem 	 	[99]ER15494 [01]ER19659 [03]ER23059 [05]ER27045 [07]ER38256 [09]ER44229 [11]ER49562 [13]ER55311 [15]ER62433 [17]ER68487	///
+							using "${PSID_dtRaw}/Main", keepnotes design(any) clear
+							
+		tempfile	mental_problem
+		save		`mental_problem'
+		
 		
 	*	Lastly, prepare individual gender variable which cannot be imported using "psidtools" command below, as it is uniform across the wave.
 	*	Individual gender variable will be used in constructing the thrifty food plan (TFP) variable
@@ -878,6 +901,8 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `weight_cross_ind', keepusing(weight_cross_ind*) nogen assert(3)
 		merge 1:1 x11101ll using `weight_long_fam', keepusing(weight_long_fam*) nogen assert(3)
 		merge 1:1 x11101ll using `respondent_ind', keepusing(respondent*) nogen assert(3)
+		merge 1:1 x11101ll using `interview_month', keepusing(interview_month*) nogen assert(3)
+		merge 1:1 x11101ll using `interview_day', keepusing(interview_day*) nogen assert(3)
 		merge 1:1 x11101ll using `relat_to_head_ind', keepusing(relat_to_head*) nogen assert(3)
 		merge 1:1 x11101ll using `main_age_ind', keepusing(age_ind*) nogen assert(3)
 		merge 1:1 x11101ll using `edu_years_ind', keepusing(edu_years*) nogen assert(3)
@@ -985,6 +1010,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		merge 1:1 x11101ll using `foodexp_recall_away_stamp', keepusing(foodexp_recall_away_stamp*) nogen assert(3)
 		merge 1:1 x11101ll using `foodexp_recall_deliv_nostamp', keepusing(foodexp_recall_deliv_nostamp*) nogen assert(3)
 		merge 1:1 x11101ll using `foodexp_recall_deliv_stamp', keepusing(foodexp_recall_deliv_stamp*) nogen assert(3)
+		merge 1:1 x11101ll using `mental_problem', keepusing(mental_problem*) nogen assert(3)
 		
 					
 		qui		compress
@@ -1071,12 +1097,12 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 			qui ds	WIC_received_last*	
 			lab	val	`r(varlist)'	YNDRI
 			
-			*	Food stamp valuee
-			qui	ds	food_stamp_value_1yr1999-food_stamp_value_1yr2017
+			*	Food stamp value
+			qui	ds	food_stamp_value_1yr1999-food_stamp_value_1yr2017	food_stamp_value_0yr1999-food_stamp_value_0yr2007 food_stamp_value_1month2009-food_stamp_value_1month2017
 			foreach	var	in	`r(varlist)'	{
 				
-				replace	`var'=.d	if	`var'==999998
-				replace	`var'=.r	if	`var'==999999
+				replace	`var'=0	if	`var'==999998
+				replace	`var'=0	if	`var'==999999
 				
 			}
 			
