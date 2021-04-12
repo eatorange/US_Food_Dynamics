@@ -120,6 +120,15 @@
 		label	variable	sample_source_SRC_SEO	"Sample = SRC or SEO"	
 		
 		
+		*	Generate week of year
+		forval	year=1999(2)2017	{
+			
+			gen	week_of_year`year'	=	week(mdy(interview_month`year',interview_day`year',`year'))
+			
+			lab	var	week_of_year`year'	"Week of the year (`year')"
+			
+		}
+		
 		*	Family Composition Change
 		
 			*	As the first step, we construct the maximum sequence number per each family unit per each wave
@@ -650,6 +659,74 @@
 		}
 		
 		
+				
+		*	Food stamp usage (current year)
+		*	Merge "current year" (99-07) and "last month" (09-17)
+		*	Since very little households (less than 0.5% each year) survyed in Jan, we can create dummy for "current year" if household used stamp "last month" (if anyone said "yes" during Feb-Dec, it implies they used stamp in curent year)
+		***	Issue: the fact that HH didn't use food stamp last month does NOT necessarily imply that HH didn't use food stamp the entire year.
+		foreach	year	in	2009	2011	2013	2015	2017	{
+			
+			gen		food_stamp_used_0yr`year'	=	0
+			replace	food_stamp_used_0yr`year'	=	1	if	food_stamp_used_1month`year'	==	1
+			replace	food_stamp_used_0yr`year'	=.		if	mi(food_stamp_used_1month`year')
+			
+			label	var	food_stamp_used_0yr`year'	"SNAP/food stamp"
+		}
+		
+		order	food_stamp_used_0yr2009-food_stamp_used_0yr2017, after(food_stamp_used_0yr2007)
+		
+		
+		*	Food stamp value
+		*	Annualize food stamp value redeemed (in thousands)
+		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+			
+			
+			*	Previous year
+			replace	food_stamp_value_1yr`year'	=	food_stamp_value_1yr`year'	*	52	if	food_stamp_freq_1yr`year'==3	//	If response was weekly, multiply by 52
+			replace	food_stamp_value_1yr`year'	=	food_stamp_value_1yr`year'	*	26	if	food_stamp_freq_1yr`year'==4	//	If response was bi-weekly, multiply by 26
+			replace	food_stamp_value_1yr`year'	=	food_stamp_value_1yr`year'	*	12	if	food_stamp_freq_1yr`year'==5	//	If response was monthly, multiply by 12
+			replace	food_stamp_value_1yr`year'	=	0									if	inlist(food_stamp_freq_1yr`year',7,8,9,0)	//	If others (dk, others, refuse, inapp), assign 0		
+			
+			label	variable	food_stamp_value_1yr`year'	"Annual food stamp value of the previous year in `year'"
+			
+			*	Current year
+			if	inlist(`year',1999,2001,2003,2005,2007)	{
+				
+				replace	food_stamp_value_0yr`year'	=	food_stamp_value_0yr`year'	*	52	if	food_stamp_freq_0yr`year'==3	//	If response was weekly, multiply by 52
+				replace	food_stamp_value_0yr`year'	=	food_stamp_value_0yr`year'	*	26	if	food_stamp_freq_0yr`year'==4	//	If response was bi-weekly, multiply by 26
+				replace	food_stamp_value_0yr`year'	=	food_stamp_value_0yr`year'	*	12	if	food_stamp_freq_0yr`year'==5	//	If response was monthly, multiply by 12
+				replace	food_stamp_value_0yr`year'	=	0									if	inlist(food_stamp_freq_0yr`year',7,8,9,0)	//	If others (dk, others, refuse, inapp), assign 0
+				
+				label	variable	food_stamp_value_0yr`year'	"Annual food stamp value of the current year in `year'"
+				
+			}
+			
+			if	inlist(`year',2009,2011,2013,2015,2017)	{	//	These years only have monthly food stamp values redeemed
+				
+				gen		food_stamp_value_0yr`year'	=	food_stamp_value_1month`year'	*	12	//	Multiply monthly value by 12								
+				label	variable	food_stamp_value_0yr`year'	"Annual food stamp value of the current year in `year'"
+				
+				
+			}	
+			
+			*	Recode other answers as zero.
+			recode	food_stamp_value_1yr`year'	food_stamp_value_0yr`year'	(0	5	8	9	.d	.r=0)
+			
+			gen		food_stamp_value_0yr_pc`year'	=	food_stamp_value_0yr`year'	/	num_FU_fam`year'
+			label	var	food_stamp_value_0yr_pc`year'	"Food stamp (per capita) value current year"
+			
+		}
+		
+		
+		*	Add food stamp value to food expenditures
+		forval	year=1999(2)2017	{
+			
+			egen	food_exp_stamp`year'	=	rowtotal(food_exp_total`year' food_stamp_value_0yr`year')
+			
+			label	var	food_exp_stamp`year'	"Total food exp with stamp value (`year')"
+		}
+		
+		
 		*	Income &  expenditure & wealth & tax per capita
 			
 			foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
@@ -659,7 +736,8 @@
 					
 					*	Expenditures, tax, debt and wealth per capita
 					
-					gen	food_exp_pc`year'			=	food_exp_total`year'/num_FU_fam`year'
+					gen	food_exp_pc`year'			=	food_exp_total`year'/num_FU_fam`year'	//	Without food stamp value
+					gen	food_exp_stamp_pc`year'		=	food_exp_stamp`year'/num_FU_fam`year'	//	With food stamp value
 					gen	child_exp_pc`year'			=	child_exp_total`year'/num_FU_fam`year'
 					gen	edu_exp_pc`year'			=	edu_exp_total`year'/num_FU_fam`year'
 					gen	health_exp_pc`year'			=	health_exp_total`year'/num_FU_fam`year'
@@ -704,7 +782,7 @@
 		*	Winsorize family income and expenditures per capita at top 1%, and scale it to thousand-dollars via division
 		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
 			
-			foreach	var	in	income_pc	food_exp_pc	child_exp_pc	edu_exp_pc	health_exp_pc	house_exp_pc	property_tax_pc	transport_exp_pc	/*other_debts*/	wealth_pc	{
+			foreach	var	in	income_pc	food_exp_pc	food_exp_stamp_pc	child_exp_pc	edu_exp_pc	health_exp_pc	house_exp_pc	property_tax_pc	transport_exp_pc	/*other_debts*/	wealth_pc	{
 				
 				*	Winsorize top 1% 
 				winsor `var'`year' 			if xsqnr_`year'!=0 & inrange(sample_source,1,3), gen(`var'_wins`year') p(0.01) highonly
@@ -718,7 +796,8 @@
 			}	//	var	
 			
 			label	variable	income_pc`year'	"Family income per capita (K) - `year'"
-			label	variable	food_exp_pc`year'	"Food expenditure per capita (K) - `year'"
+			label	variable	food_exp_pc`year'	"Food exp per capita (K) - `year'"
+			label	variable	food_exp_stamp_pc`year'	"Food exp (with stamp) per capita (K) - `year'"
 			label	variable	child_exp_pc`year'	"Child expenditure per capita (K) - `year'"
 			label	variable	edu_exp_pc`year'	"Education expenditure per capita (K) - `year'"
 			label	variable	health_exp_pc`year'	"Health expenditure per capita (K) - `year'"
@@ -752,38 +831,7 @@
 			label	var	ratio_child`year'	"\% of children population in `year'"
 		}
 		
-		
-		*	Food stamp usage (current year)
-		*	Merge "current year" (99-07) and "last month" (09-17)
-		*	Since very little households (less than 0.5% each year) survyed in Jan, we can create dummy for "current year" if household used stamp "last month" (if anyone said "yes" during Feb-Dec, it implies they used stamp in curent year)
-		foreach	year	in	2009	2011	2013	2015	2017	{
-			
-			gen		food_stamp_used_0yr`year'	=	0
-			replace	food_stamp_used_0yr`year'	=	1	if	food_stamp_used_1month`year'	==	1
-			replace	food_stamp_used_0yr`year'	=.		if	mi(food_stamp_used_1month`year')
-			
-			label	var	food_stamp_used_0yr`year'	"SNAP/food stamp"
-		}
-		
-		order	food_stamp_used_0yr2009-food_stamp_used_0yr2017, after(food_stamp_used_0yr2007)
-		
-		
-		*	Food stamp value (previous year)
-		*	Annualize food stamp value redeemed (in thousands)
-		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
-			
-			gen		food_stamp_val`year'	=	food_stamp_value_1yr`year'	*	52	if	food_stamp_freq_1yr`year'==3	//	If response was weekly, multiply by 52
-			replace	food_stamp_val`year'	=	food_stamp_value_1yr`year'	*	26	if	food_stamp_freq_1yr`year'==4	//	If response was bi-weekly, multiply by 26
-			replace	food_stamp_val`year'	=	food_stamp_value_1yr`year'	*	12	if	food_stamp_freq_1yr`year'==5	//	If response was monthly, multiply by 12
-			replace	food_stamp_val`year'	=	food_stamp_value_1yr`year'			if	food_stamp_freq_1yr`year'==6	//	If response was year, just copy the value
-			replace	food_stamp_val`year'	=	0									if	food_stamp_freq_1yr`year'==0	//	If stamp is not used, assign 0
-			
-			replace	food_stamp_val`year'	=	food_stamp_val`year'/1000 // Divide into 1,000 to make thousands as a unit.
-			
-			label	variable	food_stamp_val`year'	"Annual food stamp value of the last year in `year' (K)"
-			
-		}
-		
+
 	
 		*	Food expenditure
 			
@@ -1048,7 +1096,8 @@
 		label	var	fs_scale_fam_rescale	"USDA food security scale score-rescaled"
 		label	var	fs_cat_fam 			"USDA food security category"
 		label	var	food_stamp_used_2yr	"Received food Stamp (2 years ago)"
-		label	var	food_stamp_used_1yr "Received food stamp"
+		label	var	food_stamp_used_1yr "Received food stamp (previous year)"
+		label	var	food_stamp_used_0yr "Received food stamp (current year)"
 		label	var	child_meal_assist	"Received child free meal at school"
 		label	var	WIC_received_last	"Received foods through WIC"
 		label	var	family_comp_change	"Change in family composition"
@@ -1062,7 +1111,8 @@
 		label	var	college_completed	"HH has college degree"
 		label	var	respondent_BMI		"Respondent's Body Mass Index"
 		label	var	income_pc			"Family income per capita (thousands)"
-		label	var	food_exp_pc			"Food expenditure per capita (thousands)"
+		label	var	food_exp_pc			"Food exp per capita (thousands)"
+		label	var	food_exp_stamp_pc	"Food exp (with stamp) per capita (thousands)"
 		label	var	avg_income_pc		"Average income over two years per capita"
 		label	var	avg_foodexp_pc		"Average food expenditure over two years per capita"
 		label	var	splitoff_indicator	"Splitoff indicator"
@@ -1166,6 +1216,8 @@
 		label	var	foodexp_recall_home		"Food expenditure (at home) recall period"
 		label	var	foodexp_recall_away		"Food expenditure (away) recall period"
 		label	var	foodexp_recall_deliv	"Food expenditure (delivered) recall period"
+		label	var	mental_problem	"Mental problem"
+		label	var	week_of_year	"Week of the year"
 		
 
 		*label	var	cloth_exp_total		"Total cloth expenditure"
@@ -1174,7 +1226,9 @@
 		label	var	income_to_poverty		"Income to Poverty Ratio"
 		label	var	income_to_poverty_cat		"Income to Poverty Ratio (category)"
 		
-		label 	var	food_stamp_val	"Annual food stamp value of the last year"
+		*label 	var	food_stamp_val	"Annual food stamp value of the last year"
+		label	var	food_stamp_value_1yr	"Annual food stamp value of the previous year"
+		label	var	food_stamp_value_0yr	"Annual food stamp value of the current year"
 			      
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
 				house_exp_total	property_tax	transport_exp	wealth_total	/*cloth_exp_total*/
@@ -1197,7 +1251,7 @@
 	replace	year	=	(year-1997)/2
 	
 	*	Generate in-sample and out-of-sample for performance check
-	*	We use the data up to 2015 as "in-sample", and the data in 2018 as "out-of-sample"
+	*	We use the data up to 2015 as "in-sample", and the data in 2017 as "out-of-sample"
 	gen		in_sample	=	0
 	replace	in_sample	=	1	if	inrange(year,1,9)
 	label	var	in_sample	"In-sample (1999~2015)"
@@ -1220,7 +1274,7 @@
 		qui	ds	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse	veteran_head	veteran_spouse	tax_item_deduct	///
 				retire_plan_head	retire_plan_spouse	annuities_IRA	attend_college_head	attend_college_spouse	hs_completed_head	hs_completed_spouse	///
 				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	food_stamp_used_0yr	child_meal_assist	WIC_received_last	elderly_meal	///
-				child_daycare_any	child_daycare_FSP	child_daycare_snack	emp_HH_simple emp_spouse_simple	food_stamp_val	
+				child_daycare_any	child_daycare_FSP	child_daycare_snack	emp_HH_simple emp_spouse_simple	mental_problem
 		label values	`r(varlist)'	yes1no0
 		recode	`r(varlist)'	(0	5	8	9	.d	.r=0)
 	}
@@ -1231,13 +1285,16 @@
 		gen	lag_food_exp_pc_`i'	=	(cl.food_exp_pc)^`i'
 		label	var	lag_food_exp_pc_`i'	"Lagged food exp (pc) - `i'th polynimial	order"
 		
-		*gen	lag_avg_foodexp_pc_`i'	=	(cl.avg_foodexp_pc)^`i'
-		*label	var	lag_avg_foodexp_pc_`i'	"Lagged avg. food exp (pc) `i'th polynimial	order"
+		gen	lag_food_exp_stamp_pc_`i'	=	(cl.food_exp_stamp_pc)^`i'
+		label	var	lag_food_exp_stamp_pc_`i'	"Lagged food exp (pc) (with stamp) - `i'th polynimial	order"
 		
 	}
-	label	var	lag_food_exp_pc_1	"Lagged food expenditure per capita"
-	order	lag_food_exp_pc_1-lag_food_exp_pc_5,	after(food_exp_pc)
-	*order	lag_avg_foodexp_pc_1-lag_avg_foodexp_pc_5,	after(avg_foodexp_pc)
+	label	var	lag_food_exp_pc_1	"Lagged food exp per capita"
+	order	lag_food_exp_pc_?,	after(food_exp_pc)
+	
+	label	var	lag_food_exp_stamp_pc_1	"Lagged food exp (with stamp) per capita"
+	order	lag_food_exp_stamp_pc_?,	after(food_exp_stamp_pc)
+	
 	 
 	*	Create variables of status change (employment, marital status, ....) which could affect food expenditure
 		
@@ -1443,6 +1500,7 @@
 	label	var	income_pc			"Income per capita"
 	label	var	ln_income_pc		"ln(income per capita)"
 	label	var	food_exp_pc			"Food expenditure per capita"
+	label	var	food_exp_stamp_pc	"Food expenditure per capita (with food stamp)"
 	label	var	emp_HH_simple		"Employed"
 	label	var	phys_disab_head		"Disabled"
 	label	var	num_FU_fam			"Family size"
