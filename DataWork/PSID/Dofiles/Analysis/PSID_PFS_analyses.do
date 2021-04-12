@@ -154,7 +154,7 @@
 		
 	*	OLS
 	local	run_GLM	1
-		local	model_selection	0
+		local	model_selection	1
 		local	run_ME	0
 		
 	*	LASSO
@@ -183,11 +183,11 @@
 		local	statevars	lag_food_exp_pc_1##lag_food_exp_pc_1##lag_food_exp_pc_1	/*##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	lag_food_exp_pc_1-lag_food_exp_pc_5*/
 		local	demovars	age_head_fam age_head_fam_sq	/*HH_race_black	HH_race_other*/	HH_race_color	marital_status_cat	HH_female	/*ib1.race_head_cat*/	/*ib1.gender_head_fam*/		
 		local	econvars	ln_income_pc	/*ln_wealth_pc*/	/*income_pc	income_pc_sq	wealth_pc	wealth_pc_sq*/	
-		local	healthvars	phys_disab_head
+		local	healthvars	phys_disab_head mental_problem
 		local	empvars		emp_HH_simple
 		local	familyvars	num_FU_fam ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
 		local	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	/*attend_college_head college_yrs_head (hs_completed_head	college_completed	other_degree_head)##c.grade_comp_head_fam*/	
-		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal	/*meal_together*/	
+		local	foodvars	/*food_stamp_used_1yr*/ food_stamp_used_0yr	child_meal_assist /*WIC_received_last	elderly_meal*/	/*meal_together*/	
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	/*ib0.state_resid_fam*/	state_group? state_group1? state_group2?
 		local	timevars	i.year
@@ -799,7 +799,7 @@
 		local	demovars	age_head_fam	HH_race_white	HH_race_color	marital_status_cat	HH_female	
 		local	econvars	income_pc	food_exp_pc
 		local	empvars		emp_HH_simple
-		local	healthvars	phys_disab_head
+		local	healthvars	phys_disab_head	mental_problem
 		local	familyvars	num_FU_fam ratio_child
 		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
 		local	foodvars	food_stamp_used_1yr	child_meal_assist /*WIC_received_last	elderly_meal*/
@@ -855,41 +855,90 @@
 	
 	
 	* Examining recall period.
-	
-		*	Frequency table
-		tab foodexp_recall_home if !mi(rho1_foodexp_pc_thrifty_ols) & foodexp_recall_home!=0	&	year!=1
 		
 		*	Count the number of non-missing PFS obs within household over time. We will restrict our analysis on households with non-missing PFS 
 		cap	drop	num_nonmissing_PFS
 		bys fam_ID_1999: egen num_nonmissing_PFS = count(rho1_foodexp_pc_thrifty_ols)
 				
+		
 		*	Frequency table of recall period
-		tab	foodexp_recall_home	if	num_nonmissing_PFS!=0	&	year!=1	&	foodexp_recall_home!=0
+		*	We focus on at-home expenditure, as most households report it.
+		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0	&	year!=1 ): tab foodexp_recall_home	//	Adjusted
+		*tab	foodexp_recall_home	if	${study_sample}==1 & num_nonmissing_PFS!=0	&	year!=1	//	Unadjusted
 		
 		*	Stability of recall period within household over time
-		cap drop	num_period
-		cap	drop	num_period_temp
-		qui unique foodexp_recall_home if year!=1, by(fam_ID_1999) gen(num_period_temp)	//	Number of unique recall period. One non-missing obs per household.
-		bys fam_ID_1999: egen num_period = max(num_period_temp)
-		drop	num_period_temp	
-		tab	num_period if  	num_nonmissing_PFS!=0	&	year==2	//	"year==2" is to count only 1 obs per household.
-		*	We argue that household reported food expenditure stabley over time if the number of unique report period is low.
+		cap drop	foodexp_recall_num
+		cap	drop	foodexp_recall_num_temp
+		qui unique foodexp_recall_home if year!=1  , by(fam_ID_1999) gen(foodexp_recall_num_temp)	//	Number of unique recall period. One non-missing obs per household. I did not exclude "Inappropriate", as responses like "refuse to answer/NA" implies unstability in recall period.
+		bys fam_ID_1999: egen foodexp_recall_num = max(foodexp_recall_num_temp)
+		drop	foodexp_recall_num_temp	
+		
+		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0	&	year==2 ): tab foodexp_recall_num	//	Adjusted, "year==2" is to count only 1 obs per household.
+		*tab	foodexp_recall_num if  	num_nonmissing_PFS!=0	&	year==2	//	Unadjusted
+		*	We argue that household reported food expenditure stablely over time if the number of unique report period is low.
 		
 		*	Consistency of recall period within household over time.
-		*	We focus on at-home expenditure, as most households report it.
 		cap	drop	foodexp_recall_home_mean
 		bys fam_ID_1999: egen foodexp_recall_home_mean = mean(foodexp_recall_home) if year!=1	//	Exclude 1999 expenditure from analysis (1999 is NOT a sample year)
-		tab	foodexp_recall_home_mean	if	num_nonmissing_PFS!=0 & year==2 // count only 1 obs per household via !mi(num_period)
+		tab	foodexp_recall_home_mean	if	num_nonmissing_PFS!=0 & year==2 // count only 1 obs per household via !mi(foodexp_recall_num)
 		
-		*	Mean=3 & num_period=1 implies households reported weekly expenditure only over the study period.
+		*	Mean=3 & foodexp_recall_num=1 implies households reported weekly expenditure only over the study period.
 		cap	drop	foodexp_recall_home_weekonly
 		gen		foodexp_recall_home_weekonly	=	0
-		replace	foodexp_recall_home_weekonly	=	1	if	num_period==1	&	foodexp_recall_home_mean==3
-		tab		foodexp_recall_home_weekonly	if	num_nonmissing_PFS!=0 &	year==2
+		replace	foodexp_recall_home_weekonly	=	1	if	foodexp_recall_num==1	&	foodexp_recall_home_mean==3
+		
+		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0 &	year==2	 ): tab foodexp_recall_home_weekonly	//	Adjusted
+		*	tab		foodexp_recall_home_weekonly	if	num_nonmissing_PFS!=0 &	year==2	//	Unadjussted
+		
+
+			*	Let's examine household characteristics of households reporting multiple recall period (3 or more) over the survey period.
+		local	var	foodexp_recall_home_multiple
+		cap	drop	`var'
+		gen		`var'	=	0	if	!mi(foodexp_recall_num)
+		replace	`var'	=	1	if	!mi(foodexp_recall_num)	&	foodexp_recall_num>=3
 		
 		
+		local	demovars	age_head_fam 
+		local	econvars	ln_income_pc	food_exp_pc
+		local	healthvars	phys_disab_head mental_problem
+		local	empvars		emp_HH_simple
+		local	familyvars	num_FU_fam ratio_child
+		local	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	
+		local	foodvars	food_stamp_used_0yr	child_meal_assist
 		
-	
+		*	Simple OLS
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)): reg `var' 	`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	
+		est	store	foodexp_recall_reg
+		
+		*	Output
+		esttab	foodexp_recall_reg	using "${PSID_outRaw}/foodexp_recall_reg.csv", ///
+				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+				title(Conditional Mean and Variance of Food Expenditure per capita) 	///			
+				replace
+		
+		
+		*	Food stamp value
+		cap	mat	drop	food_stamp_value_0yr
+		forval	year=2/5	{
+			
+			svy, subpop(if ${study_sample}==1 & year==`year'	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5): mean food_stamp_value_0yr	//	Adjusted
+			mat	food_stamp_value_0yr	=	nullmat(food_stamp_value_0yr) \ e(b)[1,1]
+			
+		}
+		mat	list	food_stamp_value_0yr
+		
+		
+		*	Food stamp value by recall period
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	): tab food_stamp_freq_0yr
+		
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==3	): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5	): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==6	): mean food_stamp_value_0yr
+		
+		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==3	 ): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5	 ): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==6	 ): mean food_stamp_value_0yr
+
 	
 	/****************************************************************
 		SECTION 3: Categorization
@@ -1237,10 +1286,13 @@
 		
 	}	//	Categorization			
 
-	
+	save	"${PSID_dtInt}/PFS_cat_ready.dta", replace
+		
 	/****************************************************************
 		SECTION 4: Correlation between the PFS and the USDA measure
 	****************************************************************/	
+	
+	use	"${PSID_dtInt}/PFS_cat_ready.dta", clear
 	
 	*	Correlation	//	Examine correlation between the PFS and the USDA measure
 	local	reg_correlation		1	//	Regression coefficient, rank correlation Kolmogorov–Smirnov.
@@ -1250,42 +1302,102 @@
 	*	Regression of the USDA scale on the PFS
 	if	`reg_correlation'==1	{
 		
+		
+		*	Create decile indicator
+		cap	drop	PFS_decile_cutoff
+		cap	drop	PFS_decile
+		pctile 	PFS_decile_cutoff = rho1_foodexp_pc_thrifty_ols [pweight=weight_multi12] if (${study_sample}==1	&	inlist(year,2,3,9,10)), nq(10)
+		
+		gen		PFS_decile=.
+		quietly	summarize	PFS_decile_cutoff	in	1
+		replace	PFS_decile=1	if	inrange(rho1_foodexp_pc_thrifty_ols,0,r(mean))
+		forvalues	i=1/8	{
+			
+			local	j=`i'+1
+			qui	summ	PFS_decile_cutoff	in	`i'
+			local	minPFS=r(mean)
+			qui	summ	PFS_decile_cutoff	in	`j'
+			local	maxPFS=r(mean)
+			
+			replace	PFS_decile	=	`j'	if	inrange(rho1_foodexp_pc_thrifty_ols,`minPFS',`maxPFS')
+		}
+		
+		qui	summarize	PFS_decile_cutoff	in	9
+		replace	PFS_decile	=	10	if	inrange(rho1_foodexp_pc_thrifty_ols,r(mean),1)
+
+		
 		foreach	type	in	ols	/*ls	rf*/	{
 			
 			*	Regression
-			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'
-			est	sto	corr_USDA_`type'_lin_noFE
-			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type'
-			est	sto	corr_USDA_`type'_nonlin_noFE
-			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'	i.year ib0.state_resid_fam
-			est	sto	corr_USDA_`type'_lin_FE
-			svy, subpop(${study_sample}): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type' i.year ib0.state_resid_fam
-			est	sto	corr_USDA_`type'_nonlin_FE
+				
+				*	All study sample
+				svy, subpop(${study_sample}): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'
+				est	sto	corr_`type'_lin_noFE
+				svy, subpop(${study_sample}): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type'
+				est	sto	corr_`type'_nonlin_noFE
+				svy, subpop(${study_sample}): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'	i.year state_group? state_group1? state_group2?
+				est	sto	corr_`type'_lin_FE
+				svy, subpop(${study_sample}): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type' i.year state_group? state_group1? state_group2?
+				est	sto	corr_`type'_nonlin_FE
+				
+				*	Bottom 20% of the PFS
+				svy, subpop(if	${study_sample}==1	&	inlist(PFS_decile,1,2)): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'
+				est	sto	corr_`type'_lin_low20_noFE
+				svy, subpop(if	${study_sample}==1	&	inlist(PFS_decile,1,2)): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type'
+				est	sto	corr_`type'_nonlin_low20_noFE
+				svy, subpop(if	${study_sample}==1	&	inlist(PFS_decile,1,2)): reg fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_`type'	i.year state_group? state_group1? state_group2?
+				est	sto	corr_`type'_lin_low20_FE
+				svy, subpop(if	${study_sample}==1	&	inlist(PFS_decile,1,2)): reg fs_scale_fam_rescale	c.rho1_foodexp_pc_thrifty_`type'##c.rho1_foodexp_pc_thrifty_`type' i.year state_group? state_group1? state_group2?
+				est	sto	corr_`type'_nonlin_low20_FE
 			
 			*	Output (Table A4 of 2020/11/16 draft)
-			esttab	corr_USDA_`type'_lin_noFE	corr_USDA_`type'_nonlin_noFE	corr_USDA_`type'_lin_FE		corr_USDA_`type'_nonlin_FE	using "${PSID_outRaw}/USDA_PFS_correlation_`type'.csv", ///
-			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+			esttab	corr_`type'_lin_noFE		corr_`type'_nonlin_noFE			corr_`type'_lin_FE			corr_`type'_nonlin_FE	///
+					corr_`type'_lin_low20_noFE	corr_`type'_nonlin_low20_noFE	corr_`type'_lin_low20_FE	corr_`type'_nonlin_low20_FE	///
+					using "${PSID_outRaw}/USDA_PFS_correlation_`type'.csv", ///
+			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 			title(Regression of the USDA scale on PFS(`type')) replace
 			
-			esttab	corr_USDA_`type'_lin_noFE	corr_USDA_`type'_nonlin_noFE	corr_USDA_`type'_lin_FE		corr_USDA_`type'_nonlin_FE	using "${PSID_outRaw}/USDA_PFS_correlation_`type'.tex", ///
-			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+			esttab	corr_`type'_lin_noFE		corr_`type'_nonlin_noFE			corr_`type'_lin_FE			corr_`type'_nonlin_FE	///
+					corr_`type'_lin_low20_noFE	corr_`type'_nonlin_low20_noFE	corr_`type'_lin_low20_FE	corr_`type'_nonlin_low20_FE	///
+					using "${PSID_outRaw}/USDA_PFS_correlation_`type'.tex", ///
+			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 			title(Regression of the USDA scale on PFS(`type')) replace
 			
 						
-		*	Spearman's rank correlation
+		*	Rank correlation (spearman, Kendall's tau)
 			
 			*	Pooled
+			cap	mat	drop	corr_all
+			cap	mat	drop	corr_spearman
+			cap	mat	drop	corr_kendall
+			
 			spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf*/	///
 				if ${study_sample}	&	inlist(year,2,3,9,10),	stats(rho obs p)
+			mat	corr_spearman	=	r(rho)	
 			ktau 	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf*/	///
 				if ${study_sample}	&	inlist(year,2,3,9,10), stats(taua taub p)
+			mat	corr_kendall	=	r(tau_b)
 			
-			*	By year
-			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==2,	stats(rho obs p)
-			*ktau	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==2,	stats(taua taub score se p)
-			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==3,	stats(rho obs p)
-			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==9,	stats(rho obs p)
-			*spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf	if year==10, stats(rho obs p)
+			*	By PFS decile
+								
+				*	Check correlation per each decile
+				forvalues	i=1/10	{
+					
+					spearman	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf*/	///
+						if ${study_sample}	&	inlist(year,2,3,9,10)	&	PFS_decile==`i',	stats(rho obs p)
+						
+					mat	corr_spearman	=	nullmat(corr_spearman)	\	r(rho)	
+						
+					ktau 	fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols	/*rho1_foodexp_pc_thrifty_ls	rho1_foodexp_pc_thrifty_rf*/	///
+						if ${study_sample}	&	inlist(year,2,3,9,10)	&	PFS_decile==`i', stats(taua taub p)
+						
+					mat	corr_kendall	=	nullmat(corr_kendall)	\	r(tau_b)		
+					
+				}
+				
+				*	Correlation table, aggregated
+				mat	corr_all	=	corr_spearman,	corr_kendall
+			
 			
 			*	Summarize PFS (https://www.stata.com/support/faqs/statistics/percentiles-for-survey-data/)
 			summ	fs_scale_fam_rescale 		if ${study_sample}==1	&	inlist(year,2,3,9,10)	&	!mi(rho1_foodexp_pc_thrifty_ols)  [aweight=weight_multi12], detail
@@ -1491,7 +1603,56 @@
 			duplicates drop
 	}	//	supplement_analysis		
 				
+				
+		*	PFS by the week of the survey
+	cap	mat	drop	PFS_byweek_all
+	cap	mat	drop	PFS_byweek_FI
+	cap	mat	drop	week
+	forval	week=1/52	{
+			
+			*di "current week is `week'"
+			mat	week	=	nullmat(week)	\	`week'
+			
+			*	All households
+			qui count	if	${study_sample}==1	&	year!=1	&	week_of_year==`week'
+			if	r(N)==0	{
+				
+				mat	PFS_byweek_all	=	nullmat(PFS_byweek_all)	\	0
+				mat	PFS_byweek_FI	=	nullmat(PFS_byweek_FI)	\	0
+				continue
+				
+			}		
+			qui	svy, subpop(if ${study_sample}==1	&	year!=1	&	week_of_year==`week'):	mean	rho1_foodexp_pc_thrifty_ols
+			
+			
+			mat	PFS_byweek_all	=	nullmat(PFS_byweek_all)	\	e(b)[1,1]
+			
+			
+			*	FI households
+			qui count	if	${study_sample}==1	&	year!=1	&	week_of_year==`week'	&	rho1_thrifty_FI_ols==1
+			if	r(N)==0	{
+				
+				mat	PFS_byweek_FI	=	nullmat(PFS_byweek_FI)	\	0
+				continue
+				
+			}		
+			qui	svy, subpop(if ${study_sample}==1	&	year!=1	&	week_of_year==`week'	&	rho1_thrifty_FI_ols==1):	mean	rho1_foodexp_pc_thrifty_ols
+			
+			
+			mat	PFS_byweek_FI	=	nullmat(PFS_byweek_FI)	\	e(b)[1,1]
 		
+	}
+	
+	cap	mat	drop	PFS_byweek_table
+	mat	PFS_byweek_table	=	week,	PFS_byweek_all,	PFS_byweek_FI
+	
+	*	Simple regression of PFS on interview dummy.
+	svy, subpop(if ${study_sample}==1): reg rho1_foodexp_pc_thrifty_ols	ib47.week_of_year
+			
+	
+	*	Inclusion/Exclusion with the HFSM
+	svy, subpop(if ${study_sample}==1 & inlist(year,2,3,9,10)): tab 	fs_cat_fam_simp	rho1_thrifty_FS_ols	
+	
 	/****************************************************************
 		SECTION 5: Regression of Indicators on Correlates
 	****************************************************************/
@@ -1517,8 +1678,8 @@
 		local	familyvars	c.num_FU_fam c.ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
 		local	eduvars		/*attend_college_head*/ highdegree_NoHS highdegree_somecol highdegree_col
 		local	empvars		emp_HH_simple
-		local	healthvars	phys_disab_head
-		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
+		local	healthvars	phys_disab_head	mental_problem
+		local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist /*WIC_received_last	elderly_meal*/
 		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	/*ib0.state_resid_fam*/		state_group? state_group1? state_group2?
 		local	interactvars	c.ln_income_pc#c.HH_female	///
@@ -1641,9 +1802,16 @@
 		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE_West.png", replace
 		graph	close
 								
-		graph combine		state_group_NE	state_group_MA		state_group_South	state_group_Midwest	state_group_West, title(PFS State(Grouped) FE)
-		graph	export	"${PSID_outRaw}/PFS_State_Grouped_FE.png", replace
-		graph	close
+		
+		
+				
+		coefplot	PFS_regionFE_nocontrols	PFS_regionFE_controls, keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+				title(Regional Fixed Effects)		name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+				graph	export	"${PSID_outRaw}/PFS_groupstateFE_All.png", replace
+				graph	close
+
+			
+		
 	}
 	
 
@@ -2011,8 +2179,8 @@
 		SECTION 7: Dynamics
 	****************************************************************/	
 		
-	local	run_transition_matrix	1	//	Transition matrix
-	local	run_spell_length	1	//	Spell length
+	local	run_transition_matrix	0	//	Transition matrix
+	local	run_spell_length	0	//	Spell length
 	local	run_FS_chron_trans	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
 	
@@ -2331,8 +2499,9 @@
 	if	`run_spell_length'==1	{
 		
 		*	Tag balanced sample (Households without any missing PFS throughout the study period)
-		*	These households will be dropped from spell length analyses not to underestimate spell lengths
-		capture	drop	num_nonmissing_PFS	balanced_PFS
+		*	Unbalanced households will be dropped from spell length analyses not to underestimate spell lengths
+		capture	drop	num_nonmissing_PFS
+		cap	drop	balanced_PFS
 		bys fam_ID_1999: egen num_nonmissing_PFS=count(rho1_thrifty_FI_ols)
 		gen	balanced_PFS=1	if	num_nonmissing_PFS==9
 
@@ -2356,6 +2525,9 @@
 		mat spell_dist_comb	=	summ_spell_length,	persistence_upon_spell
 		mat	rownames	spell_dist_comb	=	2	4	6	8	10	12	14	16	18
 
+		putexcel	set "${PSID_outRaw}/Transition_Matrices", sheet(spell_dist_comb) modify	/*replace*/
+		putexcel	A5	=	matrix(spell_dist_comb), names overwritefmt nformat(number_d1)
+		
 		esttab matrix(spell_dist_comb, fmt(%9.2f)) using "${PSID_outRaw}/Spell_dist_combined.tex", replace	
 
 		drop	_seq _spell _end
@@ -2394,7 +2566,8 @@
 
 		putexcel	set "${PSID_outRaw}/Transition_Matrices", sheet(spell_length) modify	/*replace*/
 		putexcel	A5	=	matrix(dist_spell_length_byyear), names overwritefmt nformat(number_d1)
-
+	
+		
 		esttab matrix(dist_spell_length_byyear, fmt(%9.2f)) using "${PSID_outRaw}/Dist_spell_length.tex", replace	
 	
 	}
@@ -2860,8 +3033,8 @@
 		local	familyvars	num_FU_fam ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
 		local	eduvars		/*attend_college_head*/ highdegree_NoHS highdegree_somecol highdegree_col	
 		local	empvars		emp_HH_simple
-		local	healthvars	phys_disab_head
-		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
+		local	healthvars	phys_disab_head	mental_problem
+		local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist WIC_received_last	elderly_meal
 		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	state_group?	state_group1?	state_group2?	//	excluding NY (state_bgroup) as reference state group.
 		local	interactvars	c.ln_income_pc#c.HH_female	///
@@ -2873,15 +3046,15 @@
 		
 			*	Regression of TFI/CFI on Group state FE
 			
-			local measure SFIG
+			local measure HCR
 			
 			foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	{
 				
-				/*
+				
 				*	Without controls/time FE
 				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' `regionvars'
 				est	store	`depvar'_nocontrols
-				*/
+				
 				
 				*	With controls/time FE
 				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' 	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
@@ -2890,7 +3063,7 @@
 			}
 			
 			*	Output
-			esttab	Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	using "${PSID_outRaw}/TFI_CFI_regression.csv", ///
+			esttab	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols	Transient_FI_`measure'_nocontrols Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	using "${PSID_outRaw}/TFI_CFI_regression.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
@@ -2944,6 +3117,7 @@
 
 				
 			*	Northeast & Mid-Atlantic
+				
 				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1	state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(Northeast and Mid-Atlantic)	name(TFI_CFI_FE_NE_MA, replace) /*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_NE.png", replace
@@ -2992,21 +3166,16 @@
 		
 		*/
 		
-		coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+		coefplot	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols	/*Total_FI_`measure'	Chronic_FI_`measure'*/, keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(Regional Fixed Effects)		name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All.png", replace
+				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_nocontrol.png", replace
+				graph	close
+				
+		coefplot	/*Total_FI_`measure'_nocontrols	Total_FI_`measure'_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
+										title(Regional Fixed Effects)		name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_control.png", replace
 				graph	close
 			
-		/*
-		preserve
-			keep	fam_ID_1999	/*weight_multi12	newsecu*/	sample_source	SFIG	SFIG_mean	SFIG_transient
-			duplicates drop
-			drop	if	mi(SFIG)
-			*	Summary stats (unweighted)
-			summ	SFIG	SFIG_mean	SFIG_transient	//	All
-			bys	sample_source: summ	SFIG	SFIG_mean	SFIG_transient	//	By sample
-		restore
-		*/
 		
 	}
 	
