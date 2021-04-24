@@ -65,8 +65,8 @@
   
        global ado      "${mastData}/ado"
            adopath ++  "$ado" 
-           adopath ++  "$ado/m" 
-           adopath ++  "$ado/b" 
+           *adopath ++  "$ado/m" 
+           *adopath ++  "$ado/b" 
    
 
    * ******************************************************************** *
