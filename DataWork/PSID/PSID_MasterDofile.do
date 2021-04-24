@@ -41,31 +41,11 @@
 
    *Install all packages that this project requires:
    *(Note that this never updates outdated versions of already installed commands, to update commands use adoupdate)
-   local user_commands ietoolkit stgit psid sepscatter panelstat qplot	epctile winsor shapley2	rforest	cvlasso coefplot	tsspell  //Fill this list will all user-written commands this project requires
-   foreach command of local user_commands {
-       cap which `command'
-       if	(_rc==111) & "`command'"=="psid"	{
-			ssc	install	psidtools
-	   }
-	   else	if	(_rc==111) & "`command'"=="panelstat"	{
-			net install panelstat, from("https://github.com/pguimaraes99/panelstat/raw/master/")
-	   }
-	   else if	(_rc==111) * "`command'"=="qplot"	{
-			net install gr42_8.pkg, from("http://www.stata-journal.com/software/sj19-3")
-	   }
-	   else	if	(_rc==111) * "`command'"=="epctile"	{
-			net install epctile.pkg
-	   }
-	   else	if	(_rc!=111){
-			continue
-	   }
-	   else	{
-			ssc install `command'
-	   }
-   }
+   * I no longer use this code, as sharing the same ado files across the users (it is done in globals_setup.do file) would ensure better replicability. 
 
    *Standardize settings accross users
-   ieboilstart, version(12.1)          //Set the version number to the oldest version used by anyone in the project team
+   ssc install ietoolkit
+   ieboilstart, version(14.1) maxvar(32767) matsize(11000)        //Set the version number to the oldest version used by anyone in the project team
    `r(version)'                        //This line is needed to actually set the version from the command above
 
 *iefolder*1*FolderGlobals*******************************************************
@@ -96,7 +76,7 @@
 	   global	clouldfolder	"E:\Box\US Food Security Dynamics"	// Clouldfolder location (where rawdata is stored)
    }
 
-   if "`c(username)'"== "ftac2" {	//	Min, personal LAPTOP
+   if "`c(username)'"== "ftac2" {	//	Min, personal laptop
        global	projectfolder	"E:\GitHub\US_Food_Dynamics"
 	   global	clouldfolder	"E:\Box\US Food Security Dynamics"
    }
@@ -121,7 +101,7 @@
 *iefolder*1*FolderGlobals*master************************************************
 *iefolder will not work properly if the line above is edited
 
-  // global mastData               "$dataWorkFolder/MasterData" 
+   global mastData               "$dataWorkFolder/MasterData" 
 
 *iefolder*1*FolderGlobals*encrypted*********************************************
 *iefolder will not work properly if the line above is edited
