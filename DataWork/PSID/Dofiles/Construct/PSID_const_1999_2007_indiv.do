@@ -2,13 +2,13 @@
 	/*****************************************************************
 	PROJECT: 		US Food Security Dynamics
 					
-	TITLE:			PSID_const_1999_2017_ind
+	TITLE:			PSID_const_ind
 				
 	AUTHOR: 		Seungmin Lee (sl3235@cornell.edu)
 
-	LAST EDITED:	2020/9/23, by Seungmin Lee (sl3235@cornell.edu)
+	LAST EDITED:	2021/4/24, by Seungmin Lee (sl3235@cornell.edu)
 	
-	IDS VAR:    	x11101ll // Personal Identification Number
+	IDS VAR:    	fam_ID_1999 // Personal Identification Number
 
 	DESCRIPTION: 	Construct PSID individual panel data from 1999 to 2017
 		
@@ -55,7 +55,7 @@
 	set varabbrev	off
 	
 	* Filename and log
-	loc	name_do	PSID_const_1999_2017_ind
+	loc	name_do	PSID_const_ind
 	*log using	"${bl_do_cleaning}/logs/`name_do'", replace
 	
 	/* Git setup */
@@ -68,35 +68,12 @@
 		SECTION 1: Construct descriptive variables		 									
 	****************************************************************/
 	
-	use	"${PSID_dtInt}/PSID_clean_1999_2017_ind.dta", clear
+	use	"${PSID_dtInt}/PSID_cleaned_ind.dta", clear
 	
-		
-	*	Relation to "current" reference person (head)
-	local	years	1999 2001 2003 2005 2007 2009 2011 2013 2015 2017
-		foreach	year of local years	{
-			
-			*	Relation to current head
-			generate	relat_to_current_head`year'	=.
-			
-			replace	relat_to_current_head`year'	=	1	if	xsqnr_`year'==1	&	relat_to_head`year'==10
-			replace	relat_to_current_head`year'	=	2	if	xsqnr_`year'==2	&	inlist(relat_to_head`year',20,22)
-			replace	relat_to_current_head`year'	=	3	if	inrange(xsqnr_`year',2,20)	&	inrange(relat_to_head`year',30,38)
-			replace	relat_to_current_head`year'	=	4	if	!inrange(xsqnr_`year',1,20)	|	!inrange(relat_to_head`year',1,38)
-			replace	relat_to_current_head`year'	=	.n	if	inlist(0,xsqnr_`year',relat_to_head`year')
-			
-			label	variable	relat_to_current_head`year'	"Relation to current head, `year'"
-			
-			note	relat_to_current_head`year': son/daughter includes stepson/daughter, son-in-law/daughter-in-law
-							
-		}
-					
-		label	define	relat_to_current_head	1	"Reference Person (Head)"	///
-												2	"Spouse or partner"	///
-												3	"Son/Daughter"	///
-												4	"Other"
-												
-		label values	relat_to_current_head*	relat_to_current_head
-			
+	
+	*	SECTION 1-1: Survey Information Variables
+	
+				
 		*	Sample source
 		gen		sample_source=.
 		replace	sample_source=1	if	inrange(x11101ll,1000,2930999)	//	SRC
@@ -119,8 +96,8 @@
 		label	values	sample_source_SRC_SEO	yesno
 		label	variable	sample_source_SRC_SEO	"Sample = SRC or SEO"	
 		
-		
-		*	Generate week of year
+					
+		*	Week of the year (when survey was done)
 		forval	year=1999(2)2017	{
 			
 			gen	week_of_year`year'	=	week(mdy(interview_month`year',interview_day`year',`year'))
@@ -128,7 +105,51 @@
 			lab	var	week_of_year`year'	"Week of the year (`year')"
 			
 		}
+					
+		*	Import variables for sampling error estimation
+		preserve
 		
+		use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
+	
+		*	Generate a single ID variable
+		generate	x11101ll=(ER30001*1000)+ER30002
+		
+		tempfile	Ind
+		save		`Ind'
+		
+		restore
+	
+		
+	
+	*	SECTION 1-2: Demographic Variables
+		
+		*	Relation to "current" reference person (head)
+		local	years	1999 2001 2003 2005 2007 2009 2011 2013 2015 2017
+			foreach	year of local years	{
+				
+				*	Relation to current head
+				generate	relat_to_current_head`year'	=.
+				
+				replace	relat_to_current_head`year'	=	1	if	xsqnr_`year'==1	&	relat_to_head`year'==10
+				replace	relat_to_current_head`year'	=	2	if	xsqnr_`year'==2	&	inlist(relat_to_head`year',20,22)
+				replace	relat_to_current_head`year'	=	3	if	inrange(xsqnr_`year',2,20)	&	inrange(relat_to_head`year',30,38)
+				replace	relat_to_current_head`year'	=	4	if	!inrange(xsqnr_`year',1,20)	|	!inrange(relat_to_head`year',1,38)
+				replace	relat_to_current_head`year'	=	.n	if	inlist(0,xsqnr_`year',relat_to_head`year')
+				
+				label	variable	relat_to_current_head`year'	"Relation to current head, `year'"
+				
+				note	relat_to_current_head`year': son/daughter includes stepson/daughter, son-in-law/daughter-in-law
+								
+			}
+						
+			label	define	relat_to_current_head	1	"Reference Person (Head)"	///
+													2	"Spouse or partner"	///
+													3	"Son/Daughter"	///
+													4	"Other"
+													
+			label values	relat_to_current_head*	relat_to_current_head
+
+
 		*	Family Composition Change
 		
 			*	As the first step, we construct the maximum sequence number per each family unit per each wave
@@ -179,316 +200,11 @@
 				replace	`var'=1		if	`nochange_hh'	//	No change in HH member other than head since 1999 to 2017
 				label	var	`var'	"FU has same household head during 1999-2017"
 
-			drop	max_sequence_no*			
-		
-		*	Family Spllit-off (1999-2003)
-		** As of 2021/1/31, I did not verify this code as we don't use this code. I later plan to move the codes below to a separate do-file for further verification, when needed.
-		
-			*	1999 Family ID (base-year)
-			assert !mi( splitoff_indicator1999) if !mi( x11102_1999)
-			generate	fam_ID_1999	=	x11102_1999	if	!mi(x11102_1999)
-			lab	var	fam_ID_1999	"Family ID in 1999"
+			drop	max_sequence_no*		
 			
-			*	Split-off indicator (binary, family_level)
-			foreach year of local years	{
-				
-				local	var	splitoff_dummy`year'
-				generate	`var'=.
-				label	var	`var'	"Split-off dummy indicator"
-				
-				if	(`year'==1999)	{
-					replace		`var'=0	if	inlist(splitoff_indicator`year',1,3,4)	// In 1999, "split-off from recontract family" is NOT actually split-off, but 70 immigrant refresher households.
-					replace		`var'=1	if	splitoff_indicator`year'==2	
-				}
-				else	if	(`year'==2017)	{
-					replace		`var'=0	if	inlist(splitoff_indicator`year',1,3,5)	// In 2017, "2017 New immigrant has value 5
-					replace		`var'=1	if	inlist(splitoff_indicator`year',2,4)	
-				}
-				else	{
-					replace		`var'=0	if	inlist(splitoff_indicator`year',1,3)	
-					replace		`var'=1	if	inlist(splitoff_indicator`year',2,4)	
-				}
-		
-			}
-			label	values	splitoff_dummy*	yesno
 			
-			*	Number of split-off since 1999 (1999 is base-year, thus families splitted of in 1999 is not counted as split-off)
-				local	years	2001 2003 2005 2007 2009 2011 2013 2015 2017
-				foreach	year	of	local	years	{
-				    egen	accum_splitoff`year'	=	rowtotal(splitoff_dummy2001-splitoff_dummy`year')
-					replace	accum_splitoff`year'=.	if	x11102_`year'==.
-					label	variable	accum_splitoff`year' "# of split-offs since 1999"
-				}
-				
-
-			*	Respondent Consistency Indicator (family-level)
-				
-				*	1999-2001
-				local	surveyed	!mi(x11102_1999)	&	!mi(x11102_2001)
-				local	reinterview	splitoff_indicator2001==1
-				gen 	resp_consist_99_01_tmp	=.
-				replace	resp_consist_99_01_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent1999==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_99_01_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent1999==1	&	respondent2001==1	//	Numerator: same respondents out of sample
-				bys	x11102_2001: egen resp_consist_99_01=max(resp_consist_99_01_tmp)
-				drop	resp_consist_99_01_tmp
-				label	var	resp_consist_99_01	"Respondent is consistent"
-				
-				*	1999-2003
-				local	surveyed	!mi(x11102_1999)	&	!mi(x11102_2001)	&	!mi(x11102_2003)
-				local	reinterview	splitoff_indicator2001==1	&	splitoff_indicator2003==1
-				gen 	resp_consist_99_03_tmp	=.
-				replace	resp_consist_99_03_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent1999==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_99_03_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent1999==1	&	respondent2001==1	&	respondent2003==1	//	Numerator: same respondents out of sample
-				bys	x11102_2003: egen resp_consist_99_03=max(resp_consist_99_03_tmp)
-				drop	resp_consist_99_03_tmp
-				label	var	resp_consist_99_03	"Respondent is consistent"
-				
-				*	1999-2015
-				local	surveyed	!mi(x11102_1999)	&	!mi(x11102_2001)	&	!mi(x11102_2003)	&	!mi(x11102_2005)	&	!mi(x11102_2007)	&	!mi(x11102_2009)	&	!mi(x11102_2011)	&	!mi(x11102_2013)	&	!mi(x11102_2015)
-				local	reinterview	splitoff_indicator2001==1	&	splitoff_indicator2003==1	&	splitoff_indicator2005==1	&	splitoff_indicator2007==1	&	splitoff_indicator2009==1	&	splitoff_indicator2011==1	&	splitoff_indicator2013==1	&	splitoff_indicator2015==1
-				local	respondent_same	respondent2001==1	&	respondent2003==1	&	respondent2005==1	&	respondent2007==1	&	respondent2009==1	&	respondent2011==1	&	respondent2013==1	&	respondent2015==1				
-				gen 	resp_consist_99_15_tmp	=.
-				replace	resp_consist_99_15_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent1999==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_99_15_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent1999==1	&	`respondent_same'	//	Numerator: same respondents out of sample
-				bys	x11102_2015: egen resp_consist_99_15=max(resp_consist_99_15_tmp)
-				drop	resp_consist_99_15_tmp
-				label	var	resp_consist_99_15	"Respondent is consistent"
-				
-				*	1999-2017
-				local	surveyed	!mi(x11102_1999)	&	!mi(x11102_2001)	&	!mi(x11102_2003)	&	!mi(x11102_2005)	&	!mi(x11102_2007)	&	!mi(x11102_2009)	&	!mi(x11102_2011)	&	!mi(x11102_2013)	&	!mi(x11102_2015)	&	!mi(x11102_2017)
-				local	reinterview	splitoff_indicator2001==1	&	splitoff_indicator2003==1	&	splitoff_indicator2005==1	&	splitoff_indicator2007==1	&	splitoff_indicator2009==1	&	splitoff_indicator2011==1	&	splitoff_indicator2013==1	&	splitoff_indicator2015==1	&	splitoff_indicator2017==1
-				local	respondent_same	respondent2001==1	&	respondent2003==1	&	respondent2005==1	&	respondent2007==1	&	respondent2009==1	&	respondent2011==1	&	respondent2013==1	&	respondent2015==1	&	respondent2017==1			
-				gen 	resp_consist_99_17_tmp	=.
-				replace	resp_consist_99_17_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent1999==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_99_17_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent1999==1	&	`respondent_same'	//	Numerator: same respondents out of sample
-				bys	x11102_2017: egen resp_consist_99_17=max(resp_consist_99_17_tmp)
-				drop	resp_consist_99_17_tmp
-				label	var	resp_consist_99_17	"Respondent is consistent"
-				
-				*	2001-2003
-				local	surveyed	!mi(x11102_2001)	&	!mi(x11102_2003)
-				local	reinterview	splitoff_indicator2003==1
-				gen 	resp_consist_01_03_tmp	=.
-				replace	resp_consist_01_03_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent2001==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_01_03_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent2001==1	&	respondent2003==1	//	Numerator: same respondents out of sample
-				bys	x11102_2003: egen resp_consist_01_03=max(resp_consist_01_03_tmp)
-				drop	resp_consist_01_03_tmp
-				label	var	resp_consist_01_03	"Respondent is consistent"
-			
-				
-				*	2001-2015
-				local	surveyed	!mi(x11102_2001)	&	!mi(x11102_2003)	&	!mi(x11102_2005)	&	!mi(x11102_2007)	&	!mi(x11102_2009)	&	!mi(x11102_2011)	&	!mi(x11102_2013)	&	!mi(x11102_2015)
-				local	reinterview	splitoff_indicator2003==1	&	splitoff_indicator2005==1	&	splitoff_indicator2007==1	&	splitoff_indicator2009==1	&	splitoff_indicator2011==1	&	splitoff_indicator2013==1	&	splitoff_indicator2015==1
-				local	respondent_same	respondent2003==1	&	respondent2005==1	&	respondent2007==1	&	respondent2009==1	&	respondent2011==1	&	respondent2013==1	&	respondent2015==1				
-				gen 	resp_consist_01_15_tmp	=.
-				replace	resp_consist_01_15_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent2001==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_01_15_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent2001==1	&	`respondent_same'	//	Numerator: same respondents out of sample
-				bys	x11102_2015: egen resp_consist_01_15=max(resp_consist_01_15_tmp)
-				drop	resp_consist_01_15_tmp
-				label	var	resp_consist_01_15	"Respondent is consistent"
-				
-				*	2001-2017
-				local	surveyed	!mi(x11102_2001)	&	!mi(x11102_2003)	&	!mi(x11102_2005)	&	!mi(x11102_2007)	&	!mi(x11102_2009)	&	!mi(x11102_2011)	&	!mi(x11102_2013)	&	!mi(x11102_2015)	&	!mi(x11102_2017)
-				local	reinterview	splitoff_indicator2003==1	&	splitoff_indicator2005==1	&	splitoff_indicator2007==1	&	splitoff_indicator2009==1	&	splitoff_indicator2011==1	&	splitoff_indicator2013==1	&	splitoff_indicator2015==1	&	splitoff_indicator2017==1
-				local	respondent_same	respondent2003==1	&	respondent2005==1	&	respondent2007==1	&	respondent2009==1	&	respondent2011==1	&	respondent2013==1	&	respondent2015==1	&	respondent2017==1			
-				gen 	resp_consist_01_17_tmp	=.
-				replace	resp_consist_01_17_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent2001==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_01_17_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent2001==1	&	`respondent_same'	//	Numerator: same respondents out of sample
-				bys	x11102_2017: egen resp_consist_01_17=max(resp_consist_01_17_tmp)
-				drop	resp_consist_01_17_tmp
-				label	var	resp_consist_01_17	"Respondent is consistent"
-				
-				*	2003-2015
-				local	surveyed	!mi(x11102_2003)	&	!mi(x11102_2005)	&	!mi(x11102_2007)	&	!mi(x11102_2009)	&	!mi(x11102_2011)	&	!mi(x11102_2013)	&	!mi(x11102_2015)
-				local	reinterview	splitoff_indicator2005==1	&	splitoff_indicator2007==1	&	splitoff_indicator2009==1	&	splitoff_indicator2011==1	&	splitoff_indicator2013==1	&	splitoff_indicator2015==1
-				local	respondent_same	respondent2005==1	&	respondent2007==1	&	respondent2009==1	&	respondent2011==1	&	respondent2013==1	&	respondent2015==1				
-				gen 	resp_consist_03_15_tmp	=.
-				replace	resp_consist_03_15_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent2003==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_03_15_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent2003==1	&	`respondent_same'	//	Numerator: same respondents out of sample
-				bys	x11102_2015: egen resp_consist_03_15=max(resp_consist_03_15_tmp)
-				drop	resp_consist_03_15_tmp
-				label	var	resp_consist_03_15	"Respondent is consistent"
-				
-				*	2003-2017
-				local	surveyed	!mi(x11102_2003)	&	!mi(x11102_2005)	&	!mi(x11102_2007)	&	!mi(x11102_2009)	&	!mi(x11102_2011)	&	!mi(x11102_2013)	&	!mi(x11102_2015)	&	!mi(x11102_2017)
-				local	reinterview	splitoff_indicator2005==1	&	splitoff_indicator2007==1	&	splitoff_indicator2009==1	&	splitoff_indicator2011==1	&	splitoff_indicator2013==1	&	splitoff_indicator2015==1	&	splitoff_indicator2017==1
-				local	respondent_same	respondent2005==1	&	respondent2007==1	&	respondent2009==1	&	respondent2011==1	&	respondent2013==1	&	respondent2015==1	&	respondent2017==1			
-				gen 	resp_consist_03_17_tmp	=.
-				replace	resp_consist_03_17_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent2003==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_03_17_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent2003==1	&	`respondent_same'	//	Numerator: same respondents out of sample
-				bys	x11102_2017: egen resp_consist_03_17=max(resp_consist_03_17_tmp)
-				drop	resp_consist_03_17_tmp
-				label	var	resp_consist_03_17	"Respondent is consistent"
-				
-				*	2015-2017
-				local	surveyed	!mi(x11102_2015)	&	!mi(x11102_2017)
-				local	reinterview	splitoff_indicator2017==1
-				gen 	resp_consist_15_17_tmp	=.
-				replace	resp_consist_15_17_tmp	=0	if	`surveyed'	&	`reinterview'	&	respondent2001==1	//	Denominator (sample): surveyed in all years as reinterview family
-				replace	resp_consist_15_17_tmp	=1	if	`surveyed'	&	`reinterview'	&	respondent2001==1	&	respondent2003==1	//	Numerator: same respondents out of sample
-				bys	x11102_2017: egen resp_consist_15_17=max(resp_consist_15_17_tmp)
-				drop	resp_consist_15_17_tmp
-				label	var	resp_consist_15_17	"Respondent is consistent"
-				
-				label	values	resp_consist*	yesno
 		
-	*	Federal Poverty Line
-	
-		*	1998 HHS Poverty Guideline (https://aspe.hhs.gov/1998-hhs-poverty-guidelines)
-		scalar	FPL_base_48_1999	=	8050
-		scalar	FPL_base_AL_1999	=	10070
-		scalar	FPL_base_HA_1999	=	9260
-		scalar	FPL_mult_48_1999	=	2800
-		scalar	FPL_mult_AL_1999	=	3500
-		scalar	FPL_mult_HA_1999	=	3200
-		
-		*	2000 HHS Poverty Guideline (https://aspe.hhs.gov/2000-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2001	=	8350
-		scalar	FPL_base_AL_2001	=	10430
-		scalar	FPL_base_HA_2001	=	9590
-		scalar	FPL_mult_48_2001	=	2900
-		scalar	FPL_mult_AL_2001	=	3630
-		scalar	FPL_mult_HA_2001	=	3340
-		
-		*	2002 HHS Poverty Guideline (https://aspe.hhs.gov/2002-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2003	=	8860
-		scalar	FPL_base_AL_2003	=	11080
-		scalar	FPL_base_HA_2003	=	10200
-		scalar	FPL_mult_48_2003	=	3080
-		scalar	FPL_mult_AL_2003	=	3850
-		scalar	FPL_mult_HA_2003	=	3540
-		
-		*	2004 HHS Poverty Guideline (https://aspe.hhs.gov/2004-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2005	=	9310
-		scalar	FPL_base_AL_2005	=	11630
-		scalar	FPL_base_HA_2005	=	10700
-		scalar	FPL_mult_48_2005	=	3180
-		scalar	FPL_mult_AL_2005	=	3980
-		scalar	FPL_mult_HA_2005	=	3660
-		
-		*	2006 HHS Poverty Guideline (https://aspe.hhs.gov/2006-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2007	=	9800
-		scalar	FPL_base_AL_2007	=	12250
-		scalar	FPL_base_HA_2007	=	11270
-		scalar	FPL_mult_48_2007	=	3400
-		scalar	FPL_mult_AL_2007	=	4250
-		scalar	FPL_mult_HA_2007	=	3910
-		
-		*	2008 HHS Poverty Guideline (https://aspe.hhs.gov/2008-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2009	=	10400
-		scalar	FPL_base_AL_2009	=	13000
-		scalar	FPL_base_HA_2009	=	11960
-		scalar	FPL_mult_48_2009	=	3600
-		scalar	FPL_mult_AL_2009	=	4500
-		scalar	FPL_mult_HA_2009	=	4140
-		
-		*	2010 HHS Poverty Guideline (https://aspe.hhs.gov/2010-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2011	=	10830
-		scalar	FPL_base_AL_2011	=	13530
-		scalar	FPL_base_HA_2011	=	12460
-		scalar	FPL_mult_48_2011	=	3740
-		scalar	FPL_mult_AL_2011	=	4680
-		scalar	FPL_mult_HA_2011	=	4300
-		
-		*	2012 HHS Poverty Guideline (https://aspe.hhs.gov/2012-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2013	=	11170
-		scalar	FPL_base_AL_2013	=	13970
-		scalar	FPL_base_HA_2013	=	12860
-		scalar	FPL_mult_48_2013	=	3960
-		scalar	FPL_mult_AL_2013	=	4950
-		scalar	FPL_mult_HA_2013	=	4550
-		
-		*	2014 HHS Poverty Guideline (https://aspe.hhs.gov/2014-hhs-poverty-guidelines)
-		scalar	FPL_base_48_2015	=	11670
-		scalar	FPL_base_AL_2015	=	14580
-		scalar	FPL_base_HA_2015	=	13420
-		scalar	FPL_mult_48_2015	=	4060
-		scalar	FPL_mult_AL_2015	=	5080
-		scalar	FPL_mult_HA_2015	=	4670
-		
-		*	2016 HHS Poverty Guideline (https://aspe.hhs.gov/2016-hhs-poverty-guidelines)
-		*	2016 Line has complicated design
-		scalar	FPL_base_48_2017	=	11880
-		scalar	FPL_base_AL_2017	=	14850	//	11,880 * 1.25 (AL scaling factor)
-		scalar	FPL_base_HA_2017	=	13660	//	11,880 * 1.25 (HA scaling factor)
-		scalar	FPL_mult_48_2017	=	4140	
-		scalar	FPL_mult_AL_2017	=	5180	//	4,140 * 1.25 (AL scaling factor)
-		scalar	FPL_mult_HA_2017	=	4670	//	4,760 * 1.15 (HA scaling factor)
-		
-		scalar	FPL_line_48_7_2017	=	36730	//	(6 members + 4,150)
-		scalar	FPL_line_AL_7_2017	=	45920
-		scalar	FPL_line_HA_7_2017	=	42230
-		
-		scalar	FPL_mult_48_over7_2017	=	4160	
-		scalar	FPL_mult_AL_over7_2017	=	5200	//	4,160 * 1.25 (AL scaling factor)
-		scalar	FPL_mult_HA_over7_2017	=	4780	//	4,160 * 1.15 (HA scaling factor)
-		
-
-		*	Calculate FPL
-
-			*	1999-2015
-			forval	year=1999(2)2015	{
-				gen 	FPL_`year'	=	FPL_base_48_`year'	+	(num_FU_fam`year'-1)*FPL_mult_48_`year'	if	inrange(state_resid_fam`year',1,49)
-				replace	FPL_`year'	=	FPL_base_AL_`year'	+	(num_FU_fam`year'-1)*FPL_mult_AL_`year'	if	state_resid_fam`year'==50
-				replace	FPL_`year'	=	FPL_base_HA_`year'	+	(num_FU_fam`year'-1)*FPL_mult_HA_`year'	if	state_resid_fam`year'==51
-				*replace	FPL_`year'	=.	if	inrange(xsqnr_`year',1,89)	&	state_resid_fam`year'==0	//	Inappropriate state
-				*replace	FPL_`year'	=.n	if	!inrange(xsqnr_`year',1,89)		//	Outside wave
-				label	var	FPL_`year'	"Federal Poverty Line, `year'"
-			}
-			
-			*	2017 (2016 FPL) has different design as below.
-				
-				*	Families with member 6 or below.
-				gen 	FPL_2017	=	FPL_base_48_2017	+	(num_FU_fam2017-1)*FPL_mult_48_2017	if	num_FU_fam2017<=6	&	inrange(state_resid_fam2017,1,49)
-				replace	FPL_2017	=	FPL_base_AL_2017	+	(num_FU_fam2017-1)*FPL_mult_AL_2017	if	num_FU_fam2017<=6	&	state_resid_fam2017==50
-				replace	FPL_2017	=	FPL_base_HA_2017	+	(num_FU_fam2017-1)*FPL_mult_HA_2017	if	num_FU_fam2017<=6	&	state_resid_fam2017==51
-				
-				*	Families with 7 members
-				replace	FPL_2017	=	FPL_line_48_7_2017	if	num_FU_fam2017==7	&	inrange(state_resid_fam2017,1,49)
-				replace	FPL_2017	=	FPL_line_AL_7_2017	if	num_FU_fam2017==7	&	state_resid_fam2017==50
-				replace	FPL_2017	=	FPL_line_HA_7_2017	if	num_FU_fam2017==7	&	state_resid_fam2017==51
-				
-				*	Families with 8 or more members
-				replace	FPL_2017	=	FPL_line_48_7_2017	+	(num_FU_fam2017-7)*FPL_mult_48_over7_2017	if	num_FU_fam2017>=8	&	inrange(state_resid_fam2017,1,49)
-				replace	FPL_2017	=	FPL_line_AL_7_2017	+	(num_FU_fam2017-7)*FPL_mult_AL_over7_2017	if	num_FU_fam2017>=8	&	state_resid_fam2017==50
-				replace	FPL_2017	=	FPL_line_HA_7_2017	+	(num_FU_fam2017-7)*FPL_mult_HA_over7_2017	if	num_FU_fam2017>=8	&	state_resid_fam2017==51
-				
-				*	Missing values
-				replace	FPL_2017	=.	if	inrange(xsqnr_2017,1,89)	&	state_resid_fam2017==0	//	Inappropriate state
-				replace	FPL_2017	=.n	if	!inrange(xsqnr_2017,1,89)		//	Outside wave
-				
-				label	var	FPL_2017	"Federal Poverty Line, 2017"
-				
-			*	FPL variables
-			forval	year=1999(2)2017	{
-				
-				*	Income to Poverty Ratio
-				gen		income_to_poverty`year'	=	total_income_fam`year'/FPL_`year'
-				lab	var	income_to_poverty`year'	"Income to Poverty Ratio, `year'"
-				
-				*	FPL category
-				*gen		FPL_cat`year'=.
-				*replace	FPL_cat`year'=1		if	total_income_fam`year'<FPL_`year'
-				generate	income_to_poverty_cat`year'=1		if	income_to_poverty`year' <1
-				replace		income_to_poverty_cat`year'=2		if	inrange(income_to_poverty`year',1,2)
-				replace		income_to_poverty_cat`year'=3		if	inrange(income_to_poverty`year',2,3)
-				replace		income_to_poverty_cat`year'=4		if	inrange(income_to_poverty`year',3,4)
-				replace		income_to_poverty_cat`year'=5		if	inrange(income_to_poverty`year',4,5)
-				replace		income_to_poverty_cat`year'=6		if	inrange(income_to_poverty`year',5,6)
-				replace		income_to_poverty_cat`year'=7		if	inrange(income_to_poverty`year',6,7)
-				replace		income_to_poverty_cat`year'=8		if	inrange(income_to_poverty`year',7,8)
-				replace		income_to_poverty_cat`year'=9		if	inrange(income_to_poverty`year',8,9)
-				replace		income_to_poverty_cat`year'=10	if	inrange(income_to_poverty`year',9,10)
-				replace		income_to_poverty_cat`year'=11	if	income_to_poverty`year'>10
-				replace		income_to_poverty_cat`year'=.	if	mi(FPL_`year')
-				label	var	income_to_poverty_cat`year'	"Income to Poverty Category, `year'"
-			}
-			
-			label	define	income_cat_FPL	1	"<1.0"		2	"1.0~2.0"	3	"2.0~3.0"	4	"3.0~4.0"	5	"4.0~5.0"	6	"5.0~6.0"	///
-											7	"6.0~7.0"	8	"7.0~8.0"	9	"8.0~9.0"	10	"9.0~10.0"	11	"10.0"		0	"Inappropriate"
-			label	values	income_to_poverty_cat*	income_cat_FPL
-			
-		*	Region
+				*	Region
 		**	 This region uses the classificaton the PSID uses, different from this study uses.
 		label define	region_residence	0	"Wide Code"	1	"Northeast"	2	"North Central"	3	"South"	4	"West"	///
 											5	"Alaska/Hawaii"	6	"Foreign Country"	9	"NA/DK"
@@ -628,38 +344,168 @@
 			lab	var	retire_age`year' "Retirement age in `year'"
 		}
 		
-		*	Body Mass Index (BMI)
-		**	(2021-1-31 NOT verified, as we do not use BMI in our study)
-		foreach	year	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+	
+	
+	*	SECTION 1-3: Socio-economic variables
 			
-			*	Convert units into metrics
-				
-				*	Height
-				if	inrange(`year',1999,2009)	{
-					gen		height_meter`year'	=		(height_feet`year'*30.48)	+	(height_inch`year'*2.54)
-				}
-				else	if	inrange(`year',2011,2017)	{
-					replace	height_meter`year'	=		(height_feet`year'*30.48)	+	(height_inch`year'*2.54)	if	!mi(height_feet`year')	&	mi(height_meter`year')
-				}
-				
-				*	Weight
-				if	inrange(`year',1999,2009)	{
-					gen		weight_kg`year'	=		(weight_lbs`year'*0.454)
-				}
-				else	if	inrange(`year',2011,2017)	{
-					replace	weight_kg`year'	=		(weight_lbs`year'*0.454)	if	!mi(weight_lbs`year')	&	mi(weight_kg`year')
-				}
-				
-				label	var	height_meter`year'	"Respondent's height (cm)"
-				label	var	weight_kg`year'		"Respondent's weight (kg)"
-				
-			*	Calculate BMI
-				gen	respondent_BMI`year'	=		weight_kg`year'	/	(height_meter`year'/100)^2
-				label	variable	respondent_BMI`year'	"Respondent's BMI, `year'"
-		}
+		*	Federal Poverty Line
 		
-		
+			*	1998 HHS Poverty Guideline (https://aspe.hhs.gov/1998-hhs-poverty-guidelines)
+			scalar	FPL_base_48_1999	=	8050
+			scalar	FPL_base_AL_1999	=	10070
+			scalar	FPL_base_HA_1999	=	9260
+			scalar	FPL_mult_48_1999	=	2800
+			scalar	FPL_mult_AL_1999	=	3500
+			scalar	FPL_mult_HA_1999	=	3200
+			
+			*	2000 HHS Poverty Guideline (https://aspe.hhs.gov/2000-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2001	=	8350
+			scalar	FPL_base_AL_2001	=	10430
+			scalar	FPL_base_HA_2001	=	9590
+			scalar	FPL_mult_48_2001	=	2900
+			scalar	FPL_mult_AL_2001	=	3630
+			scalar	FPL_mult_HA_2001	=	3340
+			
+			*	2002 HHS Poverty Guideline (https://aspe.hhs.gov/2002-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2003	=	8860
+			scalar	FPL_base_AL_2003	=	11080
+			scalar	FPL_base_HA_2003	=	10200
+			scalar	FPL_mult_48_2003	=	3080
+			scalar	FPL_mult_AL_2003	=	3850
+			scalar	FPL_mult_HA_2003	=	3540
+			
+			*	2004 HHS Poverty Guideline (https://aspe.hhs.gov/2004-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2005	=	9310
+			scalar	FPL_base_AL_2005	=	11630
+			scalar	FPL_base_HA_2005	=	10700
+			scalar	FPL_mult_48_2005	=	3180
+			scalar	FPL_mult_AL_2005	=	3980
+			scalar	FPL_mult_HA_2005	=	3660
+			
+			*	2006 HHS Poverty Guideline (https://aspe.hhs.gov/2006-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2007	=	9800
+			scalar	FPL_base_AL_2007	=	12250
+			scalar	FPL_base_HA_2007	=	11270
+			scalar	FPL_mult_48_2007	=	3400
+			scalar	FPL_mult_AL_2007	=	4250
+			scalar	FPL_mult_HA_2007	=	3910
+			
+			*	2008 HHS Poverty Guideline (https://aspe.hhs.gov/2008-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2009	=	10400
+			scalar	FPL_base_AL_2009	=	13000
+			scalar	FPL_base_HA_2009	=	11960
+			scalar	FPL_mult_48_2009	=	3600
+			scalar	FPL_mult_AL_2009	=	4500
+			scalar	FPL_mult_HA_2009	=	4140
+			
+			*	2010 HHS Poverty Guideline (https://aspe.hhs.gov/2010-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2011	=	10830
+			scalar	FPL_base_AL_2011	=	13530
+			scalar	FPL_base_HA_2011	=	12460
+			scalar	FPL_mult_48_2011	=	3740
+			scalar	FPL_mult_AL_2011	=	4680
+			scalar	FPL_mult_HA_2011	=	4300
+			
+			*	2012 HHS Poverty Guideline (https://aspe.hhs.gov/2012-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2013	=	11170
+			scalar	FPL_base_AL_2013	=	13970
+			scalar	FPL_base_HA_2013	=	12860
+			scalar	FPL_mult_48_2013	=	3960
+			scalar	FPL_mult_AL_2013	=	4950
+			scalar	FPL_mult_HA_2013	=	4550
+			
+			*	2014 HHS Poverty Guideline (https://aspe.hhs.gov/2014-hhs-poverty-guidelines)
+			scalar	FPL_base_48_2015	=	11670
+			scalar	FPL_base_AL_2015	=	14580
+			scalar	FPL_base_HA_2015	=	13420
+			scalar	FPL_mult_48_2015	=	4060
+			scalar	FPL_mult_AL_2015	=	5080
+			scalar	FPL_mult_HA_2015	=	4670
+			
+			*	2016 HHS Poverty Guideline (https://aspe.hhs.gov/2016-hhs-poverty-guidelines)
+			*	2016 Line has complicated design
+			scalar	FPL_base_48_2017	=	11880
+			scalar	FPL_base_AL_2017	=	14850	//	11,880 * 1.25 (AL scaling factor)
+			scalar	FPL_base_HA_2017	=	13660	//	11,880 * 1.25 (HA scaling factor)
+			scalar	FPL_mult_48_2017	=	4140	
+			scalar	FPL_mult_AL_2017	=	5180	//	4,140 * 1.25 (AL scaling factor)
+			scalar	FPL_mult_HA_2017	=	4670	//	4,760 * 1.15 (HA scaling factor)
+			
+			scalar	FPL_line_48_7_2017	=	36730	//	(6 members + 4,150)
+			scalar	FPL_line_AL_7_2017	=	45920
+			scalar	FPL_line_HA_7_2017	=	42230
+			
+			scalar	FPL_mult_48_over7_2017	=	4160	
+			scalar	FPL_mult_AL_over7_2017	=	5200	//	4,160 * 1.25 (AL scaling factor)
+			scalar	FPL_mult_HA_over7_2017	=	4780	//	4,160 * 1.15 (HA scaling factor)
+			
+
+			*	Calculate FPL
+
+				*	1999-2015
+				forval	year=1999(2)2015	{
+					gen 	FPL_`year'	=	FPL_base_48_`year'	+	(num_FU_fam`year'-1)*FPL_mult_48_`year'	if	inrange(state_resid_fam`year',1,49)
+					replace	FPL_`year'	=	FPL_base_AL_`year'	+	(num_FU_fam`year'-1)*FPL_mult_AL_`year'	if	state_resid_fam`year'==50
+					replace	FPL_`year'	=	FPL_base_HA_`year'	+	(num_FU_fam`year'-1)*FPL_mult_HA_`year'	if	state_resid_fam`year'==51
+					*replace	FPL_`year'	=.	if	inrange(xsqnr_`year',1,89)	&	state_resid_fam`year'==0	//	Inappropriate state
+					*replace	FPL_`year'	=.n	if	!inrange(xsqnr_`year',1,89)		//	Outside wave
+					label	var	FPL_`year'	"Federal Poverty Line, `year'"
+				}
 				
+				*	2017 (2016 FPL) has different design as below.
+					
+					*	Families with member 6 or below.
+					gen 	FPL_2017	=	FPL_base_48_2017	+	(num_FU_fam2017-1)*FPL_mult_48_2017	if	num_FU_fam2017<=6	&	inrange(state_resid_fam2017,1,49)
+					replace	FPL_2017	=	FPL_base_AL_2017	+	(num_FU_fam2017-1)*FPL_mult_AL_2017	if	num_FU_fam2017<=6	&	state_resid_fam2017==50
+					replace	FPL_2017	=	FPL_base_HA_2017	+	(num_FU_fam2017-1)*FPL_mult_HA_2017	if	num_FU_fam2017<=6	&	state_resid_fam2017==51
+					
+					*	Families with 7 members
+					replace	FPL_2017	=	FPL_line_48_7_2017	if	num_FU_fam2017==7	&	inrange(state_resid_fam2017,1,49)
+					replace	FPL_2017	=	FPL_line_AL_7_2017	if	num_FU_fam2017==7	&	state_resid_fam2017==50
+					replace	FPL_2017	=	FPL_line_HA_7_2017	if	num_FU_fam2017==7	&	state_resid_fam2017==51
+					
+					*	Families with 8 or more members
+					replace	FPL_2017	=	FPL_line_48_7_2017	+	(num_FU_fam2017-7)*FPL_mult_48_over7_2017	if	num_FU_fam2017>=8	&	inrange(state_resid_fam2017,1,49)
+					replace	FPL_2017	=	FPL_line_AL_7_2017	+	(num_FU_fam2017-7)*FPL_mult_AL_over7_2017	if	num_FU_fam2017>=8	&	state_resid_fam2017==50
+					replace	FPL_2017	=	FPL_line_HA_7_2017	+	(num_FU_fam2017-7)*FPL_mult_HA_over7_2017	if	num_FU_fam2017>=8	&	state_resid_fam2017==51
+					
+					*	Missing values
+					replace	FPL_2017	=.	if	inrange(xsqnr_2017,1,89)	&	state_resid_fam2017==0	//	Inappropriate state
+					replace	FPL_2017	=.n	if	!inrange(xsqnr_2017,1,89)		//	Outside wave
+					
+					label	var	FPL_2017	"Federal Poverty Line, 2017"
+					
+				*	FPL variables
+				forval	year=1999(2)2017	{
+					
+					*	Income to Poverty Ratio
+					gen		income_to_poverty`year'	=	total_income_fam`year'/FPL_`year'
+					lab	var	income_to_poverty`year'	"Income to Poverty Ratio, `year'"
+					
+					*	FPL category
+					*gen		FPL_cat`year'=.
+					*replace	FPL_cat`year'=1		if	total_income_fam`year'<FPL_`year'
+					generate	income_to_poverty_cat`year'=1		if	income_to_poverty`year' <1
+					replace		income_to_poverty_cat`year'=2		if	inrange(income_to_poverty`year',1,2)
+					replace		income_to_poverty_cat`year'=3		if	inrange(income_to_poverty`year',2,3)
+					replace		income_to_poverty_cat`year'=4		if	inrange(income_to_poverty`year',3,4)
+					replace		income_to_poverty_cat`year'=5		if	inrange(income_to_poverty`year',4,5)
+					replace		income_to_poverty_cat`year'=6		if	inrange(income_to_poverty`year',5,6)
+					replace		income_to_poverty_cat`year'=7		if	inrange(income_to_poverty`year',6,7)
+					replace		income_to_poverty_cat`year'=8		if	inrange(income_to_poverty`year',7,8)
+					replace		income_to_poverty_cat`year'=9		if	inrange(income_to_poverty`year',8,9)
+					replace		income_to_poverty_cat`year'=10	if	inrange(income_to_poverty`year',9,10)
+					replace		income_to_poverty_cat`year'=11	if	income_to_poverty`year'>10
+					replace		income_to_poverty_cat`year'=.	if	mi(FPL_`year')
+					label	var	income_to_poverty_cat`year'	"Income to Poverty Category, `year'"
+				}
+				
+				label	define	income_cat_FPL	1	"<1.0"		2	"1.0~2.0"	3	"2.0~3.0"	4	"3.0~4.0"	5	"4.0~5.0"	6	"5.0~6.0"	///
+												7	"6.0~7.0"	8	"7.0~8.0"	9	"8.0~9.0"	10	"9.0~10.0"	11	"10.0"		0	"Inappropriate"
+				label	values	income_to_poverty_cat*	income_cat_FPL
+				
+
+					
 		*	Food stamp usage (current year)
 		*	Merge "current year" (99-07) and "last month" (09-17)
 		*	Since very little households (less than 0.5% each year) survyed in Jan, we can create dummy for "current year" if household used stamp "last month" (if anyone said "yes" during Feb-Dec, it implies they used stamp in curent year)
@@ -752,30 +598,6 @@
 						gen	cloth_exp_pc`year'	=	cloth_exp_total`year'/num_FU_fam`year'
 						label	variable	cloth_exp_pc`year'	"Cloth expenditure per capita, `year'"
 					}
-					
-					*	Average over the two years	(starting 2001, as we have data from 1999)
-					if	inrange(`year',2001,2017)	{
-						
-						local	prevyear=`year'-2
-						gen	avg_income_pc`year'		=	(income_pc`year'+income_pc`prevyear')/2	//	average income per capita
-						gen	avg_foodexp_pc`year'	=	(food_exp_pc`year'+food_exp_pc`prevyear')/2
-						gen	avg_childexp_pc`year'	=	(child_exp_pc`year'+child_exp_pc`prevyear')/2
-						gen	avg_eduexp_pc`year'		=	(edu_exp_pc`year'+edu_exp_pc`prevyear')/2
-						gen	avg_healthexp_pc`year'	=	(health_exp_pc`year'+health_exp_pc`prevyear')/2
-						gen	avg_houseexp_pc`year'	=	(house_exp_pc`year'+house_exp_pc`prevyear')/2
-						gen	avg_proptax_pc`year'	=	(property_tax_pc`year'+property_tax_pc`prevyear')/2
-						gen	avg_transexp_pc`year'	=	(transport_exp_pc`year'+transport_exp_pc`prevyear')/2
-						*gen	avg_othdebts_pc`year'	=	(other_debts_pc`year'+other_debts_pc`prevyear')/2
-						gen	avg_wealth_pc`year'		=	(wealth_pc`year'+wealth_pc`prevyear')/2
-						
-						
-						label	variable	avg_income_pc`year'		"Averge income per capita income, `year'-`prevyear'"
-						label	variable	avg_foodexp_pc`year'	"Averge food expenditure per capita income, `year'-`prevyear'"
-						
-						if	inrange(`year',2007,2017)	{	//	cloths							
-							gen	avg_clothexp_pc`year'	=	(cloth_exp_pc`year'+cloth_exp_pc`prevyear')/2
-						}
-					}
 			}
 		
 	
@@ -833,7 +655,7 @@
 		
 
 	
-		*	Food expenditure
+		*	TFP food plan cost
 			
 			*	Generate temporary state code variable, as food cost vary by some states (AL, HA, all others)
 			forval	year=1999(2)2017	{
@@ -1008,16 +830,7 @@
 		save		`dta_constructed'
 		
 		
-		
-		*	Import variables for sampling error estimation
-		use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
-	
-		*	Generate a single ID variable
-		generate	x11101ll=(ER30001*1000)+ER30002
-		
-		tempfile	Ind
-		save		`Ind'
-	
+
 		*	Import variables
 		use	`dta_constructed', clear
 		merge	m:1	x11101ll	using	`Ind', assert(2 3) keep(3) keepusing(ER31996 ER31997) nogen
@@ -1031,9 +844,6 @@
 		*	Keep	relevant sample
 		*	We need to decide what families to track (so we have only 1 obs per family in baseyear)
 		keep	if	fam_comp_samehead_99_17==1	//	Families with same household during 1999-2017
-		*keep	if	fam_comp_nochange_99_03==1	//	Families with no member change during 1999-2003
-		*keep	if	fam_comp_samehead_99_03==1	//	Families with same household during 1999-2003
-		*keep	if	fam_comp_samehead_99_03==1	//	Families with same household during 1999-2003
 
 		
 		*	Drop individual level variables
@@ -1273,8 +1083,8 @@
 	if	`recode_vars'==1	{
 		qui	ds	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse	veteran_head	veteran_spouse	tax_item_deduct	///
 				retire_plan_head	retire_plan_spouse	annuities_IRA	attend_college_head	attend_college_spouse	hs_completed_head	hs_completed_spouse	///
-				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	food_stamp_used_0yr	child_meal_assist	WIC_received_last	elderly_meal	///
-				child_daycare_any	child_daycare_FSP	child_daycare_snack	emp_HH_simple emp_spouse_simple	mental_problem
+				college_completed	college_comp_spouse	other_degree_head	other_degree_spouse	food_stamp_used_1yr	food_stamp_used_0yr	///
+				child_meal_assist	WIC_received_last	elderly_meal	child_daycare_any	child_daycare_FSP	child_daycare_snack	emp_HH_simple emp_spouse_simple	mental_problem
 		label values	`r(varlist)'	yes1no0
 		recode	`r(varlist)'	(0	5	8	9	.d	.r=0)
 	}
