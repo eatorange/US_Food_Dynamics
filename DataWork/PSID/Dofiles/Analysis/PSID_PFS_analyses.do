@@ -2,13 +2,13 @@
 	/*****************************************************************
 	PROJECT: 		US Food Security Dynamics
 					
-	TITLE:			PSID_CB_Measurement
+	TITLE:			PSID_analyses
 				
 	AUTHOR: 		Seungmin Lee (sl3235@cornell.edu)
 
 	LAST EDITED:	Apr 12, 2020, by Seungmin Lee (sl3235@cornell.edu)
 	
-	IDS VAR:    	        // Uniquely identifies family (update for your project)
+	IDS VAR:    	fam_ID_1999       // Uniquely identifies family (update for your project)
 
 	DESCRIPTION: 	Construct Cisse and Barrett (CB) measurement
 		
@@ -144,6 +144,21 @@
 			global	state_group21	state_resid_fam_enum5	//	CA						
 			global	state_group_West	${state_group18}	${state_group19}	${state_group20}	${state_group21}	
 	
+		*	Regression variables
+		
+			global	statevars	lag_food_exp_pc_1##lag_food_exp_pc_1	//	Lagged food expenditure per capita, up to second order
+			global	demovars	age_head_fam age_head_fam_sq	HH_race_color	marital_status_cat	HH_female	//	age, age^2, race, marital status, gender
+			global	econvars	ln_income_pc	//	log of income per capita
+			global	healthvars	phys_disab_head mental_problem	//	physical and mental health
+			global	empvars		emp_HH_simple	//	employment status
+			global	familyvars	num_FU_fam ratio_child	//	# of family members and % of ratio of children
+			global	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	//	Highest degree achieved
+			global	foodvars	food_stamp_used_0yr	child_meal_assist 		//	Food assistance programs
+			global	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled	//	Change in status
+			global	regionvars	state_group? state_group1? state_group2?	//	Region (custom group of status)
+			global	timevars	i.year	//	Year dummies
+			
+			
 	
 	/****************************************************************
 		SECTION 1: Construct PFS measurement
@@ -154,7 +169,7 @@
 		
 	*	OLS
 	local	run_GLM	1
-		local	model_selection	1
+		local	model_selection	0
 		local	run_ME	0
 		
 	*	LASSO
@@ -170,8 +185,8 @@
 		local	run_rf_step1	1
 		local	run_rf_step2	1
 		local	run_rf_step3	1
-	*svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
-	*svyset	ER31997 [pweight=weight_long_fam], strata(ER31996)	singleunit(scaled)
+	
+	
 	
 	
 	
@@ -180,69 +195,57 @@
 
 		*	Declare variables
 		local	depvar		food_exp_pc
-		local	statevars	lag_food_exp_pc_1##lag_food_exp_pc_1##lag_food_exp_pc_1	/*##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1	lag_food_exp_pc_1-lag_food_exp_pc_5*/
-		local	demovars	age_head_fam age_head_fam_sq	/*HH_race_black	HH_race_other*/	HH_race_color	marital_status_cat	HH_female	/*ib1.race_head_cat*/	/*ib1.gender_head_fam*/		
-		local	econvars	ln_income_pc	/*ln_wealth_pc*/	/*income_pc	income_pc_sq	wealth_pc	wealth_pc_sq*/	
-		local	healthvars	phys_disab_head mental_problem
-		local	empvars		emp_HH_simple
-		local	familyvars	num_FU_fam ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
-		local	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	/*attend_college_head college_yrs_head (hs_completed_head	college_completed	other_degree_head)##c.grade_comp_head_fam*/	
-		local	foodvars	/*food_stamp_used_1yr*/ food_stamp_used_0yr	child_meal_assist /*WIC_received_last	elderly_meal*/	/*meal_together*/	
-		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	/*ib0.state_resid_fam*/	state_group? state_group1? state_group2?
-		local	timevars	i.year
-			
-		/*
-		local	depvar	e1_foodexp_sq_ols
-		local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
 		
-		br alpha1_foodexp_pc_ols var1_foodexp_ols rho1_foodexp_pc_thrifty_ols `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars' if var1_foodexp_ols<0	// `regionvars'	`timevars'	
 		
-		svy, subpop(if ${study_sample}): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
-		svy, subpop(if ${study_sample}	&	var1_foodexp_ols<0): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
-		*/
-		
-		local	MEvars	c.lag_food_exp_pc_1	`healthvars'	c.age_head_fam	/*ib1.race_head_cat*/	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
+		local	MEvars	c.lag_food_exp_pc_1	${healthvars}	c.age_head_fam	HH_race_black	HH_race_other	marital_status_cat	HH_female	${econvars}	${empvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}
 	
 		*	Model selection (highest order)
 		if	`model_selection'==1	{
 			
 			local	statevars	c.lag_food_exp_pc_1
-			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'	/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order1
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
-			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order2
+			predict glm_order2	if	e(sample)==1 & `=e(subpop)'
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
-			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
 			est	sto	ols_step1_order3
+			predict glm_order3	if	e(sample)==1 & `=e(subpop)'
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
-			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
 			est	sto	ols_step1_order4
+			predict glm_order4	if	e(sample)==1 & `=e(subpop)'
 			
 			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
-			svy, subpop(${study_sample}): glm 	`depvar'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	`statevars'		/*	if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
-			estadd scalar aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
 			est	sto	ols_step1_order5
-			
+			predict glm_order5	if	e(sample)==1 & `=e(subpop)'
 			
 			*	Output
 			esttab	ols_step1_order1	ols_step1_order2	ols_step1_order3	ols_step1_order4	ols_step1_order5	using "${PSID_outRaw}/GLM_model_selection.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2 bic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
 					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
 					replace
 					
 			esttab	ols_step1_order1	ols_step1_order2	ols_step1_order3	ols_step1_order4	ols_step1_order5	using "${PSID_outRaw}/GLM_model_selection.tex", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2 bic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
 					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
@@ -252,23 +255,16 @@
 		
 		
 		*	Step 1
+		global	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 	//	Chosen from the model selection
 		
-		*	All sample
-		*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
-		*	SRC/SEO only
-		local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
-		
-		svy, subpop(${study_sample}): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
+		svy, subpop(${study_sample}): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
 		
 		est	sto	ols_step1
 		
 		*	Predict fitted value and residual
-		**	As of 2021/1/2, we will include 2017 in our regression sample which was not previously included.
 		gen	ols_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
 		predict double mean1_foodexp_ols	if	ols_step1_sample==1
-		/*if	((e(sample)==1 & `=e(subpop)')	|	(${study_sample}==1	&	year==10))*/	// Although 2017 sample is not included in estimating the PFS, we can still consturct the 2017 PFS
 		predict double e1_foodexp_ols	if	ols_step1_sample==1,r
-			/*if	((e(sample)==1 & `=e(subpop)')	|	(${study_sample}==1	&	year==10)), r*/
 		gen e1_foodexp_sq_ols = (e1_foodexp_ols)^2
 
 		*	Marginal Effect
@@ -280,30 +276,25 @@
 		*	Step 2
 		local	depvar	e1_foodexp_sq_ols
 		
-			*	All sample
-			*svy: reg `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	ols_step1_sample==1	//	glm does not converge, thus use OLS)
-			
-			*	SRC only
-			svy, subpop(ols_step1_sample): reg `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	ols_step1_sample==1*/	//	glm does not converge, thus use OLS)
+		svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
+		*svy, subpop(ols_step1_sample): reg `depvar' ${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	//	glm does not converge, thus use OLS)
 		
 		est store ols_step2
 		gen	ols_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
 		*svy:	reg `e(depvar)' `e(selected)'
-		predict	double	var1_foodexp_ols	if	ols_step2_sample==1	/*if	((e(sample)==1 & `=e(subpop)')	|	(${study_sample}==1	&	year==10))*/
+		predict	double	var1_foodexp_ols	if	ols_step2_sample==1	
 					
 		*	Output
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Conditional Mean and Variance of Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
-					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
+					addnotes(Sample includes household responses from 2001 to 2017 Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace
 					
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.tex", ///
 					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Conditional Mean and Variance of Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
-					23 observations with negative income are dropped which account for less than 0.5\% of the sample size)	///
+					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace		
 		
 			
@@ -318,15 +309,13 @@
 			esttab	ols_step1_ME	ols_step2_ME	using "${PSID_outRaw}/OLS_ME.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
-					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
+					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace
 					
 			esttab	ols_step1_ME	ols_step2_ME	using "${PSID_outRaw}/OLS_ME.tex", ///
 					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
-					23 observations with negative income are dropped which account for less than 0.5\% of the sample size)	///
+					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace		
 		}
 		
