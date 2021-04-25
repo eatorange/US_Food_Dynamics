@@ -5,11 +5,7 @@
 	
 		*	Family Spllit-off (1999-2003)
 		** As of 2021/1/31, I did not verify this code as we don't use this code. I later plan to move the codes below to a separate do-file for further verification, when needed.
-		
-			*	1999 Family ID (base-year)
-			assert !mi( splitoff_indicator1999) if !mi( x11102_1999)
-			generate	fam_ID_1999	=	x11102_1999	if	!mi(x11102_1999)
-			lab	var	fam_ID_1999	"Family ID in 1999"
+
 			
 			*	Split-off indicator (binary, family_level)
 			foreach year of local years	{
