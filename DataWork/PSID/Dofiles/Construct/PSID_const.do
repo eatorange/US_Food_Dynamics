@@ -72,7 +72,12 @@
 	
 	
 	*	SECTION 1-1: Survey Information Variables
-	
+		
+				
+		*	1999 Family ID (base-year)
+		assert !mi( splitoff_indicator1999) if !mi( x11102_1999)
+		generate	fam_ID_1999	=	x11102_1999	if	!mi(x11102_1999)
+		lab	var	fam_ID_1999	"Family ID in 1999"
 				
 		*	Sample source
 		gen		sample_source=.
@@ -109,13 +114,13 @@
 		*	Import variables for sampling error estimation
 		preserve
 		
-		use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
-	
-		*	Generate a single ID variable
-		generate	x11101ll=(ER30001*1000)+ER30002
+			use	"${PSID_dtRaw}/Main/ind2017er.dta", clear
 		
-		tempfile	Ind
-		save		`Ind'
+			*	Generate a single ID variable
+			generate	x11101ll=(ER30001*1000)+ER30002
+			
+			tempfile	Ind
+			save		`Ind'
 		
 		restore
 	
@@ -204,7 +209,7 @@
 			
 			
 		
-				*	Region
+		*	Region
 		**	 This region uses the classificaton the PSID uses, different from this study uses.
 		label define	region_residence	0	"Wide Code"	1	"Northeast"	2	"North Central"	3	"South"	4	"West"	///
 											5	"Alaska/Hawaii"	6	"Foreign Country"	9	"NA/DK"
@@ -626,7 +631,6 @@
 			label	variable	house_exp_pc`year'	"House expenditure per capita (K) - `year'"
 			label	variable	property_tax_pc`year'	"Property tax per capita (K) - `year'"
 			label	variable	transport_exp_pc`year'	"Transportation expenditure per capita (K) - `year'"
-			*label	variable	other_debts_pc`year'	"Other debts per capita (K) - `year'"
 			label	variable	wealth_pc`year'			"Wealth per capita (K) - `year'"
 			
 		}	//	year
@@ -637,14 +641,10 @@
 			gen		emp_HH_simple`year'	=.
 			replace	emp_HH_simple`year'	=1	if	inrange(emp_status_head`year',1,2)	//	Employed
 			replace	emp_HH_simple`year'	=5	if	inrange(emp_status_head`year',3,99)	//	Unemployed (including retired, disabled, keeping house, inapp, ...)
-			*replace	emp_HH_simple`year'	=5	if	inrange(emp_status_head`year',3,3)	//	Unemployed
-			*replace	emp_HH_simple`year'	=0	if	inrange(emp_status_head`year',4,99)	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)
 			
 			gen		emp_spouse_simple`year'	=.
 			replace	emp_spouse_simple`year'	=1	if	inrange(emp_status_spouse`year',1,2)	//	Employed
 			replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,99)	|	emp_status_spouse`year'==0	//	Unemployed (including retired, disabled, keeping house, inapp, DK, NA,...)	
-			*replace	emp_spouse_simple`year'	=5	if	inrange(emp_status_spouse`year',3,3)	//	Unemployed
-			*replace	emp_spouse_simple`year'	=0	if	inrange(emp_status_spouse`year',4,99)	|	emp_status_spouse`year'==0	//	Others (retired, disabled, keeping house, inapp, DK, NA,...)	
 		}
 		
 		*	% of children in the households
@@ -777,7 +777,7 @@
 			}
 			
 		}
-		
+	
 		
 		*	Food security category (simplified)
 		*	This simplified category is based on Tiehen(2019)
@@ -798,7 +798,6 @@
 			lab	var	fs_scale_fam_rescale`year'	"Food Securiy Score (Scale), rescaled"
 			
 		}
-		
 				
 		*	Recode gender
 		forval	year=1999(2)2017	{
@@ -848,10 +847,12 @@
 		
 		*	Drop individual level variables
 		drop	x11101ll weight_long_ind* weight_cross_ind* respondent???? relat_to_head* age_ind* edu_years????	relat_to_current_head*	indiv_gender
+		
 		*	Keep	relevant years
 		keep	*1999	*2001	*2003	*2005	*2007	*2009	*2011	*2013	*2015	*2017	/*fam_comp**/	sample_*	ER31996 ER31997		
 		
 		duplicates drop	
+		isid x11102_1999	
 		
 		
 		*	Save it as wide format
@@ -903,7 +904,7 @@
 		label	var	state_resid_fam		"State of Residence"
 		label 	var	fs_raw_fam 			"USDA food security raw score"
 		label 	var	fs_scale_fam 		"USDA food security scale score"
-		label	var	fs_scale_fam_rescale	"USDA food security scale score-rescaled"
+		label	var	fs_scale_fam_rescale"USDA food security scale score-rescaled"
 		label	var	fs_cat_fam 			"USDA food security category"
 		label	var	food_stamp_used_2yr	"Received food Stamp (2 years ago)"
 		label	var	food_stamp_used_1yr "Received food stamp (previous year)"
@@ -919,12 +920,9 @@
 		label	var	total_income_fam	"Total household income"
 		label	var	hs_completed_head	"HH completed high school/GED"
 		label	var	college_completed	"HH has college degree"
-		label	var	respondent_BMI		"Respondent's Body Mass Index"
 		label	var	income_pc			"Family income per capita (thousands)"
 		label	var	food_exp_pc			"Food exp per capita (thousands)"
 		label	var	food_exp_stamp_pc	"Food exp (with stamp) per capita (thousands)"
-		label	var	avg_income_pc		"Average income over two years per capita"
-		label	var	avg_foodexp_pc		"Average food expenditure over two years per capita"
 		label	var	splitoff_indicator	"Splitoff indicator"
 		label	var	num_split_fam		"# of splits"
 		label	var	main_fam_ID		"Family ID"
@@ -954,7 +952,6 @@
 		label	var	grade_comp_spouse		"Grades completed (spouse)"
 		label	var	hs_completed_spouse		"HS degree (spouse)"
 		label	var	child_exp_total		"Annual child expenditure"
-		*label	var	cloth_exp_total		"Annual cloth expenditure"
 		label	var	sup_outside_FU		"Support from outside family"
 		label	var	edu_exp_total		"Annual education expenditure"
 		label	var	health_exp_total	"Annual health expenditure"
@@ -987,7 +984,6 @@
 		label	var	emp_status_head	"Employement status (head)"
 		label	var	emp_status_spouse	"Employement status(spouse)"
 		label	var	alcohol_spouse	"Drink alcohol (spouse)"
-		*label	var	relat_to_current_head	"Veteran (head)"
 		label	var	child_exp_pc		"Annual child expenditure (pc) (thousands)"
 		label	var	edu_exp_pc		"Annual education expenditure (pc) (thousands)"
 		label	var	health_exp_pc		"Annual health expenditure (pc) (thousands)"
@@ -995,14 +991,6 @@
 		label	var	property_tax_pc		"Property tax (pc) (thousands)"
 		label	var	transport_exp_pc	"Annual transportation expenditure (pc) (thousands)"
 		label	var	wealth_pc		"Wealth (pc) (thousands)"
-		*label	var	cloth_exp_pc		"Annual cloth expenditure (pc)"
-		label	var	avg_childexp_pc		"Avg child expenditure (pc)"
-		label	var	avg_eduexp_pc		"Avg education expenditure (pc)"
-		label	var	avg_healthexp_pc		"Avg health expenditure (pc)"
-		label	var	avg_houseexp_pc		"Avg house expenditure (pc)"
-		label	var	avg_proptax_pc		"Avg property expenditure (pc)"
-		label	var	avg_transexp_pc		"Avg transportation expenditure (pc)"
-		label	var	avg_wealth_pc		"Avg wealth (pc)"
 		label	var	emp_HH_simple		"Employed"
 		label	var	emp_spouse_simple		"Employed (spouse)"
 		label	var	fs_cat_MS		"Marginal food secure"
@@ -1010,8 +998,6 @@
 		label	var	fs_cat_VLS		"Very Low food secure"
 		label	var	child_bf_assist		"Free/reduced breakfast from school"
 		label	var	child_lunch_assist		"Free/reduced lunch from school"
-		label	var	splitoff_dummy		"Splitoff ummy"
-		label	var	accum_splitoff		"Accumulated splitoff"
 		label	var	other_debts			"Other debts"
 		label	var	fs_cat_fam_simp		"Food Security Category (binary)"
 		label	var	age_over65		"65 or older"
@@ -1027,19 +1013,14 @@
 		label	var	foodexp_recall_away		"Food expenditure (away) recall period"
 		label	var	foodexp_recall_deliv	"Food expenditure (delivered) recall period"
 		label	var	mental_problem	"Mental problem"
-		label	var	week_of_year	"Week of the year"
-		
-
-		*label	var	cloth_exp_total		"Total cloth expenditure"
-		
+		label	var	week_of_year	"Week of the year"		
 		label	var	FPL_		"Federal Poverty Line"
 		label	var	income_to_poverty		"Income to Poverty Ratio"
 		label	var	income_to_poverty_cat		"Income to Poverty Ratio (category)"
-		
-		*label 	var	food_stamp_val	"Annual food stamp value of the last year"
 		label	var	food_stamp_value_1yr	"Annual food stamp value of the previous year"
 		label	var	food_stamp_value_0yr	"Annual food stamp value of the current year"
 			      
+		*	Drop variable no longer used.
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
 				house_exp_total	property_tax	transport_exp	wealth_total	/*cloth_exp_total*/
 		
