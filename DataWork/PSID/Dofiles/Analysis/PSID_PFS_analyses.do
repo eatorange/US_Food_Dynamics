@@ -770,167 +770,9 @@
 	}	//	Random Forest
 	
 	
-	/****************************************************************
-		SECTION 2: Summary statistics
-	****************************************************************/		
-	
-	local	run_sumstat	1
-	
-	if	`run_sumstat'==1	{
-	
-	*	Summary Statistics (Table 3)
-	
-		eststo drop	Total SRC	SEO	Imm
-		
-		local	estimation_year		inrange(year,2,10)
-				
-		*	Declare variables
-		local	demovars	age_head_fam	HH_race_white	HH_race_color	marital_status_cat	HH_female	
-		local	econvars	income_pc	food_exp_pc
-		local	empvars		emp_HH_simple
-		local	healthvars	phys_disab_head	mental_problem
-		local	familyvars	num_FU_fam ratio_child
-		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
-		local	foodvars	food_stamp_used_1yr	child_meal_assist /*WIC_received_last	elderly_meal*/
-		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		
-		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'
-
-		*cap	drop	sample_source?
-		*tab sample_source, gen(sample_source)
-		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)): mean	`sumvars'
-		estat sd
-		estadd matrix mean = r(mean)
-		estadd matrix sd = r(sd)
-		estadd scalar N = e(N_sub), replace
-		eststo	Total
-		
-		
-		*epctile age_head_fam, p( 5 10 25 50 75 90 95 ) /* over( obraz ) */ svy, if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)
-		
-		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)	&	sample_source_SRC==1): mean  `sumvars'
-		estat sd
-		estadd matrix mean = r(mean)
-		estadd matrix sd = r(sd)
-		estadd scalar N = e(N_sub), replace
-		eststo	SRC
-		
-		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)	&	sample_source_SEO==1): mean  `sumvars'
-		estat sd
-		estadd matrix mean = r(mean)
-		estadd matrix sd = r(sd)
-		estadd scalar N = e(N_sub), replace
-		eststo	SEO
-			
-		
-		*	Table 1 (Summary Statistics)
-		esttab *Total SRC SEO using "${PSID_outRaw}/Table1_Sumstats.csv", replace ///
-		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
-		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
-		title (Summary Statistics) ///
-		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
-		/*addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)*/
-		
-		esttab *Total SRC SEO using "${PSID_outRaw}/Table1_Sumstats.tex", replace ///
-		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
-		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
-		title (Summary Statistics) ///
-		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ tex ///
-		/*addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)*/
-		
-		
-		
-	}			
-	
-	
-	* Examining recall period.
-		
-		*	Count the number of non-missing PFS obs within household over time. We will restrict our analysis on households with non-missing PFS 
-		cap	drop	num_nonmissing_PFS
-		bys fam_ID_1999: egen num_nonmissing_PFS = count(rho1_foodexp_pc_thrifty_ols)
-				
-		
-		*	Frequency table of recall period
-		*	We focus on at-home expenditure, as most households report it.
-		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0	&	year!=1 ): tab foodexp_recall_home	//	Adjusted
-		*tab	foodexp_recall_home	if	${study_sample}==1 & num_nonmissing_PFS!=0	&	year!=1	//	Unadjusted
-		
-		*	Stability of recall period within household over time
-		cap drop	foodexp_recall_num
-		cap	drop	foodexp_recall_num_temp
-		qui unique foodexp_recall_home if year!=1  , by(fam_ID_1999) gen(foodexp_recall_num_temp)	//	Number of unique recall period. One non-missing obs per household. I did not exclude "Inappropriate", as responses like "refuse to answer/NA" implies unstability in recall period.
-		bys fam_ID_1999: egen foodexp_recall_num = max(foodexp_recall_num_temp)
-		drop	foodexp_recall_num_temp	
-		
-		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0	&	year==2 ): tab foodexp_recall_num	//	Adjusted, "year==2" is to count only 1 obs per household.
-		*tab	foodexp_recall_num if  	num_nonmissing_PFS!=0	&	year==2	//	Unadjusted
-		*	We argue that household reported food expenditure stablely over time if the number of unique report period is low.
-		
-		*	Consistency of recall period within household over time.
-		cap	drop	foodexp_recall_home_mean
-		bys fam_ID_1999: egen foodexp_recall_home_mean = mean(foodexp_recall_home) if year!=1	//	Exclude 1999 expenditure from analysis (1999 is NOT a sample year)
-		tab	foodexp_recall_home_mean	if	num_nonmissing_PFS!=0 & year==2 // count only 1 obs per household via !mi(foodexp_recall_num)
-		
-		*	Mean=3 & foodexp_recall_num=1 implies households reported weekly expenditure only over the study period.
-		cap	drop	foodexp_recall_home_weekonly
-		gen		foodexp_recall_home_weekonly	=	0
-		replace	foodexp_recall_home_weekonly	=	1	if	foodexp_recall_num==1	&	foodexp_recall_home_mean==3
-		
-		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0 &	year==2	 ): tab foodexp_recall_home_weekonly	//	Adjusted
-		*	tab		foodexp_recall_home_weekonly	if	num_nonmissing_PFS!=0 &	year==2	//	Unadjussted
-		
-
-			*	Let's examine household characteristics of households reporting multiple recall period (3 or more) over the survey period.
-		local	var	foodexp_recall_home_multiple
-		cap	drop	`var'
-		gen		`var'	=	0	if	!mi(foodexp_recall_num)
-		replace	`var'	=	1	if	!mi(foodexp_recall_num)	&	foodexp_recall_num>=3
-		
-		
-		local	demovars	age_head_fam 
-		local	econvars	ln_income_pc	food_exp_pc
-		local	healthvars	phys_disab_head mental_problem
-		local	empvars		emp_HH_simple
-		local	familyvars	num_FU_fam ratio_child
-		local	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	
-		local	foodvars	food_stamp_used_0yr	child_meal_assist
-		
-		*	Simple OLS
-		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)): reg `var' 	`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	
-		est	store	foodexp_recall_reg
-		
-		*	Output
-		esttab	foodexp_recall_reg	using "${PSID_outRaw}/foodexp_recall_reg.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-				title(Conditional Mean and Variance of Food Expenditure per capita) 	///			
-				replace
-		
-		
-		*	Food stamp value
-		cap	mat	drop	food_stamp_value_0yr
-		forval	year=2/5	{
-			
-			svy, subpop(if ${study_sample}==1 & year==`year'	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5): mean food_stamp_value_0yr	//	Adjusted
-			mat	food_stamp_value_0yr	=	nullmat(food_stamp_value_0yr) \ e(b)[1,1]
-			
-		}
-		mat	list	food_stamp_value_0yr
-		
-		
-		*	Food stamp value by recall period
-		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	): tab food_stamp_freq_0yr
-		
-		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==3	): mean food_stamp_value_0yr
-		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5	): mean food_stamp_value_0yr
-		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==6	): mean food_stamp_value_0yr
-		
-		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==3	 ): mean food_stamp_value_0yr
-		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5	 ): mean food_stamp_value_0yr
-		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==6	 ): mean food_stamp_value_0yr
-
 	
 	/****************************************************************
-		SECTION 3: Categorization
+		SECTION 2: Categorization
 	****************************************************************/	
 	
 	*	Categorization	//	Generate FS category variables from the PFS
@@ -1276,7 +1118,167 @@
 	}	//	Categorization			
 
 	save	"${PSID_dtInt}/PFS_cat_ready.dta", replace
+	
+	
+	/****************************************************************
+		SECTION 3: Summary statistics
+	****************************************************************/		
+	
+	local	run_sumstat	1
+	
+	if	`run_sumstat'==1	{
+	
+	*	Summary Statistics (Table 3)
+	
+		eststo drop	Total SRC	SEO	Imm
 		
+		local	estimation_year		inrange(year,2,10)
+				
+		*	Declare variables
+		local	demovars	age_head_fam	HH_race_white	HH_race_color	marital_status_cat	HH_female	
+		local	econvars	income_pc	food_exp_pc
+		local	empvars		emp_HH_simple
+		local	healthvars	phys_disab_head	mental_problem
+		local	familyvars	num_FU_fam ratio_child
+		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
+		local	foodvars	food_stamp_used_1yr	child_meal_assist /*WIC_received_last	elderly_meal*/
+		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		
+		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'
+
+		*cap	drop	sample_source?
+		*tab sample_source, gen(sample_source)
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)): mean	`sumvars'
+		estat sd
+		estadd matrix mean = r(mean)
+		estadd matrix sd = r(sd)
+		estadd scalar N = e(N_sub), replace
+		eststo	Total
+		
+		
+		*epctile age_head_fam, p( 5 10 25 50 75 90 95 ) /* over( obraz ) */ svy, if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)
+		
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)	&	sample_source_SRC==1): mean  `sumvars'
+		estat sd
+		estadd matrix mean = r(mean)
+		estadd matrix sd = r(sd)
+		estadd scalar N = e(N_sub), replace
+		eststo	SRC
+		
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)	&	sample_source_SEO==1): mean  `sumvars'
+		estat sd
+		estadd matrix mean = r(mean)
+		estadd matrix sd = r(sd)
+		estadd scalar N = e(N_sub), replace
+		eststo	SEO
+			
+		
+		*	Table 1 (Summary Statistics)
+		esttab *Total SRC SEO using "${PSID_outRaw}/Table1_Sumstats.csv", replace ///
+		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
+		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
+		title (Summary Statistics) ///
+		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ csv ///
+		/*addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)*/
+		
+		esttab *Total SRC SEO using "${PSID_outRaw}/Table1_Sumstats.tex", replace ///
+		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
+		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
+		title (Summary Statistics) ///
+		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ tex ///
+		/*addnotes(Includes households in LASSO regression. SRC stands for Survey Research Center composed of nationally representative households, SEO stands for Survey Economic Opportunities composed of low income households, and Immigrants are those newly added to the PSID in 1997 and 1999)*/
+		
+		
+		
+	}			
+	
+	
+	* Examining recall period.
+		
+		*	Count the number of non-missing PFS obs within household over time. We will restrict our analysis on households with non-missing PFS 
+		cap	drop	num_nonmissing_PFS
+		bys fam_ID_1999: egen num_nonmissing_PFS = count(rho1_foodexp_pc_thrifty_ols)
+				
+		
+		*	Frequency table of recall period
+		*	We focus on at-home expenditure, as most households report it.
+		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0	&	year!=1 ): tab foodexp_recall_home	//	Adjusted
+		*tab	foodexp_recall_home	if	${study_sample}==1 & num_nonmissing_PFS!=0	&	year!=1	//	Unadjusted
+		
+		*	Stability of recall period within household over time
+		cap drop	foodexp_recall_num
+		cap	drop	foodexp_recall_num_temp
+		qui unique foodexp_recall_home if year!=1  , by(fam_ID_1999) gen(foodexp_recall_num_temp)	//	Number of unique recall period. One non-missing obs per household. I did not exclude "Inappropriate", as responses like "refuse to answer/NA" implies unstability in recall period.
+		bys fam_ID_1999: egen foodexp_recall_num = max(foodexp_recall_num_temp)
+		drop	foodexp_recall_num_temp	
+		
+		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0	&	year==2 ): tab foodexp_recall_num	//	Adjusted, "year==2" is to count only 1 obs per household.
+		*tab	foodexp_recall_num if  	num_nonmissing_PFS!=0	&	year==2	//	Unadjusted
+		*	We argue that household reported food expenditure stablely over time if the number of unique report period is low.
+		
+		*	Consistency of recall period within household over time.
+		cap	drop	foodexp_recall_home_mean
+		bys fam_ID_1999: egen foodexp_recall_home_mean = mean(foodexp_recall_home) if year!=1	//	Exclude 1999 expenditure from analysis (1999 is NOT a sample year)
+		tab	foodexp_recall_home_mean	if	num_nonmissing_PFS!=0 & year==2 // count only 1 obs per household via !mi(foodexp_recall_num)
+		
+		*	Mean=3 & foodexp_recall_num=1 implies households reported weekly expenditure only over the study period.
+		cap	drop	foodexp_recall_home_weekonly
+		gen		foodexp_recall_home_weekonly	=	0
+		replace	foodexp_recall_home_weekonly	=	1	if	foodexp_recall_num==1	&	foodexp_recall_home_mean==3
+		
+		svy, subpop(if ${study_sample}==1 & num_nonmissing_PFS!=0 &	year==2	 ): tab foodexp_recall_home_weekonly	//	Adjusted
+		*	tab		foodexp_recall_home_weekonly	if	num_nonmissing_PFS!=0 &	year==2	//	Unadjussted
+		
+
+			*	Let's examine household characteristics of households reporting multiple recall period (3 or more) over the survey period.
+		local	var	foodexp_recall_home_multiple
+		cap	drop	`var'
+		gen		`var'	=	0	if	!mi(foodexp_recall_num)
+		replace	`var'	=	1	if	!mi(foodexp_recall_num)	&	foodexp_recall_num>=3
+		
+		
+		local	demovars	age_head_fam 
+		local	econvars	ln_income_pc	food_exp_pc
+		local	healthvars	phys_disab_head mental_problem
+		local	empvars		emp_HH_simple
+		local	familyvars	num_FU_fam ratio_child
+		local	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	
+		local	foodvars	food_stamp_used_0yr	child_meal_assist
+		
+		*	Simple OLS
+		svy, subpop(if ${study_sample} & !mi(rho1_foodexp_pc_thrifty_ols)): reg `var' 	`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	
+		est	store	foodexp_recall_reg
+		
+		*	Output
+		esttab	foodexp_recall_reg	using "${PSID_outRaw}/foodexp_recall_reg.csv", ///
+				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+				title(Conditional Mean and Variance of Food Expenditure per capita) 	///			
+				replace
+		
+		
+		*	Food stamp value
+		cap	mat	drop	food_stamp_value_0yr
+		forval	year=2/5	{
+			
+			svy, subpop(if ${study_sample}==1 & year==`year'	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5): mean food_stamp_value_0yr	//	Adjusted
+			mat	food_stamp_value_0yr	=	nullmat(food_stamp_value_0yr) \ e(b)[1,1]
+			
+		}
+		mat	list	food_stamp_value_0yr
+		
+		
+		*	Food stamp value by recall period
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	): tab food_stamp_freq_0yr
+		
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==3	): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5	): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & food_stamp_used_0yr==1	&	food_stamp_freq_0yr==6	): mean food_stamp_value_0yr
+		
+		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==3	 ): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==5	 ): mean food_stamp_value_0yr
+		svy, subpop(if ${study_sample}==1 & year==5	&	food_stamp_used_0yr==1	&	food_stamp_freq_0yr==6	 ): mean food_stamp_value_0yr
+
+	
 	/****************************************************************
 		SECTION 4: Correlation between the PFS and the USDA measure
 	****************************************************************/	
