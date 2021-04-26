@@ -167,9 +167,28 @@
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
 		
+	*	Including stamp value or not
+	**	For now, I will add just a code deciding which food expenditure to use - with or without food stamp.
+	** I can make this code nicer later.
+	
+	local	include_stamp	0
+		
+	*	Determine whether to include stamp value to expenditure or not.
+	if	`include_stamp'==1	{
+		
+		replace	food_exp_pc			=	food_exp_stamp_pc
+		replace	lag_food_exp_pc_1	=	lag_food_exp_stamp_pc_1
+		replace	lag_food_exp_pc_2	=	lag_food_exp_stamp_pc_2
+		replace	lag_food_exp_pc_3	=	lag_food_exp_stamp_pc_3
+		replace	lag_food_exp_pc_4	=	lag_food_exp_stamp_pc_4
+		replace	lag_food_exp_pc_5	=	lag_food_exp_stamp_pc_5
+	}
+	
+	
+	
 	*	OLS
 	local	run_GLM	1
-		local	model_selection	0
+		local	model_selection	1
 		local	run_ME	0
 		
 	*	LASSO
@@ -185,10 +204,6 @@
 		local	run_rf_step1	1
 		local	run_rf_step2	1
 		local	run_rf_step3	1
-	
-	
-	
-	
 	
 	*	GLM
 	if	`run_GLM'==1	{
@@ -276,7 +291,7 @@
 		*	Step 2
 		local	depvar	e1_foodexp_sq_ols
 		
-		svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
+		svy, subpop(${study_sample}): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	, family(gamma)	link(log)
 		*svy, subpop(ols_step1_sample): reg `depvar' ${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	//	glm does not converge, thus use OLS)
 		
 		est store ols_step2
@@ -286,20 +301,14 @@
 					
 		*	Output
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Conditional Mean and Variance of Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2017 Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
-					replace
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
+					title(Conditional Mean and Variance of Food Expenditure per capita) 	replace
 					
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.tex", ///
 					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Conditional Mean and Variance of Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
-					replace		
+					title(Conditional Mean and Variance of Food Expenditure per capita)		replace		
 		
 			
-		
-		
 		*	Marginal Effect
 		if	`run_ME'==1	{
 		
@@ -1294,6 +1303,9 @@
 	if	`reg_correlation'==1	{
 		
 		
+		*	Simple inclusion and exclusion
+		svy, subpop(${study_sample}):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
+		
 		*	Create decile indicator
 		cap	drop	PFS_decile_cutoff
 		cap	drop	PFS_decile
@@ -1595,29 +1607,34 @@
 	}	//	supplement_analysis		
 				
 				
-		*	PFS by the week of the survey
+		*	PFS and food stamp redemption by the week of the survey
 	cap	mat	drop	PFS_byweek_all
 	cap	mat	drop	PFS_byweek_FI
 	cap	mat	drop	week
+	cap	mat	drop	foodstamp_byweek
+	
 	forval	week=1/52	{
 			
 			*di "current week is `week'"
 			mat	week	=	nullmat(week)	\	`week'
 			
+			
 			*	All households
 			qui count	if	${study_sample}==1	&	year!=1	&	week_of_year==`week'
 			if	r(N)==0	{
 				
-				mat	PFS_byweek_all	=	nullmat(PFS_byweek_all)	\	0
-				mat	PFS_byweek_FI	=	nullmat(PFS_byweek_FI)	\	0
+				mat	PFS_byweek_all		=	nullmat(PFS_byweek_all)	\	0
+				mat	PFS_byweek_FI		=	nullmat(PFS_byweek_FI)	\	0
+				mat	foodstamp_byweek	=	nullmat(foodstamp_byweek)	\	0
+				
 				continue
 				
 			}		
-			qui	svy, subpop(if ${study_sample}==1	&	year!=1	&	week_of_year==`week'):	mean	rho1_foodexp_pc_thrifty_ols
-			
-			
+			qui	svy, subpop(if ${study_sample}==1	&	year!=1	&	week_of_year==`week'):	mean	rho1_foodexp_pc_thrifty_ols	//	PFS
 			mat	PFS_byweek_all	=	nullmat(PFS_byweek_all)	\	e(b)[1,1]
 			
+			qui	svy, subpop(if ${study_sample}==1	&	year!=1	&	week_of_year==`week'):	mean	food_stamp_used_0yr	//	Food stamp usage
+			mat	foodstamp_byweek	=	nullmat(foodstamp_byweek)	\	e(b)[1,1]
 			
 			*	FI households
 			qui count	if	${study_sample}==1	&	year!=1	&	week_of_year==`week'	&	rho1_thrifty_FI_ols==1
@@ -1636,13 +1653,11 @@
 	
 	cap	mat	drop	PFS_byweek_table
 	mat	PFS_byweek_table	=	week,	PFS_byweek_all,	PFS_byweek_FI
+	mat	list	PFS_byweek_table
+	mat list	foodstamp_byweek
 	
 	*	Simple regression of PFS on interview dummy.
 	svy, subpop(if ${study_sample}==1): reg rho1_foodexp_pc_thrifty_ols	ib47.week_of_year
-			
-	
-	*	Inclusion/Exclusion with the HFSM
-	svy, subpop(if ${study_sample}==1 & inlist(year,2,3,9,10)): tab 	fs_cat_fam_simp	rho1_thrifty_FS_ols	
 	
 	/****************************************************************
 		SECTION 5: Regression of Indicators on Correlates
