@@ -671,7 +671,7 @@
 		save	`temp'
 		
 			*	Import monthly food plan cost data, which has cost per gender-age
-			import excel "E:\Box\US Food Security Dynamics\DataWork\USDA\Food Plans_Cost of Food Reports.xlsx", sheet("thrifty") firstrow clear
+			import excel "${clouldfolder}/DataWork/USDA/Cost of Food Reports/Food Plans_Cost of Food Reports.xlsx", sheet("thrifty") firstrow clear
 
 			*	Make sure each gender-age-state uniquly identifies observation
 			isid	gender	age	state
