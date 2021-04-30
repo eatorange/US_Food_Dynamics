@@ -670,11 +670,12 @@
 		tempfile temp
 		save	`temp'
 		
+			/*
 			*	Import monthly food plan cost data, which has cost per gender-age
 			import excel "${clouldfolder}/DataWork/USDA/Cost of Food Reports/Food Plans_Cost of Food Reports.xlsx", sheet("thrifty") firstrow clear
 
 			*	Make sure each gender-age-state uniquly identifies observation
-			isid	gender	age	state
+			isid	gender	age	state 
 
 			rename	gender	indiv_gender
 
@@ -694,7 +695,31 @@
 				save	`foodcost_`year''
 				
 			}
+			*/
 			
+			forvalues	year=2001(2)2017	{
+				
+				import excel "${clouldfolder}/DataWork/USDA/Cost of Food Reports/Food Plans_Cost of Food Reports.xlsx", sheet("thrifty_`year'") firstrow clear
+						
+				reshape long foodcost_, i(gender state age) j(month)
+				
+				isid	gender	age	state month
+
+				rename	gender	indiv_gender
+				rename	age		age_ind`year'
+				rename	state	state_region_temp`year'
+				rename	month	interview_month`year'
+				rename	foodcost_	foodcost_monthly_`year'
+				keep	indiv_gender	age_ind`year'	state_region_temp`year'	interview_month`year'	foodcost_monthly_`year'
+				
+				tempfile foodcost_`year'
+				save	`foodcost_`year''
+				
+			}
+			
+			
+			use	`temp', clear
+						
 			*	There are household members whose ages are missing in PSID. In that case, we apply average cost of male/female, from 19(20) to 50.
 			*	I manually checked the observations, and very few numbers of household members in HH have missing ages (between 0.01~0.2%) in each year, and most of them are adults.
 
@@ -708,16 +733,13 @@
 			scalar	foodcost_monthly_avgadult_2013	=	172.2
 			scalar	foodcost_monthly_avgadult_2015	=	176
 			scalar	foodcost_monthly_avgadult_2017	=	174.3
-
-			*	Merge PSID data with cost dataset
 			
-			use	`temp', clear 
-			*use	"${PSID_dtInt}/PSID_clean_1999_2017_ind.dta", clear
+	
 			
-			forvalues	year=1999(2)2017	{
+			forvalues	year=2001(2)2017	{
 				
-				merge m:1 indiv_gender age_ind`year'	state_region_temp`year' using `foodcost_`year'', keepusing(foodcost_monthly_`year')	nogen keep(1 3)
-				replace	foodcost_monthly_`year' = foodcost_monthly_avgadult_`year'	if	mi(age_ind`year')
+				merge m:1 indiv_gender age_ind`year'	state_region_temp`year' interview_month`year'	using `foodcost_`year'', keepusing(foodcost_monthly_`year')	nogen keep(1 3)
+				replace	foodcost_monthly_`year' = foodcost_monthly_avgadult_`year'	if	mi(age_ind`year')	&	inrange(xsqnr_`year',1,20)
 				
 				foreach	plan	in	thrifty	/*low	moderate	liberal*/	{
 				
