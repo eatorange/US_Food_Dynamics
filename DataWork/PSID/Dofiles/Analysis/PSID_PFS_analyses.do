@@ -331,15 +331,15 @@
 		
 		*	Step 3
 		*	Assume the outcome variable follows the Gamma distribution
-		gen alpha1_foodexp_pc_ols = (mean1_foodexp_ols)^2 / var1_foodexp_ols	//	shape parameter of Gamma (alpha)
-		gen beta1_foodexp_pc_ols = var1_foodexp_ols / mean1_foodexp_ols	//	scale parameter of Gamma (beta)
+		gen alpha1_foodexp_pc_ols	= (mean1_foodexp_ols)^2 / var1_foodexp_ols	//	shape parameter of Gamma (alpha)
+		gen beta1_foodexp_pc_ols	= var1_foodexp_ols / mean1_foodexp_ols	//	scale parameter of Gamma (beta)
 		
 		*	Construct CDF
 		foreach	plan	in	thrifty /*low moderate liberal*/	{
 			
 			*	Generate PFS. 
 			*	Should include in-sample as well as out-of-sample to validate its OOS performance
-			gen rho1_foodexp_pc_`plan'_ols = gammaptail(alpha1_foodexp_pc_ols, foodexp_W_`plan'/beta1_foodexp_pc_ols)	/*if	(lasso_step1_sample==1)	&	(lasso_step2_sample==1)*/	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+			gen rho1_foodexp_pc_`plan'_ols = gammaptail(alpha1_foodexp_pc_ols, foodexp_W_`plan'/beta1_foodexp_pc_ols)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
 			label	var	rho1_foodexp_pc_`plan'_ols "PFS (`plan' plan)"
 		}
 		
@@ -1303,9 +1303,6 @@
 	if	`reg_correlation'==1	{
 		
 		
-		*	Simple inclusion and exclusion
-		svy, subpop(${study_sample}):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
-		
 		*	Create decile indicator
 		cap	drop	PFS_decile_cutoff
 		cap	drop	PFS_decile
@@ -1328,6 +1325,11 @@
 		qui	summarize	PFS_decile_cutoff	in	9
 		replace	PFS_decile	=	10	if	inrange(rho1_foodexp_pc_thrifty_ols,r(mean),1)
 
+		
+			
+		*	Simple inclusion and exclusion
+		svy, subpop(${study_sample}):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
+		svy, subpop(if ${study_sample} & inrange(income_to_poverty_cat,1,2)):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols	//	Low
 		
 		foreach	type	in	ols	/*ls	rf*/	{
 			
@@ -1400,14 +1402,16 @@
 				
 				*	Correlation table, aggregated
 				mat	corr_all	=	corr_spearman,	corr_kendall
+				mat list corr_all
 			
+						
+			*	Frequency table of the HFSM
+			svy, subpop(if ${study_sample}==1 & !mi(rho1_foodexp_pc_thrifty_ols) & !mi(fs_scale_fam_rescale)): tab fs_scale_fam_rescale
 			
 			*	Summarize PFS (https://www.stata.com/support/faqs/statistics/percentiles-for-survey-data/)
 			summ	fs_scale_fam_rescale 		if ${study_sample}==1	&	inlist(year,2,3,9,10)	&	!mi(rho1_foodexp_pc_thrifty_ols)  [aweight=weight_multi12], detail
 			summ	rho1_foodexp_pc_thrifty_ols if ${study_sample}==1	&	inlist(year,2,3,9,10)	&	!mi(fs_scale_fam_rescale)		  [aweight=weight_multi12], detail
-						
-			*	Mean and St.dev (unadjusted)
-			*summ fs_scale_fam_rescale	rho1_foodexp_pc_thrifty_ols if !mi(fs_scale_fam_rescale) & !mi(rho1_foodexp_pc_thrifty_ols)
+			
 			
 			*	Density Estimate of Food Security Indicator (Figure A1)
 			graph twoway 		(kdensity fs_scale_fam_rescale			if	inlist(year,2,3,9,10)	&	!mi(rho1_foodexp_pc_thrifty_ols))	///
@@ -1672,112 +1676,59 @@
 		gen		USDA_PFS_available_years=0
 		replace	USDA_PFS_available_years=1	if	inlist(year,2,3,9,10)
 		
-		cap	drop	age_head_fam_sq_K
-		gen	age_head_fam_sq_K	=	age_head_fam_sq/1000
-		lab	var	age_head_fam_sq_K	"Age$^2$/1000"	
-	
 		
-		*local	depvar		rho1_foodexp_pc_thrifty_ols
-		*local	lagdepvar	l.`depvar'
-		local	demovars	c.age_head_fam	c.age_head_fam_sq_K	HH_female	HH_race_color	marital_status_cat
-		local	econvars	c.ln_income_pc	/*wealth_pc	wealth_pc_sq*/
-		local	familyvars	c.num_FU_fam c.ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
-		local	eduvars		/*attend_college_head*/ highdegree_NoHS highdegree_somecol highdegree_col
-		local	empvars		emp_HH_simple
-		local	healthvars	phys_disab_head	mental_problem
-		local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist /*WIC_received_last	elderly_meal*/
-		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	/*ib0.state_resid_fam*/		state_group? state_group1? state_group2?
-		local	interactvars	c.ln_income_pc#c.HH_female	///
-								c.ln_income_pc#c.age_over65	///
-								c.HH_female#c.age_over65	///
-								c.ln_income_pc#c.HH_female#c.age_over65	///
-								c.no_longer_married#c.HH_female
-		local	timevars	year_enum3-year_enum10
 		
-		local	MEvars	c.age_head_fam	HH_female	HH_race_color	marital_status_cat	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'	// c.age_over65	
+		*	Regression of 4 different settings
+		
+			*	HFSM, without region FE
+			local	depvar	fs_scale_fam_rescale	
+			svy, subpop(if ${study_sample} & USDA_PFS_available_years==1	&	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)):	///
+				reg	`depvar'	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	
+			est	store	HFSM_noregionFE	
 			
+			*	PFS, without region FE
+			local	depvar	rho1_foodexp_pc_thrifty_ols
+			svy, subpop(if ${study_sample} & USDA_PFS_available_years==1	&	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)):	///
+				reg	`depvar'	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	
+			est	store	PFS_noregionFE	
+			coefplot, keep(`regionvars')	
 			
-		*	Regression of 4 different indicators on food security correlates
-		
-		local	depvar	fs_scale_fam_rescale
-		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	USDA_continuous
-		*eststo	USDA_cont_ME: margins,	dydx(`MEvars')	post	
-		
-		local	depvar	rho1_foodexp_pc_thrifty_ols
-		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	CB_continuous
-		coefplot, keep(`regionvars')
-		eststo	CB_cont_ME: margins,	dydx(`MEvars')	post	
-		
-		local	depvar	fs_cat_fam_simp
-		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	USDA_binary
-		*eststo	USDA_bin_ME: margins,	dydx(`MEvars')	post	
-		
-		local	depvar	rho1_thrifty_FS_ols
-		svy, subpop(if ${study_sample} & USDA_PFS_available_years==1): reg	`depvar'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		/*`interactvars'*/	`regionvars'	`timevars'	if	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)
-		est	store	CB_binary
-		*eststo	CB_bin_ME: margins,	dydx(`MEvars')	post	
-		
+			*	HFSM, with region FE
+			local	depvar	fs_scale_fam_rescale
+			svy, subpop(if ${study_sample} & USDA_PFS_available_years==1	&	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)):	///
+				reg	`depvar'	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	${regionvars}
+			est	store	HFSM_regionFE	
+			
+			*	PFS, with region FE
+			local	depvar	rho1_thrifty_FS_ols
+			svy, subpop(if ${study_sample} & USDA_PFS_available_years==1	&	!mi(rho1_foodexp_pc_thrifty_ols)	&	!mi(fs_scale_fam_rescale)):	///
+				reg	`depvar'	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	${regionvars}
+			est	store	PFS_regionFE	
+					
 		
 		*	Output
 			
 			*	Food Security Indicators and Their Correlates (Table 4 of 2020/11/16 draft)
-			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.csv", ///
+			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${PSID_outRaw}/HFSM_PFS_pooled.csv", ///
 					cells(b(star fmt(3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Effect of Correlates on Food Security Status) replace
 					
 					
-			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	using "${PSID_outRaw}/USDA_CB_pooled.tex", ///
+			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${PSID_outRaw}/HFSM_PFS_pooled.tex", ///
 					/*cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 					cells(b(star fmt(3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Effect of Correlates on Food Security Status) replace
-				
-			/*
-			esttab	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_ME.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Average Marginal Effects on Food Security Status) replace
-					
-			esttab	USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME	using "${PSID_outRaw}/USDA_CB_ME.tex", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Average Marginal Effects on Food Security Status) replace
-					
-			esttab	USDA_continuous	CB_continuous	USDA_binary	CB_binary	/*USDA_cont_ME	CB_cont_ME	USDA_bin_ME	CB_bin_ME*/	using "${PSID_outRaw}/USDA_CB_all.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Average Marginal Effects on Food Security Status) replace
-			*/
-			
-		/*
-		*	State-FE (base category is "Inappropriate; foreign country")
-		est	restore	CB_continuous
-									
-			coefplot, keep(${state_Northeast})	xline(0)	graphregion(color(white)) bgcolor(white)	///
-									title(Northeast)	name(state_FE_NE, replace)
-			coefplot, keep(${state_Ncentral})	xline(0)	graphregion(color(white)) bgcolor(white)	///
-									title(North Central)	name(state_FE_NC, replace)
-			coefplot, keep(${state_South})		xline(0)	graphregion(color(white)) bgcolor(white)	///
-									title(South)	name(state_FE_South, replace)
-			coefplot, keep(${state_West})		xline(0)	graphregion(color(white)) bgcolor(white)	///
-									title(West)		name(state_FE_West, replace)
-			
-			graph combine		state_FE_NE	state_FE_NC	state_FE_South	state_FE_West, title(PFS State FE)
-			graph	export	"${PSID_outRaw}/PFS_State_FE.png", replace
-			graph	close
-		*/
-		
-		
+	
 		*	Grouped-state FE (without controls)
 		
 		
 		*	Regress PFS on grouped-state FE (no controls, no time FE)
 		local	depvar	rho1_foodexp_pc_thrifty_ols
-		svy, subpop(if ${study_sample}): reg	`depvar'	`regionvars'		//	NY is omitted as a reference state
+		svy, subpop(if ${study_sample}): reg	`depvar'	${regionvars}		//	NY is omitted as a reference state
 		est	store	PFS_regionFE_nocontrols
 		
 		local	depvar	rho1_foodexp_pc_thrifty_ols
-		svy, subpop(if ${study_sample}): reg	`depvar'	`regionvars'	`demovars'	`econvars'	`familyvars'	`eduvars'	`empvars'	`healthvars'	`foodvars'	`shockvars'		`timevars'	//	NY is omitted as a reference state
+		svy, subpop(if ${study_sample}): reg	`depvar'	${regionvars}	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}		//	NY is omitted as a reference state
 		est	store	PFS_regionFE_controls
 
 		*	Plot grouped-state FE
@@ -1819,8 +1770,6 @@
 			
 		
 	}
-	
-
 	
 	
 	/****************************************************************
@@ -2113,10 +2062,10 @@
 				
 			   
 				putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(categorical) /*replace*/	modify
-				putexcel	A3	=	matrix(FGT_cat_combined), names overwritefmt nformat(number_d1)
-				putexcel	A14	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)
-				putexcel	A24	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)
-				putexcel	A34	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)
+				putexcel	A3	=	matrix(FGT_cat_combined), names overwritefmt nformat(number_d1)			//	HCR, FIG and SFIG by different groups (across all years)
+				putexcel	A14	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)		//	HCR by different groups by each year
+				putexcel	A24	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)		//	FIG by different groups by each year
+				putexcel	A34	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)		//	SFIG by different groups by each year
 				putexcel	M3	=	matrix(FGT_cat_combined_sup), names overwritefmt nformat(number_d1)
 				
 				*esttab matrix(Jalan_Rav_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/Jalan_Rav_combined.tex", replace
@@ -2124,11 +2073,7 @@
 				
 		*	Food Security Prevalence over different groups	
 		cap	mat	drop	HCR_group_PFS_3 HCR_group_PFS_7 HCR_group_PFS_10 HCR_group_PFS_all
-		//cap	mat	drop	HCR_group_HFSM_3	HCR_group_HFSM_10	HCR_group_HFSM_all
-		//cap drop	HFSM_FI	
-		
-		//gen	 	HFSM_FI	=	0	if	fs_cat_fam_simp==1
-		//replace	HFSM_FI	=	1	if	fs_cat_fam_simp==0
+
 		
 		foreach year in	3	7	10	{	// 2001, 2011, 2017
 		   foreach	edu	in	1	0	{	//	HS or below, beyond HS	   
@@ -2171,7 +2116,7 @@
 		mat	HCR_group_PFS_all	=	HCR_group_PFS_3,	HCR_group_PFS_7,	HCR_group_PFS_10
 		//mat	HCR_group_HFSM_all	=	HCR_group_HFSM_3,	HCR_group_HFSM_10
 		
-		putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(HCR_desc) replace	/*modify*/
+		putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(HCR_desc) /*replace*/	modify
 		putexcel	A3	=	matrix(HCR_group_PFS_all), names overwritefmt nformat(number_d1)
 		//putexcel	F3	=	matrix(HCR_group_HFSM_all), names overwritefmt nformat(number_d1)
 			
