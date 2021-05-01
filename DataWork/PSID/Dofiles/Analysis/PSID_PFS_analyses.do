@@ -164,7 +164,7 @@
 		local	run_lasso_step3	1
 		
 	*	Random Forest
-	local	run_rf	1	
+	local	run_rf	0	
 		local	tune_iter	0	//	Tuning iteration
 		local	tune_numvars	0	//	Tuning numvars
 		local	run_rf_step1	1
@@ -191,15 +191,6 @@
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	/*ib0.state_resid_fam*/	state_group? state_group1? state_group2?
 		local	timevars	i.year
-		
-		local	depvar	e1_foodexp_sq_ols
-		local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
-		br alpha1_foodexp_pc_ols var1_foodexp_ols rho1_foodexp_pc_thrifty_ols `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars' if var1_foodexp_ols<0	// `regionvars'	`timevars'	
-		
-		svy, subpop(if ${study_sample}): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
-		svy, subpop(if ${study_sample}	&	var1_foodexp_ols<0): mean `depvar' `statevars'		`demovars'	`econvars'	`healthvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
-		
-		local	MEvars	c.lag_food_exp_pc_1	`healthvars'	c.age_head_fam	/*ib1.race_head_cat*/	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`empvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
 		
 		*summ `depvar'	`lag_food_exp_pc_1'	`age_head_fam'	HH_race_black	HH_race_other	marital_status_cat	HH_female	`econvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'
 		
@@ -255,6 +246,7 @@
 			*	All sample
 			*svy: glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	if	in_sample==1, family(gamma/*poisson*/)	link(log)
 			*	SRC/SEO only
+			local	depvar	food_exp_pc
 			local	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 lag_food_exp_pc_3
 			
 			svy, subpop(${study_sample}): glm 	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	`foodvars'	`changevars'	`regionvars'	`timevars'	/*if	in_sample==1*/, family(gamma/*poisson*/)	link(log)
@@ -918,7 +910,7 @@
 		
 			*	Categorize food security status based on the PFS.
 			 quietly	{
-				foreach	type	in	ols	ls	rf	{
+				foreach	type	in	ols	/*ls	rf*/	{
 					foreach	plan	in	thrifty /*low moderate liberal*/	{
 						
 						gen	rho1_`plan'_FS_`type'	=	0	if	!mi(rho1_foodexp_pc_`plan'_`type')	//	Food secure
@@ -1061,6 +1053,8 @@
 			
 			drop	templine
 	
+	
+		/*
 			*	Validation Result
 				sort	fam_ID_1999	year
 				label	define	valid_result	1	"Classified as food secure"	///
@@ -1095,7 +1089,7 @@
 				*/
 				
 				*	GLM, LASSO and RF
-				foreach	type	in	ols	ls	rf	{
+				foreach	type	in	ols	/*ls	rf*/	{
 					
 					*	All sample
 					
@@ -1135,7 +1129,7 @@
 				
 				sort	fam_ID_1999	year
 				
-				foreach	type	in	ols	ls	rf	{
+				foreach	type	in	ols	/*ls	rf*/	{
 					
 					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==0	&	year==9	//	Maximum PFS of households categorized as food insecure
 					local	max_pfs_thrifty_`type'	=	r(max)
@@ -1168,7 +1162,7 @@
 			
 			eststo drop	valid_result*
 			
-			foreach	type in USDA	ols	ls	rf	{
+			foreach	type in USDA	ols	/*ls	rf*/	{
 				
 				di "Validation result of `type' in pooled sample"
 				svy: proportion valid_result_`type' if !mi(valid_result_USDA)	&	!mi(valid_result_ols)	&	!mi(valid_result_ls)	&	!mi(valid_result_rf)
@@ -1192,8 +1186,8 @@
 			
 		local	result_output_list	valid_result_USDA	/*valid_result_USDA_SRC	valid_result_USDA_SEO	valid_result_USDA_IMM*/	///
 									valid_result_ols	/*valid_result_ols_SRC	valid_result_ols_SEO	valid_result_ols_IMM*/	///
-									valid_result_ls		/*valid_result_ls_SRC		valid_result_ls_SEO		valid_result_ls_IMM*/	///
-									valid_result_rf		/*valid_result_rf_SRC		valid_result_rf_SEO		valid_result_rf_IMM*/
+									/*valid_result_ls		/*valid_result_ls_SRC		valid_result_ls_SEO		valid_result_ls_IMM*/	///
+									valid_result_rf	*/	/*valid_result_rf_SRC		valid_result_rf_SEO		valid_result_rf_IMM*/
 		
 		esttab `result_output_list' using "${PSID_outRaw}/valid_result.csv", replace ///
 		cells("mean(pattern(1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1) fmt(2))") label	///
@@ -1208,6 +1202,8 @@
 		title (Validation of 2017 Food Security Prediction) ///
 		/*coeflabels(avg_foodexp_pc "Avg. Food Exp" avg_wealth_pc "YYY")*/ tex ///
 		addnotes(Sample include households surveyed in 2017)
+		
+		*/
 
 	}	//	Categorization			
 
