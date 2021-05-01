@@ -2120,7 +2120,7 @@
 		putexcel	A3	=	matrix(HCR_group_PFS_all), names overwritefmt nformat(number_d1)
 		//putexcel	F3	=	matrix(HCR_group_HFSM_all), names overwritefmt nformat(number_d1)
 			
-		esttab matrix(HCR_group_PFS_all, fmt(%9.3f)) using "${PSID_outRaw}/HCR_group_PFS_all.tex", replace
+		esttab matrix(HCR_group_PFS_all, fmt(%9.2f)) using "${PSID_outRaw}/HCR_group_PFS_all.tex", replace
 		//esttab matrix(HCR_group_HFSM_all, fmt(%9.3f)) using "${PSID_outRaw}/HCR_group_HFSM_all.tex", replace
 		
 	}
