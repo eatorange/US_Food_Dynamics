@@ -156,10 +156,9 @@
 			global	foodvars	food_stamp_used_0yr	child_meal_assist 		//	Food assistance programs
 			global	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled	//	Change in status
 			global	regionvars	state_group? state_group1? state_group2?	//	Region (custom group of status)
-			global	timevars	i.year	//	Year dummies
+			global	timevars	year_enum3-year_enum10	//	Year dummies
 			
-			
-	
+
 	/****************************************************************
 		SECTION 1: Construct PFS measurement
 	****************************************************************/	
@@ -2468,7 +2467,7 @@
 		*	Persistence rate conditional upon spell length (Table 7 of 2020/11/16 draft)
 		mat	persistence_upon_spell	=	J(9,2,.)	
 		forvalues	i=1/8	{
-			svy: proportion rho1_thrifty_FS_ols	if	l._seq==`i'	&	!mi(rho1_thrifty_FS_ols) &	balanced_PFS==1	//	Previously FI
+			svy, subpop(if	l._seq==`i'	&	!mi(rho1_thrifty_FS_ols) &	balanced_PFS==1): proportion rho1_thrifty_FS_ols		//	Previously FI
 			mat	persistence_upon_spell[`i',1]	=	/*e(N),*/ e(b)[1,1], r(table)[2,1]
 		}
 
@@ -2605,103 +2604,7 @@
 					gen	Transient_FI_SFIG	=	Total_FI_SFIG	-	Chronic_FI_SFIG
 							
 				
-				/*
-				*	Mean PFS over time. It will be the input argument for the Chronic Poverty.
-				bys	fam_ID_1999: egen	pfs_`type'_mean	=	mean(rho1_foodexp_pc_thrifty_`type')	if	!mi(rho1_foodexp_pc_thrifty_`type')
-				
-				
-				*	First loop
-				local	num_years	=	0
-				global	PFS_threshold_total=0
-				
-				forval	year=2/10	{		
-							
-					
-					global	PFS_threshold_total	=	${PFS_threshold_total}	+	${PFS_threshold_`year'}	//	To calculate mean cut-off threshold${PFS_threshold_`year'}
-					
-					di "threshold of year `year' is ${PFS_threshold_`year'}"
-					local	num_years	=	`num_years'+1
-					
-					/*
-					*	Set threshold PFS value for year, which is the average of the maximum PFS of FI households and the minimum PFS of the FS households
-					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==0	&	year==`year'	//	Maximum PFS of households categorized as food insecure
-					local	max_pfs_thrifty_`type'_`year'	=	r(max)
-					qui	summ	rho1_foodexp_pc_thrifty_`type'	if	rho1_thrifty_FS_`type'==1	&	year==`year'	//	Minimum PFS of households categorized as food secure
-					local	min_pfs_thrifty_`type'_`year'	=	r(min)
-
-					global	thresval_`type'_`year'	=	(`max_pfs_thrifty_`type'_`year''	+	`min_pfs_thrifty_`type'_`year'')/2	//	Average of the two scores above is a threshold value.
-					global	thresval_`type'_total	=	${thresval_`type'_total}	+	${thresval_`type'_`year'}	//	To calculate mean cut-off threshold
-					
-					
-					*	Normalized PFS (PFS/threshold PFS)	(yit)
-					replace	pfs_`type'_normal	=	rho1_foodexp_pc_thrifty_`type'	/	${thresval_`type'_`year'}	if	year==`year'
-					
-					*	Squared Food Insecurity Gap (SFIG) at each year
-					replace	SFIG_indiv	=	(1-pfs_`type'_normal)^2	if	year==`year'	&	!mi(pfs_`type'_normal)	&	rho1_foodexp_pc_thrifty_`type'<${thresval_`type'_`year'}	
-					replace	SFIG_indiv	=	0						if	year==`year'	&	!mi(pfs_`type'_normal)	&	rho1_foodexp_pc_thrifty_`type'>=${thresval_`type'_`year'}
-					
-					
-					di "threshold of year `year' is ${thresval_`type'_`year'}"
-					local	num_years	=	`num_years'+1
-					*/
-					
-					/*	Outdated code
-					*	Normalized Mean PFS
-					replace	pfs_`type'_mean_normal	=	pfs_`type'_mean	/	${thresval_`type'_`year'}	if	year==`year'
-								
-					*	Squared Food Insecurity Gap (SFIG) at each year using Mean PFS
-					replace	SFIG_mean_indiv	=	(1-pfs_`type'_mean_normal)^2	if	year==`year'	&	!mi(pfs_`type'_mean_normal)	&	pfs_`type'_mean<${thresval_`type'_`year'}
-					replace	SFIG_mean_indiv	=	0								if	year==`year'	&	!mi(pfs_`type'_mean_normal)	&	pfs_`type'_mean>=${thresval_`type'_`year'}
-					*/
-					
-					
-				}	//	year
-				
-				global	PFS_threshold_mean	=	${PFS_threshold_total} / `num_years'
-				di "Total threshold is ${PFS_threshold_total}, num_years is `num_years' and mean threshold is ${PFS_threshold_mean}"
-				
-				
-				** This code is wrong. We should get the average PFS first and then normalize it, NOT the other way around (Calvo and Dercon, 2007)
-				*	Household-level mean of normalized PFS over time (yi_bar)
-				** The difference between "normalized mean PFS" below is that, this one normalize first and then gets them mean, so household i has the same value across time.
-				*bys	fam_ID_1999:	egen	pfs_`type'_normal_mean	=	mean(pfs_`type'_normal)
-				
-				
-				
-				*	Calculate mean Food Insecurity threshold over time.
-				/*	Jalan and Ravallion (2000) used a fixed poverty line across all years, while our cut-off probability line is year-specific.
-					Thus we use the mean of those cut-off probabilities as a fixed threshold to categorize households	*/
-					
-				
-				*	Second loop to get mean of normalized PFS over time
-				forval	year=2/10	{	
-							
-					*	Squared Food Insecurity Gap (SFIG) at each year using Mean normalized PFS
-					replace	SFIG_mean_indiv	=	(1-pfs_`type'_normal_mean)^2	if	year==`year'	&	!mi(pfs_`type'_normal_mean)	&	pfs_`type'_mean<${PFS_threshold_`year'}
-					replace	SFIG_mean_indiv	=	0								if	year==`year'	&	!mi(pfs_`type'_normal_mean)	&	pfs_`type'_mean>=${PFS_threshold_`year'}
-					
-				}	
-				
-				
-				*	Total, Transient and Chronic FI
-				
-					*	Total FI
-					bys	fam_ID_1999: egen	Total_FI		=	mean(SFIG_indiv)		if	!mi(SFIG_indiv)
-					
-					*	Transient FI (time mean of SFIG deviation from its mean)
-					gen	SFIG_deviation	=	SFIG_indiv	-	SFIG_mean_indiv	//	fluct
-					bys	fam_ID_1999:	egen	Transient_FI	=	mean(SFIG_deviation)
-					
-					*	Chronic FI (Total FI - Transient FI)
-					gen	Chronic_FI	=	Total_FI	-	Transient_FI
-				
-				/*
-				bys	fam_ID_1999: egen	SFIG		=	mean(SFIG_indiv)		if	!mi(SFIG_indiv)	//	Overall FI
-				bys	fam_ID_1999: egen	SFIG_mean	=	mean(SFIG_mean_indiv)	if	!mi(SFIG_mean_indiv)	//	Chronic FI
-				gen	SFIG_transient	=	SFIG	-	SFIG_mean
-				*/
-				
-			*/
+	
 			
 			}	//	type
 		
@@ -2978,23 +2881,7 @@
 				
 			}	//	measure
 		
-		*	Group State-FE of TFI and CFI
-		local	demovars	age_head_fam age_head_fam_sq	HH_female	HH_race_color	/*HH_race_black HH_race_other*/	marital_status_cat
-		local	econvars	ln_income_pc	/*wealth_pc	wealth_pc_sq*/
-		local	familyvars	num_FU_fam ratio_child	/*ib0.family_comp_change	ib5.couple_status*/
-		local	eduvars		/*attend_college_head*/ highdegree_NoHS highdegree_somecol highdegree_col	
-		local	empvars		emp_HH_simple
-		local	healthvars	phys_disab_head	mental_problem
-		local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist WIC_received_last	elderly_meal
-		local	shockvars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	state_group?	state_group1?	state_group2?	//	excluding NY (state_bgroup) as reference state group.
-		local	interactvars	c.ln_income_pc#c.HH_female	///
-								c.ln_income_pc#c.age_over65	///
-								c.HH_female#c.age_over65	///
-								c.ln_income_pc#c.HH_female#c.age_over65	///
-								c.no_longer_married#c.HH_female
-		local	timevars	year_enum3-year_enum10
-		
+		*	Group State-FE of TFI and CFI		
 			*	Regression of TFI/CFI on Group state FE
 			
 			local measure HCR
@@ -3003,13 +2890,13 @@
 				
 				
 				*	Without controls/time FE
-				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' `regionvars'
+				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' ${regionvars}
 				est	store	`depvar'_nocontrols
 				
 				
 				*	With controls/time FE
-				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' 	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`shockvars'	`regionvars'	`timevars'
+				qui	svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' ${regionvars}	///
+					${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}
 				est	store	`depvar'
 			}
 			
@@ -3032,16 +2919,16 @@
 			if	`shapley_decomposition'==1	{
 				
 				ds	state_group?	state_group1?	state_group2?
-				local groupstates `r(varlist)'
-				
+				local groupstates `r(varlist)'		
 				
 				foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	{
 					
 					*	Unadjusted
 					cap	drop	_mysample
-					regress `depvar' 	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`shockvars'	`regionvars'	`timevars'	 if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1
-					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head no_longer_employed	no_longer_married	no_longer_own_house	became_disabled) 
+					regress `depvar' 	${demovars}		${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	///
+									${foodvars}		${changevars}	 ${regionvars}	${timevars}	///
+									if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1
+					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled) 
 					
 					mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
 					mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
@@ -3051,9 +2938,10 @@
 					
 					*	Survey-adjusted
 					cap	drop	_mysample
-					svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar'  	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`shockvars'	`regionvars'	`timevars'		
-					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head no_longer_employed	no_longer_married	no_longer_own_house	became_disabled)
+					svy, subpop(if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1):	///
+						regress `depvar'  	${demovars}		${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	///
+								${foodvars}		${changevars}	 ${regionvars}	${timevars}
+					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled)
 				
 				}	//	depvar			
 			}	//	shapley
@@ -3129,8 +3017,26 @@
 			
 		
 	}
+
+	*	Quick check the sequence of FS under HFSM
+	cap	drop	HFSM_FS_always
+	cap	drop	balanced_HFSM
+	gen		HFSM_FS_always=1	if	(year==1 & fs_cat_fam_simp==1)	&	(year==2	& fs_cat_fam_simp==1)	&	(year==3 & fs_cat_fam_simp==1)	&	///
+									(year==9 & fs_cat_fam_simp==1)	&	(year==10	& fs_cat_fam_simp==1)
+	replace	HFSM_FS_always=0	if	(year==1 & fs_cat_fam_simp==0)	|	(year==2	& fs_cat_fam_simp==0)	|	(year==3 & fs_cat_fam_simp==0)	|	///
+									(year==9 & fs_cat_fam_simp==0)	|	(year==10	& fs_cat_fam_simp==0)
+	gen		balanced_HFSM=1		if	(year==1 & !mi(fs_cat_fam_simp))	&	(year==2 & !mi(fs_cat_fam_simp))	&	(year==3 & !mi(fs_cat_fam_simp))	&	///
+									(year==9 & !mi(fs_cat_fam_simp))	&	(year==10 & !mi(fs_cat_fam_simp))
+	svy, subpop(if ${study_sample}==1 &  balanced_HFSM==1): mean HFSM_FS_always
 	
 	
+	capture	drop	num_nonmissing_HFSM
+	cap	drop	HFSM_total_hf
+	bys fam_ID_1999: egen num_nonmissing_HFSM=count(fs_cat_fam_simp)
+	bys fam_ID_1999: egen HFSM_total_hf=total(fs_cat_fam_simp)
+	
+	svy, subpop(if ${study_sample}==1 &  num_nonmissing_HFSM==5): tab HFSM_total_hf
+
 	/****************************************************************
 		SECTION 8: Associations
 	****************************************************************/		
