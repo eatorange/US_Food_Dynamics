@@ -34,6 +34,7 @@ svy, subpop(${study_sample}):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
 local 
 
 
+*	Specific year
 local year=10
 svy, subpop(if ${study_sample} & year==`year'	&	HH_female==1 ):	mean rho1_thrifty_FS_ols 
 svy, subpop(if ${study_sample} & year==`year'	&	HH_female==1 ):	mean fs_cat_fam_simp 
@@ -41,10 +42,18 @@ svy, subpop(if ${study_sample} & year==`year'	&	HH_female==1 ):	mean fs_cat_fam_
 svy, subpop(if ${study_sample} & year==`year'	&	HH_race_white==0 ):	mean rho1_thrifty_FS_ols 
 svy, subpop(if ${study_sample} & year==`year'	&	HH_race_white==0 ):	mean fs_cat_fam_simp 
 
-svy, subpop(if ${study_sample} & year==`year'	&	income_to_poverty_cat==2 ):	mean rho1_thrifty_FS_ols 
-svy, subpop(if ${study_sample} & year==`year'	&	income_to_poverty_cat==2 ):	mean fs_cat_fam_simp 
+svy, subpop(if ${study_sample} & year==`year'	&	income_to_poverty_cat==1 ):	mean rho1_thrifty_FS_ols 
+svy, subpop(if ${study_sample} & year==`year'	&	income_to_poverty_cat==1 ):	mean fs_cat_fam_simp 
 
-svy, subpop(if ${study_sample} & year==`year'	&	food_stamp_used_1yr==1 ):	mean rho1_thrifty_FS_ols 
-svy, subpop(if ${study_sample} & year==`year'	&	food_stamp_used_1yr==1 ):	mean fs_cat_fam_simp 
+svy, subpop(if ${study_sample} & year==`year'	&	food_stamp_used_0yr==1 ):	mean rho1_thrifty_FS_ols 
+svy, subpop(if ${study_sample} & year==`year'	&	food_stamp_used_0yr==1 ):	mean fs_cat_fam_simp 
+
+
+*	Overall
+svy, subpop(if ${study_sample} & inlist(year,2,3,9,10)	&	income_to_poverty_cat==1 ):	mean rho1_thrifty_FS_ols 
+svy, subpop(if ${study_sample} & inlist(year,2,3,9,10)	&	income_to_poverty_cat==1 ):	mean fs_cat_fam_simp 
+
+svy, subpop(if ${study_sample} & inlist(year,2,3,9,10)	&	food_stamp_used_0yr==1 ):	mean rho1_thrifty_FS_ols 
+svy, subpop(if ${study_sample} & inlist(year,2,3,9,10)	&	food_stamp_used_0yr==1 ):	mean fs_cat_fam_simp 
 
 
