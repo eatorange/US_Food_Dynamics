@@ -170,19 +170,28 @@
 	**	For now, I will add just a code deciding which food expenditure to use - with or without food stamp.
 	** I can make this code nicer later.
 	
-	local	include_stamp	0
+	/*
+	local	include_stamp	1
 		
 	*	Determine whether to include stamp value to expenditure or not.
 	if	`include_stamp'==1	{
 		
 		replace	food_exp_pc			=	food_exp_stamp_pc
+		
 		replace	lag_food_exp_pc_1	=	lag_food_exp_stamp_pc_1
 		replace	lag_food_exp_pc_2	=	lag_food_exp_stamp_pc_2
 		replace	lag_food_exp_pc_3	=	lag_food_exp_stamp_pc_3
 		replace	lag_food_exp_pc_4	=	lag_food_exp_stamp_pc_4
 		replace	lag_food_exp_pc_5	=	lag_food_exp_stamp_pc_5
+		
+		replace	lag_food_exp_pc_1_th	=	lag_food_exp_stamp_pc_1_th
+		replace	lag_food_exp_pc_2_th	=	lag_food_exp_stamp_pc_2_th
+		replace	lag_food_exp_pc_3_th	=	lag_food_exp_stamp_pc_3_th
+		replace	lag_food_exp_pc_4_th	=	lag_food_exp_stamp_pc_4_th
+		replace	lag_food_exp_pc_5_th	=	lag_food_exp_stamp_pc_5_th
+		
 	}
-	
+	*/
 	
 	
 	*	OLS
@@ -203,47 +212,50 @@
 		local	run_rf_step1	1
 		local	run_rf_step2	1
 		local	run_rf_step3	1
+
 	
 	*	GLM
 	if	`run_GLM'==1	{
 
 		*	Declare variables
-		local	depvar		food_exp_pc
+		local	depvar		food_exp_stamp_pc
 		
 		
-		local	MEvars	c.lag_food_exp_pc_1	${healthvars}	c.age_head_fam	HH_race_black	HH_race_other	marital_status_cat	HH_female	${econvars}	${empvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}
+		local	MEvars	lag_food_exp_pc_1	${healthvars}	c.age_head_fam	HH_race_black	HH_race_other	marital_status_cat	HH_female	${econvars}	${empvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}
 	
 		*	Model selection (highest order)
 		if	`model_selection'==1	{
 			
-			local	statevars	c.lag_food_exp_pc_1
+			local	depvar		food_exp_stamp_pc
+			
+			local	statevars	lag_food_exp_stamp_pc_th_1
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order1
 			
-			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			local	statevars	lag_food_exp_stamp_pc_th_1	lag_food_exp_stamp_pc_th_2
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order2
 			predict glm_order2	if	e(sample)==1 & `=e(subpop)'
 			
-			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			local	statevars	lag_food_exp_stamp_pc_th_1	lag_food_exp_stamp_pc_th_2 lag_food_exp_stamp_pc_th_3
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
 			est	sto	ols_step1_order3
 			predict glm_order3	if	e(sample)==1 & `=e(subpop)'
 			
-			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			local	statevars	lag_food_exp_stamp_pc_th_1	lag_food_exp_stamp_pc_th_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
 			est	sto	ols_step1_order4
 			predict glm_order4	if	e(sample)==1 & `=e(subpop)'
 			
-			local	statevars	c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1
+			local	statevars	lag_food_exp_stamp_pc_th_1	lag_food_exp_stamp_pc_th_2	lag_food_exp_stamp_pc_th_3 lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5	
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
@@ -777,8 +789,7 @@
 		}	//	Step 3		
 	}	//	Random Forest
 	
-	
-	
+
 	/****************************************************************
 		SECTION 2: Categorization
 	****************************************************************/	
