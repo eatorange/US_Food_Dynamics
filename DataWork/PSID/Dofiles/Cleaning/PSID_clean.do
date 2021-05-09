@@ -65,7 +65,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	0
+	local	retrieve_vars	1
 	local	clean_vars		1
 	
 	

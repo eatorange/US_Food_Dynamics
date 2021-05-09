@@ -1093,20 +1093,32 @@
 	}
 	
 	*	Create a lagged variable of the outcome variable and its higher polynomial terms (needed for Shapley decomposition)	
+	*	Also create a scaled variable (multiplied by 1,000) and their higher polynomial terms for model selection.
+	
 	forval	i=1/5	{
 		
-		gen	lag_food_exp_pc_`i'	=	(cl.food_exp_pc)^`i'
-		label	var	lag_food_exp_pc_`i'	"Lagged food exp (pc) - `i'th polynimial	order"
+		*	Lagged food exp and higher order terms
+		gen			lag_food_exp_pc_`i'	=	(cl.food_exp_pc)^`i'
+		label	var	lag_food_exp_pc_`i'	"Lagged food exp (pc) - `i'th order"
 		
-		gen	lag_food_exp_stamp_pc_`i'	=	(cl.food_exp_stamp_pc)^`i'
-		label	var	lag_food_exp_stamp_pc_`i'	"Lagged food exp (pc) (with stamp) - `i'th polynimial	order"
+		*	Lagged food exp (with stamp) and higher order terms
+		gen			lag_food_exp_stamp_pc_`i'	=	(cl.food_exp_stamp_pc)^`i'
+		label	var	lag_food_exp_stamp_pc_`i'	"Lagged food exp (pc) (with stamp) - `i'th order"
 		
+		*	Re-scale created terms 
+		gen			lag_food_exp_pc_th_`i'	=	(lag_food_exp_pc_`i')/1000
+		label	var	lag_food_exp_pc_th_`i'	"Lagged food exp (pc) - `i'th order ('000)"
+		
+		gen			lag_food_exp_stamp_pc_th_`i'	=	(lag_food_exp_stamp_pc_`i')/1000
+		label	var	lag_food_exp_stamp_pc_th_`i'	"Lagged food exp (pc) (with stamp) - `i'th order ('000)"
+				
 	}
+	
 	label	var	lag_food_exp_pc_1	"Lagged food exp per capita"
-	order	lag_food_exp_pc_?,	after(food_exp_pc)
+	order		lag_food_exp_pc_?	lag_food_exp_pc_th_?	,	after(food_exp_pc)
 	
 	label	var	lag_food_exp_stamp_pc_1	"Lagged food exp (with stamp) per capita"
-	order	lag_food_exp_stamp_pc_?,	after(food_exp_stamp_pc)
+	order		lag_food_exp_stamp_pc_?	lag_food_exp_stamp_pc_th_?,	after(food_exp_stamp_pc)
 	
 	 
 	*	Create variables of status change (employment, marital status, ....) which could affect food expenditure
