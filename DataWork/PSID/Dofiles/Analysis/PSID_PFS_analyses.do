@@ -146,7 +146,7 @@
 	
 		*	Regression variables
 		
-			global	statevars	lag_food_exp_pc_1##lag_food_exp_pc_1	//	Lagged food expenditure per capita, up to second order
+			global	statevars	lag_food_exp_stamp_pc_th_1 lag_food_exp_stamp_pc_th_2 lag_food_exp_stamp_pc_th_3	//	Lagged food expenditure per capita, up to second order
 			global	demovars	age_head_fam age_head_fam_sq	HH_race_color	marital_status_cat	HH_female	//	age, age^2, race, marital status, gender
 			global	econvars	ln_income_pc	//	log of income per capita
 			global	healthvars	phys_disab_head mental_problem	//	physical and mental health
@@ -281,8 +281,6 @@
 		
 		
 		*	Step 1
-		global	statevars	lag_food_exp_pc_1	lag_food_exp_pc_2 	//	Chosen from the model selection
-		
 		svy, subpop(${study_sample}): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
 		
 		est	sto	ols_step1
@@ -354,7 +352,7 @@
 			label	var	rho1_foodexp_pc_`plan'_ols "PFS (`plan' plan)"
 		}
 		
-		summ alpha1_foodexp_pc_ols	beta1_foodexp_pc_ols	rho1_foodexp_pc_thrifty_ols if ${study_sample}==1
+		summ food_exp_stamp_pc alpha1_foodexp_pc_ols	beta1_foodexp_pc_ols	rho1_foodexp_pc_thrifty_ols if ${study_sample}==1
 		
 	}
 	
@@ -1155,7 +1153,7 @@
 				
 		*	Declare variables
 		local	demovars	age_head_fam	HH_race_white	HH_race_color	marital_status_cat	HH_female	
-		local	econvars	income_pc	food_exp_pc
+		local	econvars	income_pc	food_exp_stamp_pc
 		local	empvars		emp_HH_simple
 		local	healthvars	phys_disab_head	mental_problem
 		local	familyvars	num_FU_fam ratio_child
@@ -1257,7 +1255,7 @@
 		
 		
 		local	demovars	age_head_fam 
-		local	econvars	ln_income_pc	food_exp_pc
+		local	econvars	ln_income_pc	food_exp_stamp_pc
 		local	healthvars	phys_disab_head mental_problem
 		local	empvars		emp_HH_simple
 		local	familyvars	num_FU_fam ratio_child
@@ -1338,8 +1336,16 @@
 		
 			
 		*	Simple inclusion and exclusion
-		svy, subpop(${study_sample}):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
-		svy, subpop(if ${study_sample} & inrange(income_to_poverty_cat,1,2)):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols	//	Low
+		
+			*	All population
+			svy, subpop(${study_sample}):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
+			
+			*	IPR below 130%
+			svy, subpop(if ${study_sample} & income_to_poverty<1.3):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols	
+			
+			*	SNAP recepients
+			svy, subpop(if ${study_sample} & food_stamp_used_0yr==1):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols	
+			
 		
 		foreach	type	in	ols	/*ls	rf*/	{
 			
@@ -1373,7 +1379,7 @@
 			title(Regression of the USDA scale on PFS(`type')) replace
 			
 			esttab	corr_`type'_lin_noFE		corr_`type'_nonlin_noFE			corr_`type'_lin_FE			corr_`type'_nonlin_FE	///
-					corr_`type'_lin_low20_noFE	corr_`type'_nonlin_low20_noFE	corr_`type'_lin_low20_FE	corr_`type'_nonlin_low20_FE	///
+					/*corr_`type'_lin_low20_noFE	corr_`type'_nonlin_low20_noFE	corr_`type'_lin_low20_FE	corr_`type'_nonlin_low20_FE */	/// 
 					using "${PSID_outRaw}/USDA_PFS_correlation_`type'.tex", ///
 			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 			title(Regression of the USDA scale on PFS(`type')) replace
