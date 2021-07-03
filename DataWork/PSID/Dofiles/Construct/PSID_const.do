@@ -620,6 +620,7 @@
 				
 				*	Scale to thousand-dollars
 				replace	`var'`year'	=	`var'`year'/1000
+				
 			}	//	var	
 			
 			label	variable	income_pc`year'	"Family income per capita (K) - `year'"
