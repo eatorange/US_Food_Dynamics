@@ -146,7 +146,7 @@
 	
 		*	Regression variables
 		
-			global	statevars	lag_food_exp_pc_1 lag_food_exp_pc_2 //	Lagged food expenditure per capita, up to second order
+			global	statevars	lag_food_exp_pc_1 lag_food_exp_pc_2	lag_food_exp_pc_3 //	Lagged food expenditure per capita, up to third order
 			global	demovars	age_head_fam age_head_fam_sq	HH_race_color	marital_status_cat	HH_female	//	age, age^2, race, marital status, gender
 			global	econvars	ln_income_pc	//	log of income per capita
 			global	healthvars	phys_disab_head mental_problem	//	physical and mental health
@@ -171,7 +171,7 @@
 	** I can make this code nicer later.
 	
 	
-	local	include_stamp	0	//	After discussing with Chris and John, we decided NOT to include food stamp as it significantly decrades its matching between the HFSM (Check May 2021 mail). Difference would be included in the Appendix.
+	local	include_stamp	1	//	After discussing with Chris and John, we decided NOT to include food stamp as it significantly decrades its matching between the HFSM (Check May 2021 mail). Difference would be included in the Appendix.
 		
 	*	Determine whether to include stamp value to expenditure or not.
 	if	`include_stamp'==1	{
@@ -1134,7 +1134,17 @@
 		
 	}	//	Categorization			
 
-	save	"${PSID_dtInt}/PFS_cat_ready.dta", replace
+	
+	*	Save, depending on whether food stamp/SNAP value is included in the food expenditure
+	if	`include_stamp'==1	{	//	if included, default
+		
+		save	"${PSID_dtInt}/PFS_cat_ready_fs.dta", replace
+	
+	}
+	else	{	//	if NOT included.
+	    
+		save	"${PSID_dtInt}/PFS_cat_ready.dta", replace
+	}
 	
 	
 	/****************************************************************
@@ -1300,7 +1310,7 @@
 		SECTION 4: Correlation between the PFS and the USDA measure
 	****************************************************************/	
 	
-	use	"${PSID_dtInt}/PFS_cat_ready.dta", clear
+	use	"${PSID_dtInt}/PFS_cat_ready_fs.dta", clear
 	
 	*	Correlation	//	Examine correlation between the PFS and the USDA measure
 	local	reg_correlation		1	//	Regression coefficient, rank correlation Kolmogorov–Smirnov.
@@ -2091,7 +2101,7 @@
 		cap	mat	drop	HCR_group_PFS_3 HCR_group_PFS_7 HCR_group_PFS_10 HCR_group_PFS_all
 
 		
-		foreach year in	3	7	10	{	// 2001, 2011, 2017
+		foreach year in	3	7	10	{	// 2003, 2011, 2017
 		   foreach	edu	in	1	0	{	//	HS or below, beyond HS	   
 				foreach	race	in	0	1	{	//	People of colors, white
 					foreach	gender	in	1	0	{	//	Female, male
