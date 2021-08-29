@@ -1351,7 +1351,7 @@
 			svy, subpop(${study_sample}):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
 			
 			*	IPR below 130%
-			svy, subpop(if ${study_sample} & income_to_poverty<1.3):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols	
+			svy, subpop(if ${study_sample} & income_to_poverty<1.3):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols
 			
 			*	SNAP recepients
 			svy, subpop(if ${study_sample} & food_stamp_used_0yr==1):	tab	fs_cat_fam_simp	rho1_thrifty_FS_ols	
@@ -2156,8 +2156,8 @@
 		SECTION 7: Dynamics
 	****************************************************************/	
 		
-	local	run_transition_matrix	0	//	Transition matrix
-	local	run_spell_length	0	//	Spell length
+	local	run_transition_matrix	1	//	Transition matrix
+	local	run_spell_length	1	//	Spell length
 	local	run_FS_chron_trans	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
 	
@@ -2957,10 +2957,10 @@
 									if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1
 					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled) 
 					
-					mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
-					mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
+					*mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
+					*mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
 					
-					mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
+					*mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
 					
 					
 					*	Survey-adjusted
@@ -2969,6 +2969,11 @@
 						regress `depvar'  	${demovars}		${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	///
 								${foodvars}		${changevars}	 ${regionvars}	${timevars}
 					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled)
+					
+					mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
+					mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
+					
+					mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
 				
 				}	//	depvar			
 			}	//	shapley
@@ -3048,13 +3053,12 @@
 	*	Quick check the sequence of FS under HFSM
 	cap	drop	HFSM_FS_always
 	cap	drop	balanced_HFSM
-	gen		HFSM_FS_always=1	if	(year==1 & fs_cat_fam_simp==1)	&	(year==2	& fs_cat_fam_simp==1)	&	(year==3 & fs_cat_fam_simp==1)	&	///
-									(year==9 & fs_cat_fam_simp==1)	&	(year==10	& fs_cat_fam_simp==1)
-	replace	HFSM_FS_always=0	if	(year==1 & fs_cat_fam_simp==0)	|	(year==2	& fs_cat_fam_simp==0)	|	(year==3 & fs_cat_fam_simp==0)	|	///
-									(year==9 & fs_cat_fam_simp==0)	|	(year==10	& fs_cat_fam_simp==0)
-	gen		balanced_HFSM=1		if	(year==1 & !mi(fs_cat_fam_simp))	&	(year==2 & !mi(fs_cat_fam_simp))	&	(year==3 & !mi(fs_cat_fam_simp))	&	///
-									(year==9 & !mi(fs_cat_fam_simp))	&	(year==10 & !mi(fs_cat_fam_simp))
-	svy, subpop(if ${study_sample}==1 &  balanced_HFSM==1): mean HFSM_FS_always
+	bys	fam_ID_1999:	egen	HFSM_FS_always	=	min(fs_cat_fam_simp)	//	1 if never food insecure (always food secure under HFSM), 0 if sometimes insecure 
+	cap	drop	HFSM_FS_nonmissing
+	bys	fam_ID_1999:	egen	HFSM_FS_nonmissing	=	count(fs_cat_fam_simp)	// We can see they all have value 5;	All households have balanded HFSM
+									
+	*	% of always food secure households under HFSM (this statistics is included after Table 6 (Chronic Food Security Status from Permanent Approach))
+	svy, subpop(if ${study_sample}==1 & HFSM_FS_nonmissing==5): mean HFSM_FS_always
 	
 	
 	capture	drop	num_nonmissing_HFSM
@@ -3069,7 +3073,7 @@
 	****************************************************************/		
 	
 	local	specification_check	0	//	varying RHS
-	local	stationary_check	0	//	Testing stationary of the data
+	local	stationary_check	1	//	Testing stationary of the data
 	local	pre_post	0			//	Pre- and Post- Great Recession
 	local	pred_PFS_over_age	0	//	Predicted PFS over age
 	local	ME_income_level		0	//	Marginal effect over different income level
