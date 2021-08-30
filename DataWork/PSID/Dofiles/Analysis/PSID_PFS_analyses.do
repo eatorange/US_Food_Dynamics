@@ -1434,7 +1434,7 @@
 			*	Frequency table of the HFSM
 			svy, subpop(if ${study_sample}==1 & !mi(rho1_foodexp_pc_thrifty_ols) & !mi(fs_scale_fam_rescale)): tab fs_scale_fam_rescale
 			
-			*	Summarize PFS (https://www.stata.com/support/faqs/statistics/percentiles-for-survey-data/)
+			*	Summarize PFS (https://www.stata.com/support/faqs/statistics/percentiles-for-survey-data/) (Goes to the density figure footnote in the appendix)
 			summ	fs_scale_fam_rescale 		if ${study_sample}==1	&	inlist(year,2,3,9,10)	&	!mi(rho1_foodexp_pc_thrifty_ols)  [aweight=weight_multi12], detail
 			summ	rho1_foodexp_pc_thrifty_ols if ${study_sample}==1	&	inlist(year,2,3,9,10)	&	!mi(fs_scale_fam_rescale)		  [aweight=weight_multi12], detail
 			
@@ -2957,10 +2957,10 @@
 									if ${study_sample} &	!mi(rho1_foodexp_pc_thrifty_ols)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1
 					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled) 
 					
-					*mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
-					*mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
+					mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
+					mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
 					
-					*mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
+					mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
 					
 					
 					*	Survey-adjusted
@@ -2970,10 +2970,11 @@
 								${foodvars}		${changevars}	 ${regionvars}	${timevars}
 					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled)
 					
-					mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
-					mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
+					*	For some reason, Shapely decomposition does not work properly under the adjusted regression model (they don't sum up to 100%)
+					*mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
+					*mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
 					
-					mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
+					*mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
 				
 				}	//	depvar			
 			}	//	shapley
@@ -3073,9 +3074,9 @@
 	****************************************************************/		
 	
 	local	specification_check	0	//	varying RHS
-	local	stationary_check	1	//	Testing stationary of the data
+	local	stationary_check	0	//	Testing stationary of the data
 	local	pre_post	0			//	Pre- and Post- Great Recession
-	local	pred_PFS_over_age	0	//	Predicted PFS over age
+	local	pred_PFS_over_age	1	//	Predicted PFS over age
 	local	ME_income_level		0	//	Marginal effect over different income level
 	
 	tsset	fam_ID_1999 year, delta(1)
