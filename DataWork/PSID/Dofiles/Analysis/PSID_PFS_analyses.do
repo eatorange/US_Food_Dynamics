@@ -192,18 +192,20 @@
 		
 	}
 	
-	
+	*	Race composition
+	*	It shows the proportion of faces in our study sample. It is used in the footnote of "Variable Description" table. We can move this code to somewhere when we clean the codes.
+	svy, subpop(${study_sample}): tab race_head_fam
 	
 	*	OLS
 	local	run_GLM	1
-		local	model_selection	1
+		local	model_selection	0
 		local	run_ME	0
 		
 	*	LASSO
 	local	run_lasso	0
 		local	run_lasso_step1	1
-		local	run_lasso_step2	1
-		local	run_lasso_step3	1
+		local	run_lasso_step2	0
+		local	run_lasso_step3	0
 		
 	*	Random Forest
 	local	run_rf	0	
@@ -229,13 +231,13 @@
 			local	depvar		food_exp_pc
 			
 			local	statevars	lag_food_exp_pc_th_1
-			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
+			*svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order1
 			
 			local	statevars	lag_food_exp_pc_th_1	lag_food_exp_pc_th_2
-			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			*svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order2
@@ -281,8 +283,19 @@
 		
 		
 		*	Step 1
-		svy, subpop(${study_sample}): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
+		*	Note: we use svy: GLM model which generates robust, design-adjusted standard errors based on primary sampling units only (households can be thought of as secondary sampling units in the panel study.)
+		*	In other words, this svy: GLM model does NOT take clustering observations within households. (Reference: page 394, "Applied Survey Data Analysis, 1st edition, (2010), Heeringa, West, Berglund")
+		*	The reference above used GLLAMM (Generalized Linear Latent and Mixed Model) which generates (1) fixed effects of covariates and time aspect and (2) random effects of individuals where indviduals records over time are clustered (pg.380)
+		*	The book runs both svy: GLM and GLLAMM, and they found both yields very similar inferences. We will use this fininding as an argument for using svy: GLM over GLLAMM
+			
+		*	If we need to use mixed model to account for correlation wihtin households, then we can use the following command instead. The following model is Mixed-effect Generalized Linear Model (MEGLM)
+		*	The following command is written based upon (1) Stata manual (2) 2nd edition of the reference above (Heeringa sent me an excerpt as a word file. Check 2021/6/22 email for the record)
+			/*	meglm	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars} [pweight=weight_multi2] if `depvar'>0 || fam_ID_1999: ,	///
+				pweight(weight_multi1)	family(gamma)	link(log)	vce(cluster fam_ID_1999)	*/
 		
+		
+		svy, subpop(${study_sample}): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
+			
 		est	sto	ols_step1
 		
 		*	Predict fitted value and residual
@@ -362,19 +375,19 @@
 		*	Variable selection
 		*	when "0" implies "no". Should yield the same result to the previous coding which "5" implies "no"
 		local	statevars	lag_food_exp_pc_1-lag_food_exp_pc_5	/*c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1*/		//	up to the order of 5
-		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse
-		local	demovars	age_head_fam age_head_fam_sq	/*HH_race_black HH_race_other*/	HH_race_color	marital_status_cat	/*marital_status_fam_enum1 marital_status_fam_enum3 marital_status_fam_enum4 marital_status_fam_enum5*/	/*age_head_fam	age_head_fam_sq*/	///
+		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse	mental_problem
+		local	demovars	age_head_fam age_head_fam_sq	HH_race_white HH_race_color	marital_status_cat	/*marital_status_fam_enum1 marital_status_fam_enum3 marital_status_fam_enum4 marital_status_fam_enum5*/	/*age_head_fam	age_head_fam_sq*/	///
 							HH_female	/*c.age_spouse##c.age_spouse*/ age_spouse	age_spouse_sq	housing_status_enum1 housing_status_enum3	veteran_head veteran_spouse
 		local	econvars	ln_income_pc	ln_wealth_pc	/*income_pc	income_pc_sq	wealth_pc	wealth_pc_sq*/	sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
 		local	empvars		emp_HH_simple	emp_spouse_simple
-		local	familyvars	num_FU_fam ratio_child	/*num_child_fam*/	couple_status_enum1-couple_status_enum4
+		local	familyvars	num_FU_fam ratio_child	/*num_child_fam*/	child_in_FU_cat	couple_status_enum1-couple_status_enum4
 		local	eduvars		highdegree_NoHS	highdegree_HS		highdegree_somecol	highdegree_col	highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse
 							/*	attend_college_head attend_college_spouse	college_yrs_head college_yrs_spouse	///
 							hs_completed_head	college_completed	other_degree_head	grade_comp_head_fam	///
 							hs_completed_head_interact college_completed_interact other_degree_head_interact	///
 							hs_completed_spouse	college_comp_spouse	other_degree_spouse	grade_comp_spouse	///
 							hs_completed_spouse_interact college_comp_spouse_interact other_degree_spouse_interact	*/
-		local	foodvars	food_stamp_used_1yr	child_meal_assist WIC_received_last	/*meal_together*/	elderly_meal
+		local	foodvars	food_stamp_used_0yr food_stamp_used_1yr	child_meal_assist WIC_received_last	/*meal_together*/	elderly_meal
 		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local	regionvars	/*state_resid_fam_enum1-state_resid_fam_enum52*/ state_group? state_group1? state_group2?
@@ -402,27 +415,35 @@
 			** As of Sep 11, 2020, the estimated lambda with lse is 1208.72 (lse). Since this lamba value gives too many variables, we use lambda = exp(8) whose MSPE is only very slightly higher than the MSPE under the lse.
 			** As of Nov 5, 2020 using SRC sample only, the estimated lambda with lse is 1546.914 (lse).
 			
+				
 				/*
 				*	Finding optimal lambda using cross-validation (computationally intensive)
-				cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	///
-									`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	/*in_sample==1	&*/	${study_sample}==1,	///
-					/*lopt*/ lse	seed(20200505)	notpen(`regionvars'	`timevars')	 /*rolling	h(1) fe	prestd 	postres	ols*/	plotcv 
+				cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	${study_sample}==1,	///
+					/*lopt*/ lse	seed(20200505)	notpen(`regionvars'	`timevars')	 rolling	/*h(1) fe	prestd 	postres	ols*/	plotcv 
+					
 				est	store	lasso_step1_lse
 				
 				*cvlasso, postresult lopt	//	somehow this command is needed to generate `e(selected)' macro. Need to double-check
-				cvlasso, postresult lse
+				*cvlasso, postresult lse
 				*/
+		
+				
 				
 				*	Running lasso with pre-determined lambda value 
 				*local	lambdaval=exp(14.7)	//	14.7 is as of Aug 21
 				*local	lambdaval=2208.348	//	manual lambda value from the cvplot. This is the value slightly higher than lse but give only slightly higher MSPE
 				*local	lambdaval=1546.914	//	the lse value found from cvlasso using SRC sample only as of Nov 5.
+				
+				
 				local	lambdaval=2000	//	temporary value, will find the exact value via cvlasso it later.
-				lasso2	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`eduvars'	`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	/*in_sample==1	&*/	${study_sample}==1,	///
+				lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`healthvars'	`empvars'		`familyvars'	`eduvars'	`foodvars'	///
+										`changevars'	`regionvars'	`timevars'	`childvars'	if	/*in_sample==1	&*/	${study_sample}==1,	///
 							ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
 				est	store	lasso_step1_manual
 				lasso2, postresults
+				
+				
+	
 				
 			*	Manually run post-lasso
 				gen	lasso_step1_sample=1	if	e(sample)==1	
@@ -2089,12 +2110,103 @@
 			   
 				putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(categorical) /*replace*/	modify
 				putexcel	A3	=	matrix(FGT_cat_combined), names overwritefmt nformat(number_d1)			//	HCR, FIG and SFIG by different groups (across all years)
-				putexcel	A14	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)		//	HCR by different groups by each year
-				putexcel	A24	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)		//	FIG by different groups by each year
-				putexcel	A34	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)		//	SFIG by different groups by each year
-				putexcel	M3	=	matrix(FGT_cat_combined_sup), names overwritefmt nformat(number_d1)
+				putexcel	A14	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)		//	HCR by different groups by each year. Input for Fig 8a
+				putexcel	A24	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)		//	FIG by different groups by each year.	Input for Fig A5
+				putexcel	A34	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)		//	SFIG by different groups by each year.	Input for Fig 8b
+				putexcel	M3	=	matrix(FGT_cat_combined_sup), names overwritefmt nformat(number_d1)	//	Input for Fig 7 "Food Insecurity Prevalence and Severity by Group"
 				
-				*esttab matrix(Jalan_Rav_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/Jalan_Rav_combined.tex", replace
+				
+			*	Figure 7
+			preserve
+			
+				clear
+				
+				set	obs	16
+				
+				*	Generate category variable 
+				gen	fig7_cat	=	_n
+				
+					//	Currently we use the value for the proportion of each category from the pre-calculated value. It would be better if we can automatically update it as analyses are updated.
+				label	define	fig7_cat	1	"NoHS/NonWhite/Female (1.6%)"		2	"NoHS/NonWhite/Male (0.8%)"		3	"NoHS/White/Female (1.2%)"		4	"NoHS/White/Male (4%)"	///
+											5	"HS/NonWhite/Female (2.4%)"			6	"HS/NonWhite/Male (2.5%)"		7	"HS/White/Female (5%)"			8	"HS/White/Male (21%)"	///
+											9	"SomeCol/NonWhite/Female (1.4%)"	10	"SomeCol/NonWhite/Male (2.6%)"	11	"SomeCol/White/Female (5%)"		12	"SomeCol/White/Male (15.8%)"		///
+											13	"Sol/NonWhite/Female (0.9%)"		14	"Col/NonWhite/Male (2.2%)"		15	"Col/White/Female (4.4%)"		16	"Col/White/Male (29.2%)",	replace
+				label	values	fig7_cat	fig7_cat
+				
+				
+				*	Generate category variable for Fig 8 and A5
+				
+				
+				svmat	FGT_cat_combined_sup
+				rename	FGT_cat_combined_sup?	(pop_ratio	HCR	FIG	SFIG)
+				
+				*	Figure 7	(Food Insecurity Prevalence and Severity by Group)
+				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
+							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
+				graph	export	"${PSID_outRaw}/FGT_group_decomposition.png", replace
+				graph	close
+				
+				/*
+				*	Figure A5-a	(Food Insecurity Prevalence and Severity by Group - FIG)
+				graph hbar FIG, over(fig7_cat, sort(FIG) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "FIG") size(small) rows(1))	///
+							bar(1, fcolor(yellow*0.5)) /*bar(2, fcolor(green*0.6))*/	graphregion(color(white)) bgcolor(white)	title((a) FI Severity by Group) ytitle(FIG) name(FIG_bygroup)
+				graph	export	"${PSID_outRaw}/FGT_group_decomposition_FIG.png", replace
+				graph	close
+				*/
+			
+			restore
+			
+			*	Figure 8, A5
+			
+			preserve
+			
+				clear
+			
+				set	obs	9
+				gen	year	=	_n
+				replace	year	=	1999	+	(2*year)
+				
+				*	Input matrices
+				**	Input matrices (HCR_weight_cat_all, FIG_weight_cat_all,	SFIG_weight_cat_all) have years in column and category as row, so they need to be transposed)
+				foreach	FGT_category	in	HCR_weight_cat_all FIG_weight_cat_all	SFIG_weight_cat_all{
+					
+					mat		`FGT_category'_tr=`FGT_category''
+					svmat 	`FGT_category'_tr
+				}
+				
+			
+				
+				*	Figure 8a	(HCR)
+				graph bar HCR_weight_cat_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))	ylabel(0(.025)0.1)*/	///
+							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+							asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Headcount Ratio)	name(Fig8_HCR, replace) scale(0.8)     
+
+							
+				*	Figure 8b	(SFIG)
+				graph bar SFIG_weight_cat_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))	ylabel(0(.025)0.1)*/	///
+							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+							asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Squared Food Insecurity Gap)	name(Fig8_SFIG, replace) scale(0.8)   
+							
+				*	Figure 8 (Food Security Status By Group and Yea)
+				grc1leg Fig8_HCR Fig8_SFIG, rows(2) legendfrom(Fig8_HCR)	graphregion(color(white)) /*(white)*/
+				graph	export	"${PSID_outRaw}/FGT_group_change.png", replace
+				graph	close
+				
+				
+				*	Figure A5	(Food Insecurity Status (FIG) by Group and Year)
+				graph bar FIG_weight_cat_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))	ylabel(0(.025)0.1)*/	///
+							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+							asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	/*title((b) By Group and Year)*/	name(FigA5_b, replace) scale(0.8) 
+				graph	export	"${PSID_outRaw}/FGT_group_change_FIG.png", replace
+				graph	close
+							
+			restore
 				
 				
 		*	Food Security Prevalence over different groups	
@@ -2156,7 +2268,7 @@
 		SECTION 7: Dynamics
 	****************************************************************/	
 		
-	local	run_transition_matrix	1	//	Transition matrix
+	local	run_transition_matrix	0	//	Transition matrix
 	local	run_spell_length	1	//	Spell length
 	local	run_FS_chron_trans	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
@@ -2469,6 +2581,71 @@
 		putexcel	A3	=	matrix(trans_change_year), names overwritefmt nformat(number_d1)
 		putexcel	A13	=	matrix(FI_still_year_all), names overwritefmt nformat(number_d1)
 		putexcel	A23	=	matrix(FI_newly_year_all), names overwritefmt nformat(number_d1)
+		
+		*	Figure 3 & 4
+		*	Need to plot from matrix, thus create a temporary dataset to do this
+		preserve
+		
+			clear
+			
+			set	obs	8
+			gen	year	=	_n
+			replace	year	=	2001	+	(2*year)
+			
+			*	Matrix for Figure 3
+			svmat trans_change_year
+			rename	(trans_change_year?)	(still_FI	newly_FI	status_unknown)
+			label var	still_FI		"Still food insecure"
+			label var	newly_FI		"Newly food insecure"
+			label var	status_unknown	"Previous status unknown"
+
+			egen	FI_prevalence	=	rowtotal(still_FI	newly_FI	status_unknown)
+			label	var	FI_prevalence	"Annual FI prevalence"
+			
+			*	Matrix for Figure 4a
+			**	Figure 4 matrices (FI_still_year_all, FI_newly_year_all) have years in column and category as row, so they need to be transposed)
+			foreach	fs_category	in	FI_still_year_all	FI_newly_year_all	{
+				
+				mat		`fs_category'_tr=`fs_category''
+				svmat 	`fs_category'_tr
+			}
+			
+			*	Figure 3	(Change in food security status by year)
+			graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
+						graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(orange)) bar(3, fcolor(gs12))	///
+						ytitle(Population prevalence(%))	ylabel(0(.025)0.153)
+			graph	export	"${PSID_outRaw}/FI_change_status_byyear.png", replace
+			graph	close
+				
+			*	Figure 4 (Change in Food Security Status by Group)
+			*	Figure 4a
+			graph bar FI_newly_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Population prevalence(%))	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+						asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Newly Food Insecure)	name(Newly_FI, replace) scale(0.8)     
+			
+			
+			*	Figure 4b
+			graph bar FI_still_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))*/	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+						asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI, replace)	scale(0.8)  
+						
+						
+			grc1leg Newly_FI Still_FI, rows(1) legendfrom(Newly_FI)	graphregion(color(white)) /*(white)*/
+			graph	export	"${PSID_outRaw}/FI_change_status_bygroup.png", replace
+			graph	close
+		
+		restore
+		
+		*	Figure 4
+		preserve
+		
+		clear
+		svmat	FI_still_year_all
+		
 			
 	}
 	
@@ -2546,6 +2723,56 @@
 	
 		
 		esttab matrix(dist_spell_length_byyear, fmt(%9.2f)) using "${PSID_outRaw}/Dist_spell_length.tex", replace	
+		
+		
+		*	Figure 2
+		preserve
+			
+			clear
+			
+			set	obs	10
+			
+			mat	dist_spell_length_byyear_tr	=	dist_spell_length_byyear'
+			svmat	dist_spell_length_byyear_tr
+			rename	(dist_spell_length_byyear_tr?)	(yr_2001	yr_2003	yr_2005	yr_2007	yr_2009	yr_2011	yr_2013	yr_2015)
+			drop	in	1
+			
+			gen	spell_length	=	(2*_n)
+			
+			
+			*	Figure 2 (Spell Length of Food Insecurity (2003-2015))
+			local	marker_2003	mcolor(blue)	msymbol(circle)
+			local	marker_2005	mcolor(red)		msymbol(diamond)
+			local	marker_2007	mcolor(green)	msymbol(triangle)
+			local	marker_2009	mcolor(gs5)		msymbol(square)
+			local	marker_2011	mcolor(orange)	msymbol(plus)
+			local	marker_2013	mcolor(brown)	msymbol(X)
+			local	marker_2015	mcolor(gs13)	msymbol(V)			
+			
+			twoway	(connected	yr_2003	spell_length	in	1/7, `marker_2003'	lpattern(solid))			(connected	yr_2003	spell_length	in	8, `marker_2003')	///
+					(connected	yr_2005	spell_length	in	1/6, `marker_2005'	lpattern(dash))				(connected	yr_2005	spell_length	in	7, `marker_2005')	///
+					(connected	yr_2007	spell_length	in	1/5, `marker_2007'	lpattern(dot))				(connected	yr_2007	spell_length	in	6, `marker_2007')	///
+					(connected	yr_2009	spell_length	in	1/4, `marker_2009'	lpattern(dash_dot))			(connected	yr_2009	spell_length	in	5, `marker_2009')	///
+					(connected	yr_2011	spell_length	in	1/3, `marker_2011'	lpattern(shortdash))		(connected	yr_2011	spell_length	in	4, `marker_2011')	///
+					(connected	yr_2013	spell_length	in	1/2, `marker_2013'	lpattern(shortdash_dot))	(connected	yr_2013	spell_length	in	3, `marker_2013')	///
+					(connected	yr_2015	spell_length	in	1/6, `marker_2015'	lpattern(longdash))			(connected	yr_2015	spell_length	in	2, `marker_2015'),	///
+					xtitle(Years)	ytitle(Percentage)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(1))	///
+					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
+			
+			graph	export	"${PSID_outRaw}/FI_spell_length.png", replace
+			graph	close
+			
+			
+			*	Figure A4 (Spell Length of Food Insecurity (2001))
+			twoway	(connected	yr_2001	spell_length	in	1/8, mcolor(blue)	lpattern(dash))	///
+					(connected	yr_2001	spell_length	in	9, mcolor(blue)),	///
+					xtitle(Years)	ytitle(Percentage)	legend(off)	xlabel(0(2)18)	ylabel(0(0.05)0.4)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
+			
+			graph	export	"${PSID_outRaw}/FI_spell_length_2001.png", replace
+			graph	close
+			
+		restore
+		
 	
 	}
 	
@@ -2783,7 +3010,52 @@
 				esttab matrix(Jalan_Rav_2000_combined_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Jalan_Rav_combined_`measure'.tex", replace	
 				
 				local	exceloption	modify
-			}
+			}	//	measure
+			
+			*	Plot Figure 5: Chronic Food Insecurity by Group (HCR)
+			preserve
+			
+				clear
+				
+				set	obs	16
+				gen		race_gender	=	1	in	1/4
+				replace	race_gender	=	2	in	5/8
+				replace	race_gender	=	3	in	9/12
+				replace	race_gender	=	4	in	13/16
+				
+				label	define	race_gender	1	"Non-White/Female"	2	"Non-White/Male"	3	"White/Female"	4	"White/Male",	replace
+				label	values	race_gender	race_gender
+				
+				gen		education	=	mod(_n,4)
+				replace	education	=	4	if	education==0
+				
+				label	define	education	1	"Less than High School"	2	"High School"	3	"Some College"	4	"College",	replace
+				label	values	education	education
+				
+				gen	edu_fig5	=	_n
+				
+				//	Currently we use the value for the proportion of each category from the pre-calculated value. It would be better if we can automatically update it as analyses are updated.
+				label	define	edu_fig5	1	"Less than High School (2%)"	2	"High School (2.4%)"	3	"Some College (1.4%)"	4	"College (0.6%)"	///
+											5	"Less than High School (0.8%)"	6	"High School (2.7%)"	7	"Some College (2.7%)"	8	"College (1.9%)"	///
+											9	"Less than High School (1.5%)"	10	"High School (5.6%)"	11	"Some College (4.6%)"	12	"College (4%)"		///
+											13	"Less than High School (4.7%)"	14	"High School (21.4%)"	15	"Some College (16.3%)"	16	"College (27.5%)",	replace
+				label	values	edu_fig5	edu_fig5
+				
+			
+				
+				svmat	Jalan_Rav_2000_decomp_HCR
+				rename	Jalan_Rav_2000_decomp_HCR?	(pop_ratio	TFI	CFI	TFF_minus_CFI	ratio_CFI_TFI)
+				
+				*	Figure 5
+				graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
+									legend(lab (1 "TFI") lab(2 "CFI") /*size(vsmall)*/ rows(1))	bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
+				graph	export	"${PSID_outRaw}/CFI_bygroup.png", replace
+				graph	close
+				
+					
+			restore
+			
+			
 			
 			*	Categorize HH into four categories
 			*	First, generate dummy whether (1) always or not-always FI (2) Never or sometimes FI
@@ -3038,13 +3310,16 @@
 		
 		*/
 		
-		coefplot	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols	/*Total_FI_`measure'	Chronic_FI_`measure'*/, keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
-										title(Regional Fixed Effects)		name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+		coefplot	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols, 	///
+					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
+					xline(0)	graphregion(color(white)) bgcolor(white)	/*title(Regional Fixed Effects)*/	legend(lab (2 "TFI") lab(4 "CFI") /*size(vsmall)*/ rows(1))	name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_nocontrol.png", replace
 				graph	close
 				
-		coefplot	/*Total_FI_`measure'_nocontrols	Total_FI_`measure'_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)		xline(0)	graphregion(color(white)) bgcolor(white)	///
-										title(Regional Fixed Effects)		name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
+	
+		coefplot	Total_FI_`measure'	Chronic_FI_`measure', 	///
+					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
+					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "CFI") rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_control.png", replace
 				graph	close
 			
