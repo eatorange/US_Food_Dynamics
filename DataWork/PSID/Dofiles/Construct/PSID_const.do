@@ -1246,7 +1246,7 @@
 			*	South
 			egen	state_group6	=	rowmax(state_resid_fam_enum33	state_resid_fam_enum39)	//	NC, SC
 			egen	state_group7	=	rowmax(state_resid_fam_enum11)	//	GA
-			egen	state_group8	=	rowmax(state_resid_fam_enum17	state_resid_fam_enum41	state_resid_fam_enum47)	//	KT, TN, WV
+			egen	state_group8	=	rowmax(state_resid_fam_enum17	state_resid_fam_enum41	state_resid_fam_enum47)	//	KY, TN, WV
 			egen	state_group9	=	rowmax(state_resid_fam_enum10)	//	FL
 			egen	state_group10	=	rowmax(state_resid_fam_enum2	state_resid_fam_enum4	state_resid_fam_enum24 state_resid_fam_enum18)	//	AL, AR, MS, LA
 			egen	state_group11	=	rowmax(state_resid_fam_enum42)	//	TX
@@ -1282,7 +1282,7 @@
 			label var	state_group5	"VA"
 			label var	state_group6	"NC/SC"
 			label var	state_group7	"GA"
-			label var	state_group8	"KT/TN/WV"
+			label var	state_group8	"KY/TN/WV"
 			label var	state_group9	"FL"
 			label var	state_group10	"AL/AR/MS/LA"
 			label var	state_group11	"TX"
@@ -1392,8 +1392,8 @@
 		
 		*	Create two new variables "weight_multi1" and "weight_multi2" from the two newly constructed weight variables above.
 		*	This step is required if we want to use "gllamm" command, Generalized Linear Latent and Mixed Model
-		gen	weight_multi1	=	weight_long_fam_base
-		gen	weight_multi2	=	weight_l1_r
+		gen	weight_multi1	=	weight_l1_r
+		gen	weight_multi2	=	weight_long_fam_base
 		
 		*	For an alternative approach, multiply two weights to be used as a new survey weight
 		gen	weight_multi12	=	weight_multi1*weight_multi2
