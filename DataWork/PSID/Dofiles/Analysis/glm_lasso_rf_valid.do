@@ -426,6 +426,9 @@
 		*	Step 1
 		if	`run_rf_step1'==1	{
 			
+			cap	drop	rf_step1_sample
+			cap	drop	importance_mean
+			cap	drop	importance_mean1
 			
 			local	statevars	lag_food_exp_pc_1-lag_food_exp_pc_5	/*c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1##c.lag_food_exp_pc_1*/		//	up to the order of 5
 			local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse	mental_problem

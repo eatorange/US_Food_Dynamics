@@ -146,17 +146,18 @@
 	
 		*	Regression variables
 		
-			global	statevars	lag_food_exp_pc_1 lag_food_exp_pc_2	lag_food_exp_pc_3 //	Lagged food expenditure per capita, up to third order
-			global	demovars	age_head_fam age_head_fam_sq	HH_race_color	marital_status_cat	HH_female	//	age, age^2, race, marital status, gender
-			global	econvars	ln_income_pc	//	log of income per capita
-			global	healthvars	phys_disab_head mental_problem	//	physical and mental health
-			global	empvars		emp_HH_simple	//	employment status
-			global	familyvars	num_FU_fam ratio_child	//	# of family members and % of ratio of children
-			global	eduvars		highdegree_NoHS	highdegree_somecol	highdegree_col	//	Highest degree achieved
-			global	foodvars	food_stamp_used_0yr	child_meal_assist 		//	Food assistance programs
-			global	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled	//	Change in status
-			global	regionvars	state_group? state_group1? state_group2?	//	Region (custom group of status)
-			global	timevars	year_enum3-year_enum10	//	Year dummies
+			global	statevars			lag_food_exp_pc_1 lag_food_exp_pc_2	lag_food_exp_pc_3 //	Lagged food expenditure per capita, up to third order
+			global	statevars_rescaled	lag_food_exp_pc_1 lag_food_exp_pc_2	lag_food_exp_pc_th_3 //	Same as "statevars", but replaced the third order with re-scaled version (to properly display coefficients)
+			global	demovars			age_head_fam age_head_fam_sq	HH_race_color	marital_status_cat	HH_female	//	age, age^2, race, marital status, gender
+			global	econvars			ln_income_pc	//	log of income per capita
+			global	healthvars			phys_disab_head mental_problem	//	physical and mental health
+			global	empvars				emp_HH_simple	//	employment status
+			global	familyvars			num_FU_fam ratio_child	//	# of family members and % of ratio of children
+			global	eduvars				highdegree_NoHS	highdegree_somecol	highdegree_col	//	Highest degree achieved
+			global	foodvars			food_stamp_used_0yr	child_meal_assist 		//	Food assistance programs
+			global	changevars			no_longer_employed	no_longer_married	no_longer_own_house	became_disabled	//	Change in status
+			global	regionvars			state_group? state_group1? state_group2?	//	Region (custom group of status)
+			global	timevars			year_enum3-year_enum10	//	Year dummies
 			
 
 	/****************************************************************
@@ -171,7 +172,7 @@
 	** I can make this code nicer later.
 	
 	
-	local	include_stamp	1	//	After discussing with Chris and John, we decided NOT to include food stamp as it significantly decrades its matching between the HFSM (Check May 2021 mail). Difference would be included in the Appendix.
+	local	include_stamp	1	//	Turn it on to include food stamp value in food expenditure value.
 		
 	*	Determine whether to include stamp value to expenditure or not.
 	if	`include_stamp'==1	{
@@ -198,7 +199,7 @@
 	
 	*	OLS
 	local	run_GLM	1
-		local	model_selection	0
+		local	model_selection	1
 		local	run_ME	0
 		
 	*	LASSO
@@ -231,13 +232,13 @@
 			local	depvar		food_exp_pc
 			
 			local	statevars	lag_food_exp_pc_th_1
-			*svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order1
 			
 			local	statevars	lag_food_exp_pc_th_1	lag_food_exp_pc_th_2
-			*svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	ols_step1_order2
@@ -265,6 +266,9 @@
 			predict glm_order5	if	e(sample)==1 & `=e(subpop)'
 			
 			*	Output
+			**	AER requires NOT to use asterisk(*) to display significance level, so we don't display it here
+			**	We can display them by modifying some options
+			
 			esttab	ols_step1_order1	ols_step1_order2	ols_step1_order3	ols_step1_order4	ols_step1_order5	using "${PSID_outRaw}/GLM_model_selection.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2 bic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
@@ -273,7 +277,7 @@
 					replace
 					
 			esttab	ols_step1_order1	ols_step1_order2	ols_step1_order3	ols_step1_order4	ols_step1_order5	using "${PSID_outRaw}/GLM_model_selection.tex", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N aic2 bic2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N aic2 bic2, fmt(%8.0fc %8.2fc %8.2fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
 					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
@@ -294,9 +298,9 @@
 				pweight(weight_multi1)	family(gamma)	link(log)	vce(cluster fam_ID_1999)	*/
 		
 		
-		svy, subpop(${study_sample}): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
-			
+		svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
 		est	sto	ols_step1
+
 		
 		*	Predict fitted value and residual
 		gen	ols_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
@@ -313,21 +317,23 @@
 		*	Step 2
 		local	depvar	e1_foodexp_sq_ols
 		
-		svy, subpop(${study_sample}): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	, family(gamma)	link(log)
-		*svy, subpop(ols_step1_sample): reg `depvar' ${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	//	glm does not converge, thus use OLS)
-		
+		svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	, family(gamma)	link(log)
+	
 		est store ols_step2
 		gen	ols_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
 		*svy:	reg `e(depvar)' `e(selected)'
 		predict	double	var1_foodexp_ols	if	ols_step2_sample==1	
 					
 		*	Output
+		**	For AER manuscript, we omit asterisk(*) to display significance as AER requires not to use.
+		**	If we want to diplay star, renable "star" option inside "cells" and "star(* 0.10 ** 0.05 *** 0.01)"
+		
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
+					cells(b(star fmt(%8.2f)) se(fmt(2) par)) stats(N_sub /*r2*/) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
 					title(Conditional Mean and Variance of Food Expenditure per capita) 	replace
 					
 			esttab	ols_step1	ols_step2	using "${PSID_outRaw}/GLM_pooled.tex", ///
-					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Conditional Mean and Variance of Food Expenditure per capita)		replace		
 		
 			
@@ -415,6 +421,10 @@
 			** As of Sep 11, 2020, the estimated lambda with lse is 1208.72 (lse). Since this lamba value gives too many variables, we use lambda = exp(8) whose MSPE is only very slightly higher than the MSPE under the lse.
 			** As of Nov 5, 2020 using SRC sample only, the estimated lambda with lse is 1546.914 (lse).
 			
+			*local	lambdaval=45467.265 (lse) // LSE value from training set (excluding 2017)
+			*	"cvlasso" using training data (2001-2015) gives lse-optimal lambda=45467.265, which does penalize "ALL" variables except those we intentionally didn't penalize (time and state FE). It gives RMPSE=2.600
+			*	Thus, we manually tested all the values from 50 to 50000, with increment 100. We found lambda=50 minimuzes MSPE (lopt) and the largest lambda within 1-stdev is lambda=11,800
+			
 				
 				/*
 				*	Finding optimal lambda using cross-validation (computationally intensive)
@@ -435,7 +445,7 @@
 				*local	lambdaval=1546.914	//	the lse value found from cvlasso using SRC sample only as of Nov 5.
 				
 				
-				local	lambdaval=2000	//	temporary value, will find the exact value via cvlasso it later.
+				local	lambdaval=11800	//	temporary value, will find the exact value via cvlasso it later.
 				lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`healthvars'	`empvars'		`familyvars'	`eduvars'	`foodvars'	///
 										`changevars'	`regionvars'	`timevars'	`childvars'	if	/*in_sample==1	&*/	${study_sample}==1,	///
 							ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
@@ -1403,16 +1413,20 @@
 				est	sto	corr_`type'_nonlin_low20_FE
 			
 			*	Output (Table A4 of 2020/11/16 draft)
+			**	AER requires not to use asterisk(*) for significance level, so we currently do not display it
+			**	We can display it by modifying some options
+			
 			esttab	corr_`type'_lin_noFE		corr_`type'_nonlin_noFE			corr_`type'_lin_FE			corr_`type'_nonlin_FE	///
 					corr_`type'_lin_low20_noFE	corr_`type'_nonlin_low20_noFE	corr_`type'_lin_low20_FE	corr_`type'_nonlin_low20_FE	///
 					using "${PSID_outRaw}/USDA_PFS_correlation_`type'.csv", ///
 			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 			title(Regression of the USDA scale on PFS(`type')) replace
 			
-			esttab	corr_`type'_lin_noFE		corr_`type'_nonlin_noFE			corr_`type'_lin_FE			corr_`type'_nonlin_FE	///
-					/*corr_`type'_lin_low20_noFE	corr_`type'_nonlin_low20_noFE	corr_`type'_lin_low20_FE	corr_`type'_nonlin_low20_FE */	/// 
-					using "${PSID_outRaw}/USDA_PFS_correlation_`type'.tex", ///
-			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+			
+			loc	type	ols
+			esttab			corr_`type'_lin_noFE		corr_`type'_nonlin_noFE			corr_`type'_lin_FE			corr_`type'_nonlin_FE	///
+				using "${PSID_outRaw}/USDA_PFS_correlation_`type'.tex", ///
+			cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc	%8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 			title(Regression of the USDA scale on PFS(`type')) replace
 			
 						
@@ -1754,6 +1768,8 @@
 					
 		
 		*	Output
+		**	AER requires NOT to use asterisk(*) to denote significance level, so we do not display in this code.
+		**	We can display them by disabling "nostar" and enabling "star" option
 			
 			*	Food Security Indicators and Their Correlates (Table 4 of 2020/11/16 draft)
 			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${PSID_outRaw}/HFSM_PFS_pooled.csv", ///
@@ -1762,8 +1778,8 @@
 					
 					
 			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${PSID_outRaw}/HFSM_PFS_pooled.tex", ///
-					/*cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
-					cells(b(star fmt(3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					/*cells(b(star fmt(3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	*/	///
+					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 					title(Effect of Correlates on Food Security Status) replace
 	
 		*	Grouped-state FE (without controls)
@@ -2268,7 +2284,7 @@
 		SECTION 7: Dynamics
 	****************************************************************/	
 		
-	local	run_transition_matrix	0	//	Transition matrix
+	local	run_transition_matrix	1	//	Transition matrix
 	local	run_spell_length	1	//	Spell length
 	local	run_FS_chron_trans	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
@@ -2639,13 +2655,6 @@
 			graph	close
 		
 		restore
-		
-		*	Figure 4
-		preserve
-		
-		clear
-		svmat	FI_still_year_all
-		
 			
 	}
 	
@@ -3207,7 +3216,7 @@
 					replace
 					
 			esttab	Total_FI_`measure'	Chronic_FI_`measure'		using "${PSID_outRaw}/TFI_CFI_regression.tex", ///
-					cells(b(star fmt(a3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace		
