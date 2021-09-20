@@ -884,7 +884,7 @@
 		
 		
 	/****************************************************************
-		SECTION X: Construct a long format data
+		SECTION 2: Construct a long format data
 	****************************************************************/
 		
 	
@@ -1194,6 +1194,11 @@
 		label	variable	highdegree_somecol	"Highest degree: some college"
 		label	variable	highdegree_col		"Highest degree: college"
 		
+			*	Aggregate some categories
+			cap	drop	highdegree_HSorbelow	//	binary for HS or below, or beyond HS.
+			gen		highdegree_HSorbelow=0	if	inlist(1,highdegree_somecol,highdegree_col)
+			replace	highdegree_HSorbelow=1	if	inlist(1,highdegree_NoHS, highdegree_HS)
+		
 		rename	(grade_comp_cat_spouse_enum1	grade_comp_cat_spouse_enum2	grade_comp_cat_spouse_enum3	grade_comp_cat_spouse_enum4)	///
 				(highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse)
 				
@@ -1407,7 +1412,607 @@
 		save		`fs_const_long'
 	
 		
+	/****************************************************************
+		SECTION 3: Construct PFS	 									
+	****************************************************************/		
+	
+	*	Run do-file which includes macros needed for constructing PFS
+	*	This file should have already been executed while "PSID_MasterDofile.do" was executed, but run it again just to make sure.
+	include	"${PSID_doAnl}/Macros_for_analyses.do"
+	
+	*	Asess model performance among GLM, LASSO and Random Forest
+	*	Before constructing PFS, we need to decide which model to use for constructing PFS
+	*	We make decision based on the out-of-sample prediction performance of equation (1) - constructing conditional mean
+	*	Performance will be measured by root mean square prediction error (RMSPE), using 2001-2015 as training sample, and 2017 as out-of-sample
+	
+	**	This measurement needs not be run every time, thus we toggle it only when needed.
+	**	As of Sep 2021, LASSO(1.78) and random forest (1.82) does not perform significantly better than GLM(1.83)
+	
+	local	model_performance_measure=0
+	
+	if	`model_performance_measure'==1	{
 		
+		
+			
+	*	GLM
+	
+		*	Declare variables
+		local	depvar		food_exp_stamp_pc
+		
+		*	Step 1
+		*	Exclude year 10 (to calculate RMPSE)
+		svy, subpop(if ${study_sample} & year!=10): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
+		est	sto	glm_step1
+		
+	
+		*	Predict fitted value and residual
+		gen		glm_step1_sample=1	if	e(sample)==1 & sample_source_SRC_SEO & year!=10	
+		replace	glm_step1_sample=1	if	year==10 & l.glm_step1_sample==1
+		count if glm_step1_sample==1 & year==10	//	Number of 2017 observations used to measure performance
+		scalar step1_N_glm=r(N)
+		
+		predict double mean1_foodexp_glm	if	glm_step1_sample==1
+		predict double e1_foodexp_glm		if	glm_step1_sample==1,r
+		gen e1_foodexp_sq_glm = (e1_foodexp_glm)^2
+		
+		egen e1_total_glm=total(e1_foodexp_sq_glm) if glm_step1_sample==1 & year==10
+		gen rmspe_step1_glm = sqrt(e1_total_glm/step1_N_glm)
+	
+	
+	
+	
+	*	LASSO
+		
+		*	Features to be tested
+		*	To increase predictive power, we include the variables not only those originally included in GLM, but also other variables.
+	
+		local	depvar	food_exp_stamp_pc
+		
+		local	statevars	lag_food_exp_stamp_pc_1-lag_food_exp_stamp_pc_5		//	up to the order of 5
+		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse	mental_problem
+		local	demovars	age_head_fam age_head_fam_sq	HH_race_white HH_race_color	marital_status_cat	///
+							HH_female age_spouse	age_spouse_sq	housing_status_enum1 housing_status_enum3	veteran_head veteran_spouse
+		local	econvars	ln_income_pc	ln_wealth_pc		sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
+		local	empvars		emp_HH_simple	emp_spouse_simple
+		local	familyvars	num_FU_fam ratio_child	child_in_FU_cat	couple_status_enum1-couple_status_enum4
+		local	eduvars		highdegree_NoHS	highdegree_HS		highdegree_somecol	highdegree_col	highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse					
+		local	foodvars	food_stamp_used_0yr food_stamp_used_1yr	child_meal_assist WIC_received_last		elderly_meal
+		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
+		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	regionvars	state_group? state_group1? state_group2?
+		local	timevars	year_enum2-year_enum9
+		
+		
+		set	seed	20200505
+		
+		*	Select optimal lambda
+		*	We choose optimal lambda by doing cross-validation, but it takes too much time. Thus we run it only when needed
+		
+		**	Note: "cvlasso" using training data (2001-2015) gives lse-optimal lambda=45467.265, which does penalize "ALL" variables except those we intentionally didn't penalize (time and state FE). It gives RMPSE=2.600
+		**	Thus, we manually tested all the values from 50 to 50000, with increment 100. We found lambda=50 minimuzes MSPE (lopt) and the largest lambda within 1-stdev is lambda=11,800	
+		
+		local	run_cvlasso=0
+		
+		if	`run_cvlasso'==1	{
+			
+			numlist "50000(50)1", descending
+			*	Finding optimal lambda using cross-validation (computationally intensive)
+			cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	${study_sample}==1 & year!=10,	///
+				/*lopt lse*/  lambda(`r(numlist)')	seed(20200505)	notpen(`regionvars'	`timevars')	 rolling	/*h(1) fe	prestd 	postres	ols*/	plotcv 
+				
+			est	store	lasso_step1_lse
+			cvlasso, postresult lse
+			
+			*	Display lambda result
+			di "lambda is `e(lambda)'"
+			
+			*	Save plot
+			graph	export	"${PSID_outRaw}/cvlasso_result.png", replace
+			graph	close
+			
+		}
+			
+			
+		*	Run lasso with the optimal lambda value	
+		
+		*local	lambdaval=exp(14.7)	//	14.7 is as of Aug 21
+		*local	lambdaval=2208.348	//	manual lambda value from the cvplot. This is the value slightly higher than lse but give only slightly higher MSPE
+		*local	lambdaval=1546.914	//	the lse value found from cvlasso using SRC sample only as of Nov 5.
+		*local	lambdaval=45467.265 (lse) // LSE value from training set (excluding 2017)
+			
+		local	lambdaval=11800	//	temporary value, will find the exact value via cvlasso it later.	
+						
+		lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`healthvars'	`empvars'		`familyvars'	`eduvars'	`foodvars'	///
+								`changevars'	`regionvars'	`timevars'	`childvars'	if	${study_sample}==1 & year!=10,	///
+					ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
+		est	store	lasso_step1_manual
+		lasso2, postresults
+				
+		*	Manually run post-lasso
+			gen		lasso_step1_sample=1	if	e(sample)==1	& year!=10
+							
+			global selected_step1_lasso `e(selected)'	/*`e(notpen)'*/
+			svy:	reg `depvar' ${selected_step1_lasso}	`e(notpen)'	if	lasso_step1_sample==1
+			est store postlasso_step1_lse
+			
+			
+			replace	lasso_step1_sample=1 if year==10 & l.lasso_step1_sample==1 // This command should run "after" running post-LASSO, since we don't want 2017 to be included in post-LASSO when validating performance
+			count if lasso_step1_sample==1 & year==10	//	Number of 2017 observations used to measure performance
+			scalar step1_N_lasso=r(N)
+			
+			*	Predict conditional means and variance from Post-LASSO
+			predict double mean1_foodexp_lasso	if	lasso_step1_sample==1, xb	
+			predict double e1_foodexp_lasso	if	lasso_step1_sample==1,r	
+			gen e1_foodexp_sq_lasso = (e1_foodexp_lasso)^2
+
+			egen e1_total_lasso=total(e1_foodexp_sq_lasso) if lasso_step1_sample==1 & year==10
+			gen rmspe_step1_lasso = sqrt(e1_total_lasso/step1_N_lasso)
+
+	
+	
+	*	Random forest
+		
+		*	Features to be tested
+		*	To increase predictive power, we include the variables not only those originally included in GLM, but also other variables.
+		
+		local	depvar		food_exp_stamp_pc
+
+		local	statevars	lag_food_exp_stamp_pc_1	//	RF allows non-linearity, thus need not include higher polynomial terms
+		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse	mental_problem
+		local	demovars	age_head_fam HH_race_white HH_race_color	marital_status_cat	HH_female	age_spouse	age_spouse_sq	housing_status_enum1 housing_status_enum3	veteran_head veteran_spouse
+		local	econvars	ln_income_pc	ln_wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
+		local	empvars		emp_HH_simple	emp_spouse_simple
+		local	familyvars	num_FU_fam ratio_child	child_in_FU_cat	couple_status_enum1-couple_status_enum4
+		local	eduvars		highdegree_NoHS	highdegree_HS		highdegree_somecol	highdegree_col	highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse
+		local	foodvars	food_stamp_used_0yr food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
+		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
+		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local	regionvars	state_group? state_group1? state_group2?
+		local	timevars	year_enum2-year_enum9
+
+
+		local	tune_iter	0	//	Tune how large the value of iterations() need to be. Computationally intensive thus run only when needed
+		local	tune_numvars	0	//	Tune the number of variables. Computationally intensive thus run only when needed
+		
+		*	Tune how large the value of iterations() need to be
+		if	`tune_iter'==1	{
+			loc	depvar	food_exp_pc
+			generate out_of_bag_error1 = .
+			generate validation_error = .
+			generate iter1 = .
+			local j = 0
+			forvalues i = 10(5)500 {
+				local j = `j' + 1
+				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	year!=10	&	${study_sample}==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
+				quietly replace iter1 = `i' in `j'
+				quietly replace out_of_bag_error1 = `e(OOB_Error)' in `j'
+				predict p if	out_of_sample==1
+				quietly replace validation_error = `e(RMSE)' in `j'
+				drop p
+			}
+			label variable out_of_bag_error1 "Out-of-bag error"
+			label variable iter1 "Iterations"
+			label variable validation_error "Validation error"
+			scatter out_of_bag_error1 iter1, mcolor(blue) msize(tiny)	title(OOB Error and Validation Error) ||	scatter validation_error iter1, mcolor(red) msize(tiny)
+		
+		*	50 seems to be optimal (as of Sep 12, 2021)
+		}	//	tune_iter
+		
+			
+		*	Tune the number of variables
+		if	`tune_numvars'==1	{
+			loc	depvar	food_exp_pc
+			generate oob_error = .
+			generate nvars = .
+			generate val_error = .
+			local j = 0
+			forvalues i = 1(1)26 {
+				local j = `j'+ 1
+				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+											`foodvars'	`childvars'	`changevars'	`regionvars'	if	year!=10	&	${study_sample}==1,	///
+											type(reg)	seed(20200505) iterations(50) numvars(`i')
+				quietly replace nvars = `i' in `j'
+				quietly replace oob_error = `e(OOB_Error)' in `j'
+				predict p	if	out_of_sample==1
+				quietly replace val_error = `e(RMSE)' in `j'
+				drop p
+			}
+			label variable oob_error "Out-of-bag error"
+			label variable val_error "Validation error"
+			label variable nvars "Number of variables randomly selected at each split"
+			scatter oob_error nvars, mcolor(blue) msize(tiny)	title(OOB Error and Validation Error)	subtitle(by the number of variables)	///
+			||	scatter val_error nvars, mcolor(red) msize(tiny)
+			
+			frame put val_error nvars, into(mydata)
+			frame mydata {
+				sort val_error, stable
+				local min_val_err = val_error[1]
+				local min_nvars = nvars[1]
+			}
+			frame drop mydata
+			display "Minimum Error: `min_val_err'; Corresponding number of variables `min_nvars''"
+			* (2020-09-05) Minimum Error: 1.780909180641174; Corresponding number of variables 23'
+			* (2021-09-12) (valication without 2017) Minimum Error: 1.808252334594727; Corresponding number of variables 17'
+		}	//	tune_numvars
+		
+		
+		*	Run random forest
+			cap	drop	rf_step1_sample
+			cap	drop	importance_mean
+			cap	drop	importance_mean1
+			
+			loc	depvar	food_exp_pc
+			rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
+									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	year!=10 & 	${study_sample}==1,	///
+									type(reg)	iterations(50)	numvars(17)	seed(20200505) 
+			gen		rf_step1_sample=1	if		${study_sample}==1 // For Random Forest, ALL observations are used.
+			count	if	rf_step1_sample==1	&	year==10
+			scalar step1_N_rf=r(N)
+			* Variable importance plot
+			matrix importance_mean = e(importance)
+			svmat importance_mean
+			generate importid_mean=""
+			local mynames: rownames importance_mean
+			local k: word count `mynames'
+			if `k'>_N {
+				set obs `k'
+			}
+			forvalues i = 1(1)`k' {
+				local aword: word `i' of `mynames'
+				local alabel: variable label `aword'
+				if ("`alabel'"!="") qui replace importid_mean= "`alabel'" in `i'
+				else qui replace importid_mean= "`aword'" in `i'
+			}
+			gsort	-importance_mean1
+			graph hbar (mean) importance_mean1	in	1/12, over(importid_mean, sort(1) label(labsize(2))) ytitle(Importance) title(Feature Importance for Conditional Mean)
+			graph	export	"${PSID_outRaw}/rf_feature_importance_step1.png", replace
+			graph	close
+			
+			putexcel	set "${PSID_outRaw}/Feature_importance", sheet(mean) replace	/*modify*/
+			putexcel	A3	=	matrix(importance_mean), names overwritefmt nformat(number_d1)
+			
+			predict	mean1_foodexp_rf
+			*	"rforest" cannot predict residual, so we need to compute it manually
+			gen	double e1_foodexp_rf	=	food_exp_pc	-	mean1_foodexp_rf
+			gen e1_foodexp_sq_rf = (e1_foodexp_rf)^2
+			
+			
+			egen e1_total_rf=total(e1_foodexp_sq_rf) if rf_step1_sample==1 & year==10
+			gen rmspe_step1_rf = sqrt(e1_total_rf/step1_N_rf)
+		
+
+		
+	}
+	
+	
+	*	Construct PFS
+	*	Based on the performance result above, we use GLM to construct
+	
+	local	depvar		food_exp_stamp_pc
+
+		local	model_selection=0	//	Code that determines how many polynomial orders we should include.
+		
+		*	Model selection (highest order)
+		if	`model_selection'==1	{
+			
+			cap	drop	glm_order2	glm_order3	glm_order4	glm_order5
+			
+			local	statevars	lag_food_exp_stamp_pc_th_1
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
+			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
+			est	sto	glm_step1_order1
+			
+			local	statevars	lag_food_exp_stamp_pc_th_1	lag_food_exp_stamp_pc_th_2
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
+			est	sto	glm_step1_order2
+			predict glm_order2	if	e(sample)==1 & `=e(subpop)'
+			
+			local	statevars	lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_3
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
+			est	sto	glm_step1_order3
+			predict glm_order3	if	e(sample)==1 & `=e(subpop)'
+			
+			local	statevars	lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_4
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
+			est	sto	glm_step1_order4
+			predict glm_order4	if	e(sample)==1 & `=e(subpop)'
+			
+			local	statevars	lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_5
+			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
+			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
+			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
+			est	sto	glm_step1_order5
+			predict glm_order5	if	e(sample)==1 & `=e(subpop)'
+			
+			*	Output
+			**	AER requires NOT to use asterisk(*) to display significance level, so we don't display it here
+			**	We can display them by modifying some options
+			
+			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${PSID_outRaw}/GLM_model_selection.csv", ///
+					cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N aic2 bic2, fmt(%8.0fc %8.2fc %8.2fc)) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Average Marginal Effects on Food Expenditure per capita) 	///
+					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
+					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
+					replace
+					
+			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${PSID_outRaw}/GLM_model_selection.tex", ///
+					cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N aic2 bic2, fmt(%8.0fc %8.2fc %8.2fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
+					title(Average Marginal Effects on Food Expenditure per capita) 	///
+					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
+					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
+					replace
+			
+		}
+		
+		
+		*	Step 1
+		*	Note: we use svy: GLM model which generates robust, design-adjusted standard errors based on primary sampling units only (households can be thought of as secondary sampling units in the panel study.)
+		*	In other words, this svy: GLM model does NOT take clustering observations within households. (Reference: page 394, "Applied Survey Data Analysis, 1st edition, (2010), Heeringa, West, Berglund")
+		*	The reference above used GLLAMM (Generalized Linear Latent and Mixed Model) which generates (1) fixed effects of covariates and time aspect and (2) random effects of individuals where indviduals records over time are clustered (pg.380)
+		*	The book runs both svy: GLM and GLLAMM, and they found both yields very similar inferences. We will use this fininding as an argument for using svy: GLM over GLLAMM
+			
+		*	If we need to use mixed model to account for correlation wihtin households, then we can use the following command instead. The following model is Mixed-effect Generalized Linear Model (MEGLM)
+		*	The following command is written based upon (1) Stata manual (2) 2nd edition of the reference above (Heeringa sent me an excerpt as a word file. Check 2021/6/22 email for the record)
+			/*	meglm	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars} [pweight=weight_multi2] if `depvar'>0 || fam_ID_1999: ,	///
+				pweight(weight_multi1)	family(gamma)	link(log)	vce(cluster fam_ID_1999)	*/
+		
+		
+		svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
+		est	sto	glm_step1
+
+		
+		*	Predict fitted value and residual
+		gen	glm_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
+		predict double mean1_foodexp_glm	if	glm_step1_sample==1
+		predict double e1_foodexp_glm	if	glm_step1_sample==1,r
+		gen e1_foodexp_sq_glm = (e1_foodexp_glm)^2
+	
+		
+		*	Step 2
+		local	depvar	e1_foodexp_sq_glm
+		
+		svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	, family(gamma)	link(log)
+	
+		est store glm_step2
+		gen	glm_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
+		*svy:	reg `e(depvar)' `e(selected)'
+		predict	double	var1_foodexp_glm	if	glm_step2_sample==1	
+					
+		*	Output
+		**	For AER manuscript, we omit asterisk(*) to display significance as AER requires not to use.
+		**	If we want to diplay star, renable "star" option inside "cells" and "star(* 0.10 ** 0.05 *** 0.01)"
+		
+			esttab	glm_step1	glm_step2	using "${PSID_outRaw}/GLM_pooled.csv", ///
+					cells(b(star fmt(%8.2f)) se(fmt(2) par)) stats(N_sub /*r2*/) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
+					title(Conditional Mean and Variance of Food Expenditure per capita) 	replace
+					
+			esttab	glm_step1	glm_step2	using "${PSID_outRaw}/GLM_pooled.tex", ///
+					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					title(Conditional Mean and Variance of Food Expenditure per capita)		replace		
+		
+		
+		
+		*	Step 3
+		*	Assume the outcome variable follows the Gamma distribution
+		gen alpha1_foodexp_pc_glm	= (mean1_foodexp_glm)^2 / var1_foodexp_glm	//	shape parameter of Gamma (alpha)
+		gen beta1_foodexp_pc_glm	= var1_foodexp_glm / mean1_foodexp_glm	//	scale parameter of Gamma (beta)
+		
+		*	Generate PFS by constructing CDF
+		gen PFS_glm = gammaptail(alpha1_foodexp_pc_glm, foodexp_W_thrifty/beta1_foodexp_pc_glm)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+		label	var	PFS_glm "PFS"
+		
+		
+	/****************************************************************
+		SECTION 4: Categorize food security status based on PFS	 									
+	****************************************************************/		
+	*	Categorization	//	Generate FS category variables from the PFS
+	local	run_categorization	1	
+
+	*	Categorization	
+	if	`run_categorization'==1	{
+						
+		
+			*	Summary Statistics of Indicies
+			summ	fs_scale_fam_rescale	PFS_glm		///
+					if	inlist(year,2,3,9,10)
+			
+			*	For food security threshold value, we use the ratio from the annual USDA reports.
+			*	(https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-us/readings/#reports)
+			
+			*** One thing we need to be careful is that, we need to match the USDA ratio to the "population ratio(weighted)", NOT the "sample ratio(unweighted)"
+			*	To get population ratio, we should use "svy: mean"	or "svy: proportion"
+			*	The best way to do is let STATA find them automatically, but for now (2020/10/6) I will find them manually.
+				*	One idea I have to do it automatically is to use loop(while) until we get the threshold value matching the USDA ratio.
+			*	Due to time constraint, I only found it for 2015 (year=9) for OLS, which is needed to generate validation table.
+			
+			
+			local	prop_FI_1	=	0.101	// 1999: 10.1% are food insecure (7.1% are low food secure, 3.0% are very low food secure)
+			local	prop_FI_2	=	0.107	// 2001: 10.7% are food insecure (7.4% are low food secure, 3.3% are very low food secure)
+			local	prop_FI_3	=	0.112	// 2003: 11.2% are food insecure (7.7% are low food secure, 3.5% are very low food secure)
+			local	prop_FI_4	=	0.110	// 2005: 11.0% are food insecure (7.1% are low food secure, 3.9% are very low food secure)
+			local	prop_FI_5	=	0.111	// 2007: 11.1% are food insecure (7.0% are low food secure, 4.1% are very low food secure)
+			local	prop_FI_6	=	0.147	// 2009: 14.7% are food insecure (9.0% are low food secure, 5.7% are very low food secure)
+			local	prop_FI_7	=	0.149	// 2011: 14.9% are food insecure (9.2% are low food secure, 5.7% are very low food secure)
+			local	prop_FI_8	=	0.143	// 2013: 14.3% are food insecure (8.7% are low food secure, 5.6% are very low food secure)
+			local	prop_FI_9	=	0.127	// 2015: 12.7% are food insecure (7.7% are low food secure, 5.0% are very low food secure)
+			local	prop_FI_10	=	0.118	// 2017: 11.8% are food insecure (7.3% are low food secure, 4.5% are very low food secure)
+			
+			local	prop_VLFS_1		=	0.030	// 1999: 10.1% are food insecure (7.1% are low food secure, 3.0% are very low food secure)
+			local	prop_VLFS_2		=	0.033	// 2001: 10.7% are food insecure (7.4% are low food secure, 3.3% are very low food secure)
+			local	prop_VLFS_3		=	0.035	// 2003: 11.2% are food insecure (7.7% are low food secure, 3.5% are very low food secure)
+			local	prop_VLFS_4		=	0.039	// 2005: 11.0% are food insecure (7.1% are low food secure, 3.9% are very low food secure)
+			local	prop_VLFS_5		=	0.041	// 2007: 11.1% are food insecure (7.0% are low food secure, 4.1% are very low food secure)
+			local	prop_VLFS_6		=	0.057	// 2009: 14.7% are food insecure (9.0% are low food secure, 5.7% are very low food secure)
+			local	prop_VLFS_7		=	0.057	// 2011: 14.9% are food insecure (9.2% are low food secure, 5.7% are very low food secure)
+			local	prop_VLFS_8		=	0.056	// 2013: 14.3% are food insecure (8.7% are low food secure, 5.6% are very low food secure)
+			local	prop_VLFS_9		=	0.050	// 2015: 12.7% are food insecure (7.7% are low food secure, 5.0% are very low food secure)
+			local	prop_VLFS_10	=	0.045	// 2017: 11.8% are food insecure (7.3% are low food secure, 4.5% are very low food secure)
+		
+			*	Categorize food security status based on the PFS.
+			 quietly	{
+				foreach	type	in	glm	/*ls	rf*/	{
+
+						
+						gen	PFS_FS_`type'	=	0	if	!mi(PFS_`type')	//	Food secure
+						gen	PFS_FI_`type'	=	0	if	!mi(PFS_`type')	//	Food insecure (low food secure and very low food secure)
+						gen	PFS_LFS_`type'	=	0	if	!mi(PFS_`type')	//	Low food secure
+						gen	PFS_VLFS_`type'	=	0	if	!mi(PFS_`type')	//	Very low food secure
+						gen	PFS_cat_`type'	=	0	if	!mi(PFS_`type')	//	Categorical variable: FS, LFS or VLFS
+												
+						*	Generate a variable for the threshold PFS
+						gen	PFS_threshold_`type'=.
+						
+						foreach	year	in	2	3	4	5	6	7	8	9	10	{
+							
+							di	"current loop is `plan',  in year `year'"
+							xtile pctile_`type'_`year' = PFS_`type' if !mi(PFS_`type')	&	year==`year', nq(1000)
+	
+							* We use loop to find the threshold value for categorizing households as food (in)secure
+							local	counter 	=	1	//	reset counter
+							local	ratio_FI	=	0	//	reset FI population ratio
+							local	ratio_VLFS	=	0	//	reset VLFS population ratio
+							
+							foreach	indicator	in	FI	VLFS	{
+								
+								local	counter 	=	1	//	reset counter
+								local	ratio_`indicator'	=	0	//	reset population ratio
+							
+								* To decrease running time, we first loop by 10 
+								while (`counter' < 1000 & `ratio_`indicator''<`prop_`indicator'_`year'') {	//	Loop until population ratio > USDA ratio
+									
+									qui di	"current indicator is `indicator', counter is `counter'"
+									qui	replace	PFS_`indicator'_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',1,`counter')	//	categorize certain number of households at bottom as FI
+									qui	svy, subpop(year_enum`year'): mean 	PFS_`indicator'_`type'	//	Generate population ratio
+									local ratio_`indicator' = _b[PFS_`indicator'_`type']
+									
+									local counter = `counter' + 10	//	Increase counter by 10
+								}
+
+								*	Since we first looped by unit of 10, we now have to find to exact value by looping 1 instead of 10.
+								qui di "internediate counter is `counter'"
+								local	counter=`counter'-10	//	Adjust the counter, since we added extra 10 at the end of the first loop
+
+								while (`counter' > 1 & `ratio_`indicator''>`prop_`indicator'_`year'') {	//	Loop until population ratio < USDA ratio
+									
+									qui di "counter is `counter'"
+									qui	replace	PFS_`indicator'_`type'=0	if	year==`year'	&	inrange(pctile_`type'_`year',`counter',1000)
+									qui	svy, subpop(year_enum`year'): mean 	PFS_`indicator'_`type'
+									local ratio_`indicator' = _b[PFS_`indicator'_`type']
+									
+									local counter = `counter' - 1
+								}
+								qui di "Final counter is `counter'"
+
+								*	Now we finalize the threshold value - whether `counter' or `counter'+1
+									
+									*	Counter
+									local	diff_case1	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
+
+									*	Counter + 1
+									qui	replace	PFS_`indicator'_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',1,`counter'+1)
+									qui	svy, subpop(year_enum`year'): mean 	PFS_`indicator'_`type'
+									local	ratio_`indicator' = _b[PFS_`indicator'_`type']
+									local	diff_case2	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
+									qui	di "diff_case2 is `diff_case2'"
+
+									*	Compare two threshold values and choose the one closer to the USDA value
+									if	(`diff_case1'<`diff_case2')	{
+										global	threshold_`indicator'_`plan'_`type'_`year'	=	`counter'
+									}
+									else	{	
+										global	threshold_`indicator'_`plan'_`type'_`year'	=	`counter'+1
+									}
+								
+								*	Categorize households based on the finalized threshold value.
+								qui	{
+									replace	PFS_`indicator'_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',1,${threshold_`indicator'_`plan'_`type'_`year'})
+									replace	PFS_`indicator'_`type'=0	if	year==`year'	&	inrange(pctile_`type'_`year',${threshold_`indicator'_`plan'_`type'_`year'}+1,1000)		
+								}	
+								di "thresval of `indicator' in year `year' is ${threshold_`indicator'_`plan'_`type'_`year'}"
+							}	//	indicator
+							
+							*	Food secure households
+							replace	PFS_FS_`type'=0	if	year==`year'	&	inrange(pctile_`type'_`year',1,${threshold_FI_`plan'_`type'_`year'})
+							replace	PFS_FS_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',${threshold_FI_`plan'_`type'_`year'}+1,1000)
+							
+							*	Low food secure households
+							replace	PFS_LFS_`type'=1	if	year==`year'	&	PFS_FI_`type'==1	&	PFS_VLFS_`type'==0	//	food insecure but NOT very low food secure households			
+							
+							*	Categorize households into one of the three values: FS, LFS and VLFS						
+							replace	PFS_cat_`type'=1	if	year==`year'	&	PFS_VLFS_`type'==1
+							replace	PFS_cat_`type'=2	if	year==`year'	&	PFS_LFS_`type'==1
+							replace	PFS_cat_`type'=3	if	year==`year'	&	PFS_FS_`type'==1
+							assert	PFS_cat_`type'!=0	if	year==`year'
+							
+							*	Save threshold PFS as global macros and a variable, the average of the maximum PFS among the food insecure households and the minimum of the food secure households					
+							qui	summ	PFS_`type'	if	year==`year'	&	PFS_FS_`type'==1	//	Minimum PFS of FS households
+							local	min_FS_PFS	=	r(min)
+							qui	summ	PFS_`type'	if	year==`year'	&	PFS_FI_`type'==1	//	Maximum PFS of FI households
+							local	max_FI_PFS	=	r(max)
+							
+							*	Save the threshold PFS
+							replace	PFS_threshold_`type'	=	(`min_FS_PFS'	+	`max_FI_PFS')/2		if	year==`year'
+							*global	PFS_threshold_`type'_`year'	=	(`min_FS_PFS'	+	`max_FI_PFS')/2
+							
+							
+						}	//	year
+						
+						label	var	PFS_FI_`type'	"Food Insecurity (PFS) (`type')"
+						label	var	PFS_FS_`type'	"Food security (PFS) (`type')"
+						label	var	PFS_LFS_`type'	"Low food security (PFS) (`type')"
+						label	var	PFS_VLFS_`type'	"Very low food security (PFS) (`type')"
+						label	var	PFS_cat_`type'	"PFS category: FS, LFS or VLFS"
+						
+
+				}	//	type
+				
+				lab	define	PFS_category	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food security(FS)"
+				lab	value	PFS_cat_*	PFS_category
+				
+			 }	//	qui
+			
+			
+			*	Graph the PFS threshold for each year
+			cap drop templine
+			gen templine=0.6
+			twoway	(connected PFS_threshold_glm year2 if fam_ID_1999==1, lpattern(dot)	mlabel(PFS_threshold_glm) mlabposition(12) mlabformat(%9.3f))	///
+					(line templine year2 if fam_ID_1999==1, lpattern(dash)),	///
+					/*title(Probability Threshold for being Food Secure)*/	ytitle(Probability)	xtitle(Year)	xlabel(2001(2)2017) legend(off)	///
+					name(PFS_Threshold, replace)	graphregion(color(white)) bgcolor(white)
+					
+			graph	export	"${PSID_outRaw}/Fig_A1_PFS_Thresholds.png", replace
+			graph	close
+			
+			drop	templine
+	
+		
+	}	//	Categorization			
+
+	
+	tempfile	fs_const_long
+	save		`fs_const_long'
+	
+	/*
+	*	Save, depending on whether food stamp/SNAP value is included in the food expenditure
+	if	`include_stamp'==1	{	//	if included, default
+		
+		save	"${PSID_dtInt}/PFS_cat_ready_fs.dta", replace
+	
+	}
+	else	{	//	if NOT included.
+	    
+		save	"${PSID_dtInt}/PFS_cat_ready.dta", replace
+	}
+	*/
+	
 		
 			
 	/****************************************************************
