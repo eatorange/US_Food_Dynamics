@@ -739,12 +739,13 @@
 			
 			forvalues	year=2001(2)2017	{
 				
+				*	Attach individual-level monthly TFP cost from the external data to individual household member
 				merge m:1 indiv_gender age_ind`year'	state_region_temp`year' interview_month`year'	using `foodcost_`year'', keepusing(foodcost_monthly_`year')	nogen keep(1 3)
-				replace	foodcost_monthly_`year' = foodcost_monthly_avgadult_`year'	if	mi(age_ind`year')	&	inrange(xsqnr_`year',1,20)
+				replace	foodcost_monthly_`year' = foodcost_monthly_avgadult_`year'	if	mi(age_ind`year')	&	inrange(xsqnr_`year',1,20) // Use average cost if missing
 				
 				foreach	plan	in	thrifty	/*low	moderate	liberal*/	{
 				
-					*	Sum all individual costs to calculate total monthly clost 
+					*	Sum all individual costs to calculate total monthly cost 
 					bys x11102_`year': egen foodexp_W_`plan'`year' = total(foodcost_monthly_`year') if !mi(x11102_`year')	&	inrange(xsqnr_`year',1,20) //	Total household monthly cost
 					
 					*	Adjust by the number of families
