@@ -9,6 +9,7 @@
 * 2.10 Updated to PSID delivery 2015
 * 2.11 Updated to PSID delivery 2017
 * 2.12 Bug fix. 
+* (Min, 2021-11-05) Manually updated for PSID delivery 2019
 
 * Selector Program
 program psid
@@ -103,7 +104,7 @@ program psid_main
 		local wavelist: list waves - nonwaves
 	}
 	else if "`ftype'" == "wlth" {
-		local availablewaves 1984 1989 1994 1999 2001 2003 2005 2007 2009 2011 2013 2015 2017
+		local availablewaves 1984 1989 1994 1999 2001 2003 2005 2007 2009 2011 2013 2015 2017 2019
 		local wavelist: list availablewaves & waves
 	}
 	else if "`ftype'" == "psid" & "`waves'" != "" {
@@ -937,7 +938,7 @@ program _SET_DELIVERY, rclass
 	local s =cond("`lower'" == "","S","s")
 
 	// I try to find the users delivery by myself ...
-	local stop 2017
+	local stop 2019
 	while `stop' > 1968 {
 		capture confirm file `"`using'/ind`stop'er.dta"'
 		if !_rc {
@@ -958,7 +959,8 @@ program _SET_DELIVERY, rclass
 	  [92] `er'30733 [93] `er'30806 [94] `er'33101 [95] `er'33201  /// 
 	  [96] `er'33301 [97] `er'33401 [99] `er'33501 [01] `er'33601  /// 
 	  [03] `er'33701 [05] `er'33801 [07] `er'33901 [09] `er'34001  ///
-	  [11] `er'34101 [13] `er'34201 [15] `er'34301 [17] `er'34501  
+	  [11] `er'34101 [13] `er'34201 [15] `er'34301 [17] `er'34501  ///
+	  [19] `er'34701
 
 	
 	local idfam ///
@@ -969,7 +971,7 @@ program _SET_DELIVERY, rclass
 	  [89] `v'16302  [90] `v'17702  [91] `v'19002  [92] `v'20302  [93] `v'21602   /// 
 	  [94] `er'2002  [95] `er'5002  [96] `er'7002  [97] `er'10002 [99] `er'13002  /// 
 	  [01] `er'17002 [03] `er'21002 [05] `er'25002 [07] `er'36002 [09] `er'42002  ///
-	  [11] `er'47302 [13] `er'53002 [15] `er'60002 [17] `er'66002
+	  [11] `er'47302 [13] `er'53002 [15] `er'60002 [17] `er'66002 [19] `er'72002
 
 	local sqind ///
 	  [69] `er'30021 [70] `er'30044 [71] `er'30068 [72] `er'30092 [73] `er'30118 [74] `er'30139  ///
@@ -978,7 +980,7 @@ program _SET_DELIVERY, rclass
 	  [87] `er'30536 [88] `er'30571 [89] `er'30607 [90] `er'30643 [91] `er'30690 [92] `er'30734  /// 
 	  [93] `er'30807 [94] `er'33102 [95] `er'33202 [96] `er'33302 [97] `er'33402 [99] `er'33502  /// 
 	  [01] `er'33602 [03] `er'33702 [05] `er'33802 [07] `er'33902 [09] `er'34002 [11] `er'34102  ///
-	  [13] `er'34202 [15] `er'34302 [17] `er'34502
+	  [13] `er'34202 [15] `er'34302 [17] `er'34502 [19] `er'34702
 	
 	foreach macname in indfile idfam idind sqind delivery {
 
