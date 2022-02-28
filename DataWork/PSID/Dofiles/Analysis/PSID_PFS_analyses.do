@@ -98,7 +98,7 @@
 
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
-	local	run_sumstat	1
+	local	run_sumstat	0
 	
 	if	`run_sumstat'==1	{
 	
@@ -672,8 +672,8 @@
 		SECTION 5: Household-level Dynamics
 	****************************************************************/	
 		
-	local	run_spell_length	0	//	Spell length
-	local	run_transition_matrix	0	//	Transition matrix
+	local	run_spell_length	1	//	Spell length
+	local	run_transition_matrix	1	//	Transition matrix
 	local	run_perm_approach	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	test_stationary	0	//	Test whether PFS is stationary (computationally intensive)
 		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
@@ -790,6 +790,23 @@
 			
 			graph	export	"${PSID_outRaw}/Fig_2_FI_spell_length.png", replace
 			graph	close
+			
+			*	Figure 2a (with selected years only. For presentation)
+			local	marker_2003	mcolor(blue)	msymbol(circle)
+			local	marker_2005	mcolor(red)		msymbol(diamond)
+			local	marker_2007	mcolor(green)	msymbol(triangle)
+			local	marker_2013	mcolor(brown)	msymbol(X)		
+			
+			twoway	(connected	yr_2003	spell_length	in	1/7, `marker_2003'	lpattern(solid))			(connected	yr_2003	spell_length	in	8, `marker_2003')	///
+					(connected	yr_2005	spell_length	in	1/6, `marker_2005'	lpattern(dash))				(connected	yr_2005	spell_length	in	7, `marker_2005')	///
+					(connected	yr_2007	spell_length	in	1/5, `marker_2007'	lpattern(dot))				(connected	yr_2007	spell_length	in	6, `marker_2007')	///
+					(connected	yr_2013	spell_length	in	1/2, `marker_2013'	lpattern(shortdash_dot))	(connected	yr_2013	spell_length	in	3, `marker_2013'),	///
+					xtitle(Years)	ytitle(Percentage)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2013") rows(1))	///
+					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
+			
+			graph	export	"${PSID_outRaw}/Fig_2a_FI_spell_length_ppt.png", replace
+			graph	close
+			
 			
 			
 			*	Figure A4 (Spell Length of Food Insecurity (2001))
@@ -1119,7 +1136,7 @@
 			graph bar FI_newly_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Population prevalence(%))	ylabel(0(.025)0.1)	///
 						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
 						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
-						asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Newly Food Insecure)	name(Newly_FI, replace) scale(0.8)     
 			
 			
@@ -1127,14 +1144,41 @@
 			graph bar FI_still_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))*/	ylabel(0(.025)0.1)	///
 						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
 						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
-						asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI, replace)	scale(0.8)  
 						
 						
 			grc1leg Newly_FI Still_FI, rows(1) legendfrom(Newly_FI)	graphregion(color(white)) /*(white)*/
 			graph	export	"${PSID_outRaw}/Fig_4_FI_change_status_bygroup.png", replace
 			graph	close
-		
+			
+			
+			*	Figure 4c (legend on the right side. For presentation)
+			
+			*	Figure 4aa
+			graph bar FI_newly_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Population prevalence(%))	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))		///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Newly Food Insecure)	name(Newly_FI_aa, replace) scale(0.8)     
+			
+			
+			*	Figure 4bb
+			graph bar FI_still_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))*/	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))	///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI_bb, replace)	scale(0.8)  
+			
+			
+			
+			*	Figure 4c (legend on the right side. For presentation)
+			grc1leg Newly_FI_aa Still_FI_bb, rows(1) cols(2) legendfrom(Newly_FI_aa)	graphregion(color(white)) position(3)	graphregion(color(white))	name(Fig4c, replace) ysize(4) xsize(9.0)
+			graph display Fig4c, ysize(4) xsize(9.0)
+			graph	export	"${PSID_outRaw}/Fig_4c_FI_change_status_bygroup_ppt.png", as(png) replace
+			graph	close
+			
+			
 		restore
 			
 	}
@@ -2006,7 +2050,7 @@
 				label	define	fig7_cat	1	"NoHS/NonWhite/Female (1.6%)"		2	"NoHS/NonWhite/Male (0.8%)"		3	"NoHS/White/Female (1.2%)"		4	"NoHS/White/Male (4%)"	///
 											5	"HS/NonWhite/Female (2.4%)"			6	"HS/NonWhite/Male (2.5%)"		7	"HS/White/Female (5%)"			8	"HS/White/Male (21%)"	///
 											9	"SomeCol/NonWhite/Female (1.4%)"	10	"SomeCol/NonWhite/Male (2.6%)"	11	"SomeCol/White/Female (5%)"		12	"SomeCol/White/Male (15.8%)"		///
-											13	"Sol/NonWhite/Female (0.9%)"		14	"Col/NonWhite/Male (2.2%)"		15	"Col/White/Female (4.4%)"		16	"Col/White/Male (29.2%)",	replace
+											13	"Col/NonWhite/Female (0.9%)"		14	"Col/NonWhite/Male (2.2%)"		15	"Col/White/Female (4.4%)"		16	"Col/White/Male (29.2%)",	replace
 				label	values	fig7_cat	fig7_cat
 				
 				
@@ -2020,6 +2064,16 @@
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
 				graph	export	"${PSID_outRaw}/Fig_7_FGT_group_decomposition.png", replace
+				graph	close
+				
+				*	Figure 7a	(Figure 7 with selected groups. For presentation)
+				drop	in	2/6
+				drop	in	3/7
+				drop	in	4/5
+				
+				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) descending	label(labsize(medium)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
+							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white) blabel(bar, format(%4.3f) size(vsmall))
+				graph	export	"${PSID_outRaw}/Fig_7a_FGT_group_decomposition_ppt.png", replace
 				graph	close
 				
 				/*
@@ -2067,9 +2121,30 @@
 							asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Squared Food Insecurity Gap)	name(Fig8_SFIG, replace) scale(0.8)   
 							
-				*	Figure 8 (Food Security Status By Group and Yea)
+				*	Figure 8 (Food Security Status By Group and Year)
 				grc1leg Fig8_HCR Fig8_SFIG, rows(2) legendfrom(Fig8_HCR)	graphregion(color(white)) /*(white)*/
-				graph	export	"${PSID_outRaw}/Fig_8_FGT_group_change.png", replace
+				graph	export	"${PSID_outRaw}/Fig_8_FGT_group_change.png", as(png) replace
+				graph	close
+				
+				*	Figure 8aa (Figure 8a with different legend position. For presentation)
+				graph bar HCR_weight_cat_all_tr?, over(year) stack	graphregion(color(white)) bgcolor(white)	ysize(2) xsize(4)	///
+							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))	///
+							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Headcount Ratio)	name(Fig8aa_HCR, replace) scale(0.8)
+				
+							
+				*	Figure 8bb	(Figure 8b with different legend position. For presentation)
+				graph bar SFIG_weight_cat_all_tr?, over(year) stack	graphregion(color(white)) bgcolor(white)	ysize(2) xsize(4)	///	///
+							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))	///
+							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Squared Food Insecurity Gap)	name(Fig8bb_SFIG, replace) scale(0.8)  
+				
+				*	Figure 8c	(Figure 8 with different legend for presentation)
+				grc1leg Fig8aa_HCR Fig8bb_SFIG, rows(1) cols(2) legendfrom(Fig8aa_HCR)	graphregion(color(white)) position(3)	graphregion(color(white))	name(Fig8c, replace) 
+				graph display Fig8c, ysize(4) xsize(9.0)
+				graph	export	"${PSID_outRaw}/Fig_8c_FGT_group_chang_ppt.png", as(png) replace
 				graph	close
 				
 				
