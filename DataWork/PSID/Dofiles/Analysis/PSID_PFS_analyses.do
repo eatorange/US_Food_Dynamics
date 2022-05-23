@@ -42,7 +42,7 @@
 	cap	log			close
 
 	* Set version number
-	version			14
+	version			16
 
 	* Set basic memory limits
 	set maxvar 		32767
@@ -98,7 +98,7 @@
 
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
-	local	run_sumstat	0
+	local	run_sumstat	1
 	
 	if	`run_sumstat'==1	{
 	
@@ -113,7 +113,7 @@
 		local	econvars	income_pc	food_exp_stamp_pc
 		local	empvars		emp_HH_simple
 		local	healthvars	phys_disab_head	mental_problem
-		local	familyvars	num_FU_fam ratio_child
+		local	familyvars	num_FU_fam ratio_child	childage_in_FU_nochild childage_in_FU_presch childage_in_FU_sch childage_in_FU_both
 		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
 		local	foodvars	food_stamp_used_1yr	child_meal_assist 
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
@@ -672,8 +672,8 @@
 		SECTION 5: Household-level Dynamics
 	****************************************************************/	
 		
-	local	run_spell_length	1	//	Spell length
-	local	run_transition_matrix	1	//	Transition matrix
+	local	run_spell_length	0	//	Spell length
+	local	run_transition_matrix	0	//	Transition matrix
 	local	run_perm_approach	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	test_stationary	0	//	Test whether PFS is stationary (computationally intensive)
 		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
@@ -1014,6 +1014,26 @@
 			
 			mat	trans_2by2_disability	=	trans_2by2_nodisab	\	trans_2by2_disab
 			
+			*	Child status (by age)
+			foreach	type	in	nochild	presch	sch	both	{
+				
+				*	Joint
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & childage_in_FU_`type'): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+				
+				*	Marginal
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & childage_in_FU_`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+				scalar	persistence_`type'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & childage_in_FU_`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+				scalar	entry_`type'	=	e(b)[1,1]
+				
+				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
+				
+			}
+			
+			mat	trans_2by2_child	=	trans_2by2_nochild	\	trans_2by2_presch	\	trans_2by2_sch	\	trans_2by2_both
+			
 			*	Food Stamp
 			cap drop	food_nostamp_used_1yr
 			gen		food_nostamp_used_1yr=1	if	food_stamp_used_1yr==0
@@ -1081,7 +1101,7 @@
 		mat	define	blankrow	=	J(1,7,.)
 		mat	trans_2by2_combined	=	trans_2by2_year	\	blankrow	\	trans_2by2_gender	\	blankrow	\	///
 									trans_2by2_race	\	blankrow	\	trans_2by2_region	\	blankrow	\	trans_2by2_degree	\	blankrow	\	///
-									trans_2by2_disability	\	blankrow	\	trans_2by2_foodstamp	\	blankrow	\	///
+									trans_2by2_disability	\	blankrow	\	trans_2by2_child	\	blankrow \	trans_2by2_foodstamp	\	blankrow	\	///
 									trans_2by2_shock
 		
 		mat	list	trans_2by2_combined
@@ -1323,6 +1343,21 @@
 				drop	highdegree_`edu'_2001_temp?
 			}
 			drop	tempyear
+			
+			*	(Temporary) For having a child or not, I use a new variable showing whether a HH "ever" had a child. This variable is time-invariant across periods within households.
+			*	We can come up with more complex definition (ex. share of periods having a child, etc.)
+			cap	drop	child_ever_had	child_ever_had_enum1	child_ever_had_enum2	child_nothad	child_had
+			
+			loc	var	child_ever_had
+			bys	fam_ID_1999:	egen	`var'=max(child_in_FU_cat)	//	If HH had a child at leat in 1 period, this value should be 1. Otherwise it is zero.
+			label	var	`var'	"Ever had a child"
+			label	value	`var'	yesno			
+			
+			tab	`var', gen(`var'_enum)
+			rename	(child_ever_had_enum1	child_ever_had_enum2)	(child_nothad	child_had)
+			label	var	child_nothad	"No child at all"
+			label	var	child_had		"Had a child"
+			label value	child_nothad	child_had	yesno
 
 
 			*	Generate statistics for tables
@@ -1386,6 +1421,19 @@
 			
 				mat	perm_stat_2000_metro	=	perm_stat_2000_metro_metro	\	perm_stat_2000_metro_nonmetro
 				
+				*	Ever had a child
+				foreach	type	in	nothad	had	{
+					
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	child_`type'==1):	///
+						mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
+					scalar	prop_trans_child_`type'	=	e(b)[1,2]/e(b)[1,1]
+					mat	perm_stat_2000_child_`type'	=	e(N_sub),	e(b), prop_trans_child_`type'
+					
+				}
+			
+				mat	perm_stat_2000_child	=	perm_stat_2000_child_nothad	\	perm_stat_2000_child_had
+				
+				
 				*	Education degree (Based on 2001 degree)
 				foreach	degree	in	NoHS	HS	somecol	col	{
 					
@@ -1422,7 +1470,7 @@
 				mat	define	blankrow	=	J(1,5,.)
 				mat	perm_stat_2000_allcat_`measure'	=	perm_stat_2000_all	\	blankrow	\	perm_stat_2000_gender	\	blankrow	\	perm_stat_2000_race	\	///
 												blankrow	\	perm_stat_2000_region	\	blankrow	\	perm_stat_2000_metro	\	blankrow \	///
-												perm_stat_2000_edu	//	To be combined with category later.
+												perm_stat_2000_child	\	blankrow	\	perm_stat_2000_edu	//	To be combined with category later.
 				mat	perm_stat_2000_combined_`measure'	=	perm_stat_2000_allcat_`measure'	\	blankrow	\	blankrow	\	perm_stat_2000_decomp_`measure'
 
 				putexcel	set "${PSID_outRaw}/perm_stat", sheet(perm_stat_`measure') `exceloption'
@@ -1491,6 +1539,7 @@
 			
 			local	exceloption	modify
 			foreach	measure	in	HCR	SFIG	{
+				
 				
 				assert	Total_FI_`measure'==0 if PFS_FI_never_glm==1	//	Make sure TFI=0 when HH is always FS (PFS>cut-off PFS)
 				
@@ -1564,6 +1613,17 @@
 				
 				mat	PFS_perm_FI_metro	=	PFS_perm_FI_metro_metro	\	PFS_perm_FI_metro_nonmetro
 				
+				*	Child
+				foreach	type	in	nothad	had	{
+					
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	child_`type'==1):	///
+						proportion PFS_perm_FI_`measure'
+					mat	PFS_perm_FI_child_`type'	=	e(N_sub),	e(b)
+					
+				}
+				
+				mat	PFS_perm_FI_child	=	PFS_perm_FI_child_nothad	\	PFS_perm_FI_child_had
+				
 				
 				*	Education
 				foreach	degree	in	NoHS	HS	somecol	col	{
@@ -1579,7 +1639,7 @@
 				*	Combine results (Table 9 of 2020/11/16 draft)
 				mat	define	blankrow	=	J(1,5,.)
 				mat	PFS_perm_FI_combined_`measure'	=	PFS_perm_FI_all	\	blankrow	\	PFS_perm_FI_gender	\	blankrow	\	PFS_perm_FI_race	\	blankrow	\	///
-														PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro	\	blankrow	\	PFS_perm_FI_edu
+														PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro	\	blankrow	\	PFS_perm_FI_child	\	blankrow	\	PFS_perm_FI_edu
 				
 				mat	list	PFS_perm_FI_combined_`measure'
 				
@@ -1791,7 +1851,7 @@
 		*	Input for Figure 2 (Food Security Status by Group) in Dec 2020 draft.
 			* Graph can be found in "FGT_year" sheet in "Min_report" Excel file
 		
-		foreach	group	in	all	male	female	white	black	other	NoHS	HS	somecol	col	NE	MidAt	South	MidWest	West metro nonmetro	{
+		foreach	group	in	all	male	female	white	black	other	NoHS	HS	somecol	col	NE	MidAt	South	MidWest	West metro nonmetro	nochild	presch	sch	both	{
 			cap	mat	drop	sampleno_`group'	HCR_`group'	FIG_`group'	SFIG_`group'
 		}
 		
@@ -1889,7 +1949,37 @@
 						
 					}
 					
+				*	Child
+				
+					*	No child
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& childage_in_FU_nochild==1	&	year==`year'): mean PFS_FI_glm FIG_indiv	SFIG_indiv
+					mat	sampleno_nochild	=	nullmat(sampleno_nochild),	e(N_sub)
+					mat	HCR_nochild		=	nullmat(HCR_nochild),	e(b)[1,1]
+					mat	FIG_nochild		=	nullmat(FIG_nochild),	e(b)[1,2]
+					mat	SFIG_nochild		=	nullmat(SFIG_nochild),	e(b)[1,3]
 					
+					*	Pre-schooler only
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& childage_in_FU_presch==1	&	year==`year'): mean PFS_FI_glm FIG_indiv	SFIG_indiv
+					mat	sampleno_presch	=	nullmat(sampleno_presch),	e(N_sub)
+					mat	HCR_presch		=	nullmat(HCR_presch),	e(b)[1,1]
+					mat	FIG_presch		=	nullmat(FIG_presch),	e(b)[1,2]
+					mat	SFIG_presch	=	nullmat(SFIG_presch),	e(b)[1,3]
+					
+					*	Schooler only
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& childage_in_FU_sch==1	&	year==`year'): mean PFS_FI_glm FIG_indiv	SFIG_indiv
+					mat	sampleno_sch	=	nullmat(sampleno_sch),	e(N_sub)
+					mat	HCR_sch		=	nullmat(HCR_sch),	e(b)[1,1]
+					mat	FIG_sch		=	nullmat(FIG_sch),	e(b)[1,2]
+					mat	SFIG_sch		=	nullmat(SFIG_sch),	e(b)[1,3]
+					
+					*	Both
+					svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& childage_in_FU_both==1	&	year==`year'): mean PFS_FI_glm FIG_indiv	SFIG_indiv
+					mat	sampleno_both	=	nullmat(sampleno_both),	e(N_sub)
+					mat	HCR_both		=	nullmat(HCR_both),	e(b)[1,1]
+					mat	FIG_both		=	nullmat(FIG_both),	e(b)[1,2]
+					mat	SFIG_both		=	nullmat(SFIG_both),	e(b)[1,3]
+				
+				
 				*	Metropolitan Area
 				 
 					*	Metro
@@ -1918,6 +2008,7 @@
 											 	`measure'_white	\	`measure'_black	\	`measure'_other	\	blankrow_1by9 	 \		`measure'_NoHS	 \	///
 												 `measure'_HS	\	`measure'_somecol	\	`measure'_col	\	blankrow_1by9	\	///
 												 `measure'_NE	\	`measure'_MidAt	\	`measure'_South	\	`measure'_MidWest	\	`measure'_West	\	blankrow_1by9	\	///
+												 `measure'_nochild	\	`measure'_presch	\	`measure'_sch	\	`measure'_both	\	blankrow_1by9	\	///
 												 `measure'_metro	\	`measure'_nonmetro
 				
 			}

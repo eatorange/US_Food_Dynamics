@@ -254,18 +254,80 @@
 		label	define	marital_status_cat	1	"Married"	0	"Not Married"
 		label	values	marital_status_cat*	marital_status_cat
 		
-		*	Children in Household (Binary)
-		forval	year=1999(2)2017	{
-			gen		child_in_FU_cat`year'=.
-			replace	child_in_FU_cat`year'=1		if	num_child_fam`year'>=1	&	!mi(num_child_fam`year')
-			replace	child_in_FU_cat`year'=2		if	num_child_fam`year'==0
-			*replace	child_in_FU_cat`year'=.n	if	!inrange(xsqnr_`year',1,89)
+		*	Category of child agre - pre-school (0-5), school (6-18)
 			
-			label variable	child_in_FU_cat`year'	"Children in Household, `year'"
-		}
-		label	define	child_in_FU_cat	1	"Children in Household"	2	"No Children in Household"
-		label	values	child_in_FU_cat*	child_in_FU_cat
+			lab	define	childage_in_FU_cat	0	"No child"	///
+											1	"Pre-school aged (0-5) only"	///
+											2	"School aged (6-17) only"	///
+											3	"Both",	replace
+			
+			forval	year=1999(2)2017	{
+			
+			*	Pre-school child (0-5 years old) - ind
+				
+				*	Individual-level indicator (will be used to construct family-level indicator)
+				loc	var	presch_child_ind`year'
+				cap	drop	`var'
+				gen		`var'=0	if	inrange(xsqnr_`year',1,20)		/*	Lives in HH	*/
+				replace	`var'=1	if	inrange(xsqnr_`year',1,20)	&	/*	Lives in HH	*/	///
+									inrange(age_ind`year',0,5)	//	Age between 0 and 5
+				label	var	`var'	"A pre-school aged child in `year'"
+				
+				*	Family-level indicator
+				loc	var	presch_child_fam`year'
+				cap	drop	`var'
+				bys	x11102_`year':	egen	`var'=max(presch_child_ind`year')
+				label	var	`var'	"HH has a pre-school aged child in `year'"
+				
+			*	School-aged child (6-18)
+			
+				*	Individual-level indicator (will be used to construct family-level indicator)
+				loc	var	sch_child_ind`year'
+				cap	drop	`var'
+				gen		`var'=0		if	inrange(xsqnr_`year',1,20)		/*	Lives in HH	*/
+				replace	`var'=1		if	inrange(xsqnr_`year',1,20)	&	/*	Lives in HH	*/	///
+									inrange(age_ind`year',6,17)	//	Age between 0 and 5
+				label	var	`var'	"A school aged child in `year'"	
+				
+				*	Family-level indicator
+				loc	var	sch_child_fam`year'
+				cap	drop	`var'
+				bys	x11102_`year':	egen	`var'=max(sch_child_ind`year')
+				label	var	`var'	"HH has a school aged child in `year'"
+						
+			*	Create a variable that has combind information of pre-school and school-aged children
+				local	var	childage_in_FU_cat`year'
+				cap	drop	`var'
+				gen		`var'=0	if	presch_child_fam`year'==0	&	sch_child_fam`year'==0
+				replace	`var'=1	if	presch_child_fam`year'==1	&	sch_child_fam`year'==0
+				replace	`var'=2	if	presch_child_fam`year'==0	&	sch_child_fam`year'==1
+				replace	`var'=3	if	presch_child_fam`year'==1	&	sch_child_fam`year'==1
+			
+				lab	value	childage_in_FU_cat`year'	childage_in_FU_cat
+				lab	var	`var'	"HH's child category in `year'"
+			
+			}	//	Year
+				
 		
+		*	Children in Household (Binary)
+		**	(2022-3-9)	Previously, I constructed this variable based on "the number of children in HH.", a HH-level variable. However, this variable is not always correct
+			*	One example is HH with survey ID==3332 in 2001. This household has two children (11-year old and 15-year old), but it has value 0 in the variable above.
+		**	Therefore, I construct this variable from child-age variables I constructed above from individual-level data.
+		**	This update should have no change in analyses, as previosu analyses didn't use this variable.	
+		
+		forval	year=1999(2)2017	{
+			
+			loc	var	child_in_FU_cat`year'
+			cap	drop	`var'
+			
+			gen		`var'=.	if	mi(x11102_2001)	//	No household ID in 2001 (not surveyed)
+			replace	`var'=0	if	!mi(x11102_2001)	&	childage_in_FU_cat`year'==0	//	Has no child (neither pre-school aged nor school-aged)
+			replace	`var'=1	if	!mi(x11102_2001)	&	inrange(childage_in_FU_cat`year',1,3)	//	Has a child
+			
+			label variable	child_in_FU_cat`year'	"HH Has a child in `year'"
+		}
+		label	values	child_in_FU_cat*	yesno
+			
 		*	Age of Head (Category)
 		forval	year=1999(2)2017	{
 			gen		age_head_cat`year'=1	if	inrange(age_head_fam`year',16,24)
@@ -940,6 +1002,7 @@
 		label	var	race_head_cat		"Racial category"
 		label	var	marital_status_cat	"Married"
 		label	var	child_in_FU_cat		"Household has a child"
+		label	var	childage_in_FU_cat	"Age of Child(ren)"
 		label	var	age_head_cat 		"Age category"
 		label	var	total_income_fam	"Total household income"
 		label	var	hs_completed_head	"HH completed high school/GED"
@@ -1172,12 +1235,19 @@
 		label	var	income_pc_sq	"(Income per capita)$^3$"
 		
 		*	Decompose unordered categorical variables
-		local	catvars	race_head_cat	marital_status_fam	gender_head_fam	state_resid_fam	housing_status	family_comp_change	couple_status	grade_comp_cat	grade_comp_cat_spouse	year	sample_source	region_residence metro_area
+		local	catvars	race_head_cat	marital_status_fam	gender_head_fam	state_resid_fam	housing_status	family_comp_change	couple_status	grade_comp_cat	grade_comp_cat_spouse	year	sample_source	region_residence metro_area	childage_in_FU_cat
 		foreach	var	of	local	catvars	{
 			tab	`var',	gen(`var'_enum)
 		}
 		rename	gender_head_fam_enum1	HH_female
 		label	variable	HH_female	"Female"
+		
+		rename	(childage_in_FU_cat_enum1 childage_in_FU_cat_enum2 childage_in_FU_cat_enum3 childage_in_FU_cat_enum4)	///
+				(childage_in_FU_nochild	childage_in_FU_presch	childage_in_FU_sch	childage_in_FU_both)
+		label	variable	childage_in_FU_nochild	"No child"
+		label	variable	childage_in_FU_presch	"Pre-school aged only"
+		label	variable	childage_in_FU_sch		"School aged only"
+		label	variable	childage_in_FU_both		"Both"
 		
 		rename	(race_head_cat_enum1 race_head_cat_enum2 race_head_cat_enum3)	(HH_race_white	HH_race_black	HH_race_other)
 		label	variable	HH_race_white	"Race: White"
