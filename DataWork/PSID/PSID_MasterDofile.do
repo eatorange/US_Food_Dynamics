@@ -81,12 +81,12 @@
 	   global	clouldfolder	"E:\Box\US Food Security Dynamics"
    }
    
-   if "`c(username)'"== "xxx" {	//	Liz
+   if "`c(username)'"== "xxx" {	//	Florio
        global	projectfolder	"..."
 	   global	clouldfolder	"..."
    }
    
-   if "`c(username)'"== "xxx" {	//	Lizzie
+   if "`c(username)'"== "xxx" {	//	
        global	projectfolder	"..."
 	   global	clouldfolder	"..."
    }
@@ -175,9 +175,9 @@
    **Set the locals corresponding to the tasks you want
    * run to 1. To not run a task, set the local to 0.
    local importDo       0
-   local cleaningDo     0
-   local constructDo    0
-   local analysisDo     0
+   local cleaningDo     1
+   local constructDo    1
+   local analysisDo     1
 
    if (`importDo' == 1) { // Change the local above to run or not to run this file
        do "$PSID_doImp/PSID_import_MasterDofile.do" 
