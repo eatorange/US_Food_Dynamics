@@ -28,8 +28,9 @@
    *
    * ***************************************************** *
 
-       do "$PSID_doAnl/PSID_descriptive_stats.do" // Generate descriptive stats
-
+		*do "$PSID_doAnl/PSID_descriptive_stats.do" // Generate descriptive stats
+		do	"${PSID_doAnl}/PSID_PFS_analyses.do"
+		
    * ***************************************************** *
    *
    *   analysis dofile 2

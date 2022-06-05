@@ -28,7 +28,7 @@
    *
    * ***************************************************** *
 
-       *do "$PSID_doCln/dofile1.do" //Give your dofile a more informative name, this is just a placeholder name
+       do "$PSID_doCln/PSID_clean.do" //Give your dofile a more informative name, this is just a placeholder name
 
    * ***************************************************** *
    *
