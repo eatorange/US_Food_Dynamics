@@ -56,8 +56,7 @@
 	*log using	"${bl_do_cleaning}/logs/`name_do'", replace
 	
 	/* Git setup */
-	cd	"${PSID_doCln}"
-	stgit9
+	cd	"${PSID_doCln}"	stgit9
 	di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
 	di "Git branch `r(branch)'; commit `r(sha)'."
 	
@@ -65,7 +64,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	1
+	local	retrieve_vars	0
 	local	clean_vars		1
 	
 	
@@ -1022,6 +1021,50 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 		
 	if	`clean_vars'==1	{
 		
+		*	External data
+					
+			*	Regional price parity (RPP)
+			*	It will be imported into main data to adjust federal-level TFP cost.
+			*	Source: https://www.bea.gov/data/prices-inflation/regional-price-parities-state-and-metro-area
+					
+			import	excel	"${clouldfolder}/DataWork/BEA/Regional_Price_Parities.xls", firstrow cellrange(A6) clear
+			keep	if	Description=="RPPs: All items"
+			drop	if	GeoName=="United States"
+			
+			*	Generate metro/non-metro indicator
+			gen		resid_metro=0
+			replace	resid_metro=1	if	regexm(GeoName,"Metropolitan Portion")
+			
+			gen		resid_nonmetro=0
+			replace	resid_nonmetro=1	if	regexm(GeoName,"Nonmetropolitan Portion")
+			
+			*	Replace name
+			replace	GeoName	=	subinstr(GeoName, " (Metropolitan Portion)","",.)
+			replace	GeoName	=	subinstr(GeoName, " (Nonmetropolitan Portion)","",.)
+			replace	GeoName="D.C."	if	GeoName=="District of Columbia"
+					
+			drop	GeoFips	LineCode Description
+		
+			rename	GeoName	state_str
+			rename (E-Q) RPP#, addnumber(2008)
+			
+			reshape	long	RPP, i(state_str	resid_metro	resid_nonmetro)	j(year2)
+			
+			
+			*	Replace zero-RPP in some non-metropolitan area with non-zero indices from metropolitan area
+			*	Some states (D.C., Delaware, RI, NJ) have zero RPP in non-metropolitan area (dunno why). Note that they use non-zero metropolitan RPP as state-level RPP.
+			*	In our data, several observations belong to these metropolitan area, ending up their RPP being zero (thus their RPP-adjusted TFPP will be zero.)
+			*	To avoid it, we import non-zero metropolitan RPP into zero non-metropolitan RPP (which is also used as state-level RPP) for these states.
+			sort	state_str	year2	resid_metro	resid_nonmetro
+			by		state_str	year2:	replace	RPP=RPP[_n+1]	if	RPP==0
+			
+					
+			drop	if	inlist(year2,2008,2010,2012,2014,2016,2018,2019,2020)
+			
+			compress
+			save	"${PSID_dtInt}/RPP_2008_2020.dta", replace
+			
+		
 		use	"${PSID_dtInt}/PSID_raw_ind.dta", clear
 		
 		*	Clean
@@ -1115,7 +1158,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 												7	"Delaware"		8	"D.C."				9	"Florida"	///
 												10	"Georgia"		11	"Idaho"				12	"Illinois"	///
 												13	"Indiana"		14	"Iowa"				15	"Kansas"	///
-												16	"Kentucky"		17	"Lousiana"			18	"Maine"		///
+												16	"Kentucky"		17	"Louisiana"			18	"Maine"		///
 												19	"Maryland"		20	"Massachusetts"		21	"Michigan"	///
 												22	"Minnesota"		23	"Mississippi"		24	"Missouri"	///
 												25	"Montana"		26	"Nebraska"			27	"Nevada"	///
@@ -1128,6 +1171,7 @@ psid use || college_yrs_spouse	/*[85]V12314 [86]V13512 [87]V14559 [88]V16033 [89
 												46	"Washington"	47	"West Virginia"		48	"Wisconsin"	///
 												49	"Wyoming"		50	"Alaska"			51	"Hawaii"
 					lab	val	state_resid_fam* statecode
+					
 				
 			*	Race
 				
