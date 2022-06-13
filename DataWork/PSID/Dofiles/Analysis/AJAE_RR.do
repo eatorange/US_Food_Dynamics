@@ -343,9 +343,9 @@
 		
 		*	Table 3 (Permanent approach) - Total and Region only
 		
-		*	Permanent approach	
-	if	`run_perm_approach'==1	{
+		if	`run_perm_approach'==1	{
 		
+		local	test_stationary=0
 		
 		*	Before we conduct permanent approach, we need to test whether PFS is stationary.
 		**	We reject the null hypothesis that all panels have unit roots.
@@ -356,8 +356,8 @@
 		*cap	drop	pfs_glm_normal
 		cap	drop	SFIG
 		cap	drop	PFS_glm_mean
-		cap	drop	PFS_glm_total
-		cap	drop	PFS_threshold_glm_total
+		*cap	drop	PFS_glm_total
+		*cap	drop	PFS_threshold_glm_total
 		cap	drop	PFS_glm_mean_normal
 		cap	drop	PFS_threshold_glm_mean
 		cap	drop	PFS_glm_normal_mean
@@ -381,56 +381,89 @@
 		*	We add-up all non-missing PFS over time at household-level, and divide it by cut-off PFS of those non-missing years.
 		
 		*	Aggregate PFS over time (numerator)
-		bys	fam_ID_1999:	egen	PFS_glm_total	=	total(PFS_glm)	if	inrange(year,2,10)
+		cap	drop	PFS_glm_total	PFS_glm_total_RPPadj
+		bys	fam_ID_1999:	egen	PFS_glm_total			=	total(PFS_glm)			if	inrange(year,6,10)
+		bys	fam_ID_1999:	egen	PFS_glm_total_RPPadj	=	total(PFS_glm_RPPadj)	if	inrange(year,6,10)
 		
 		*	Aggregate cut-off PFS over time. To add only the years with non-missing PFS, we replace the cut-off PFS of missing PFS years as missing.
-		replace	PFS_threshold_glm=.	if	mi(PFS_glm)
-		bys	fam_ID_1999:	egen	PFS_threshold_glm_total	=	total(PFS_threshold_glm)	if	inrange(year,2,10)
+		cap	drop	PFS_threshold_glm_total	PFS_threshold_glm_total_RPPadj
+		replace	PFS_threshold_glm=.			if	mi(PFS_glm)
+		replace	PFS_threshold_glm_RPPadj=.	if	mi(PFS_glm_RPPadj)
+		bys	fam_ID_1999:	egen	PFS_threshold_glm_total			=	total(PFS_threshold_glm)		if	inrange(year,6,10)
+		bys	fam_ID_1999:	egen	PFS_threshold_glm_total_RPPadj	=	total(PFS_threshold_glm_RPPadj)	if	inrange(year,6,10)
 		
 		*	Generate (normalized) mean-PFS by dividing the numerator into the denominator (Check Calvo & Dercon (2007), page 19)
-		gen	PFS_glm_mean_normal	=	PFS_glm_total	/	PFS_threshold_glm_total
+		gen	PFS_glm_mean_normal			=	PFS_glm_total			/	PFS_threshold_glm_total
+		gen	PFS_glm_mean_normal_RPPadj	=	PFS_glm_total_RPPadj	/	PFS_threshold_glm_total_RPPadj
 		
 		*	Construct FIG and SFIG
 		cap	drop	FIG_indiv
 		cap	drop	SFIG_indiv
-		gen	FIG_indiv=.
+		cap	drop	FIG_indiv_RPPadj
+		cap	drop	SFIG_indiv_RPPadj
+		gen	FIG_indiv	=.
 		gen	SFIG_indiv	=.
+		gen	FIG_indiv_RPPadj	=.
+		gen	SFIG_indiv_RPPadj	=.
 				
 			
 			cap	drop	pfs_glm_normal
-			gen pfs_glm_normal	=.
+			cap	drop	pfs_glm_normal_RPPadj
+			gen pfs_glm_normal			=.
+			gen pfs_glm_normal_RPPadj	=.
 				
 				
 			*	Normalized PFS (PFS/threshold PFS)	(PFSit/PFS_underbar_t)
-			replace	pfs_glm_normal	=	PFS_glm	/	PFS_threshold_glm
+			replace	pfs_glm_normal			=	PFS_glm			/	PFS_threshold_glm
+			replace	pfs_glm_normal_RPPadj	=	PFS_glm_RPPadj	/	PFS_threshold_glm_RPPadj
 			
 			*	Inner term of the food securit gap (FIG) and the squared food insecurity gap (SFIG)
 			replace	FIG_indiv	=	(1-pfs_glm_normal)^1	if	!mi(pfs_glm_normal)	&	pfs_glm_normal<1	//	PFS_glm<PFS_threshold_glm
 			replace	FIG_indiv	=	0						if	!mi(pfs_glm_normal)	&	pfs_glm_normal>=1	//	PFS_glm>=PFS_threshold_glm
 			replace	SFIG_indiv	=	(1-pfs_glm_normal)^2	if	!mi(pfs_glm_normal)	&	pfs_glm_normal<1	//	PFS_glm<PFS_threshold_glm
 			replace	SFIG_indiv	=	0						if	!mi(pfs_glm_normal)	&	pfs_glm_normal>=1	//	PFS_glm>=PFS_threshold_glm
+			
+			replace	FIG_indiv_RPPadj	=	(1-pfs_glm_normal_RPPadj)^1	if	!mi(pfs_glm_normal_RPPadj)	&	pfs_glm_normal_RPPadj<1	//	PFS_glm<PFS_threshold_glm
+			replace	FIG_indiv_RPPadj	=	0							if	!mi(pfs_glm_normal_RPPadj)	&	pfs_glm_normal_RPPadj>=1	//	PFS_glm>=PFS_threshold_glm
+			replace	SFIG_indiv_RPPadj	=	(1-pfs_glm_normal_RPPadj)^2	if	!mi(pfs_glm_normal_RPPadj)	&	pfs_glm_normal_RPPadj<1	//	PFS_glm<PFS_threshold_glm
+			replace	SFIG_indiv_RPPadj	=	0							if	!mi(pfs_glm_normal_RPPadj)	&	pfs_glm_normal_RPPadj>=1	//	PFS_glm>=PFS_threshold_glm
 		
 			
 		*	Total, Transient and Chronic FI
 
 		
 			*	Total FI	(Average SFIG over time)
-			bys	fam_ID_1999:	egen	Total_FI_HCR	=	mean(PFS_FI_glm)	if	inrange(year,2,10)	//	HCR
-			bys	fam_ID_1999:	egen	Total_FI_SFIG	=	mean(SFIG_indiv)	if	inrange(year,2,10)	//	SFIG
+			bys	fam_ID_1999:	egen	Total_FI_HCR	=	mean(PFS_FI_glm)	if	inrange(year,6,10)	//	HCR
+			bys	fam_ID_1999:	egen	Total_FI_SFIG	=	mean(SFIG_indiv)	if	inrange(year,6,10)	//	SFIG
+			
+			bys	fam_ID_1999:	egen	Total_FI_HCR_RPPadj		=	mean(PFS_FI_glm_RPPadj)	if	inrange(year,6,10)	//	HCR
+			bys	fam_ID_1999:	egen	Total_FI_SFIG_RPPadj	=	mean(SFIG_indiv_RPPadj)	if	inrange(year,6,10)	//	SFIG
 			
 			label	var	Total_FI_HCR	"TFI (HCR)"
 			label	var	Total_FI_SFIG	"TFI (SFIG)"
+			label	var	Total_FI_HCR_RPPadj		"TFI (HCR) - RPPadj"
+			label	var	Total_FI_SFIG_RPPadj	"TFI (SFIG) - RPPadj"
 
 			*	Chronic FI (SFIG(with mean PFS))					
 			gen		Chronic_FI_HCR=.
 			gen		Chronic_FI_SFIG=.
+			gen		Chronic_FI_HCR_RPPadj=.
+			gen		Chronic_FI_SFIG_RPPadj=.
+			
 			replace	Chronic_FI_HCR	=	(1-PFS_glm_mean_normal)^0	if	!mi(PFS_glm_mean_normal)	&	PFS_glm_mean_normal<1	//	Avg PFS < Avg cut-off PFS
 			replace	Chronic_FI_SFIG	=	(1-PFS_glm_mean_normal)^2	if	!mi(PFS_glm_mean_normal)	&	PFS_glm_mean_normal<1	//	Avg PFS < Avg cut-off PFS
-			replace	Chronic_FI_HCR	=	0								if	!mi(PFS_glm_mean_normal)	&	PFS_glm_mean_normal>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
-			replace	Chronic_FI_SFIG	=	0								if	!mi(PFS_glm_mean_normal)	&	PFS_glm_mean_normal>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
+			replace	Chronic_FI_HCR	=	0							if	!mi(PFS_glm_mean_normal)	&	PFS_glm_mean_normal>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
+			replace	Chronic_FI_SFIG	=	0							if	!mi(PFS_glm_mean_normal)	&	PFS_glm_mean_normal>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
+			
+			replace	Chronic_FI_HCR_RPPadj	=	(1-PFS_glm_mean_normal_RPPadj)^0	if	!mi(PFS_glm_mean_normal_RPPadj)	&	PFS_glm_mean_normal_RPPadj<1	//	Avg PFS < Avg cut-off PFS
+			replace	Chronic_FI_SFIG_RPPadj	=	(1-PFS_glm_mean_normal_RPPadj)^2	if	!mi(PFS_glm_mean_normal_RPPadj)	&	PFS_glm_mean_normal_RPPadj<1	//	Avg PFS < Avg cut-off PFS
+			replace	Chronic_FI_HCR_RPPadj	=	0									if	!mi(PFS_glm_mean_normal_RPPadj)	&	PFS_glm_mean_normal_RPPadj>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
+			replace	Chronic_FI_SFIG_RPPadj	=	0									if	!mi(PFS_glm_mean_normal_RPPadj)	&	PFS_glm_mean_normal_RPPadj>=1	//	Avg PFS >= Avg cut-off PFS (thus zero CFI)
 			
 			lab	var		Chronic_FI_HCR	"CFI (HCR)"
 			lab	var		Chronic_FI_SFIG	"CFI (SFIG)"
+			lab	var		Chronic_FI_HCR_RPPadj	"CFI (HCR) - RPP adj"
+			lab	var		Chronic_FI_SFIG_RPPadj	"CFI (SFIG) - RPP adj"
 			
 			**** In several households, CFI is greater than TFI. I assume it is because the threshold probability varies, but need to thoroughly check why.
 			**** For now, in that case we treat CFI as equal to the TFI
@@ -441,258 +474,204 @@
 			*	Transient FI (TFI - CFI)
 			gen	Transient_FI_HCR	=	Total_FI_HCR	-	Chronic_FI_HCR
 			gen	Transient_FI_SFIG	=	Total_FI_SFIG	-	Chronic_FI_SFIG
+			
+			gen	Transient_FI_HCR_RPPadj		=	Total_FI_HCR_RPPadj		-	Chronic_FI_HCR_RPPadj
+			gen	Transient_FI_SFIG_RPPadj	=	Total_FI_SFIG_RPPadj	-	Chronic_FI_SFIG_RPPadj
 					
 
 
-		*	Restrict sample to non_missing TFI and CFI
-		global	nonmissing_TFI_CFI	!mi(Total_FI_HCR)	&	!mi(Chronic_FI_HCR)
+		*	Restrict sample to non_missing TFI and CFI, both PFS and RPP-adjusted PFS
+		global	nonmissing_TFI_CFI	!mi(Total_FI_HCR)	&	!mi(Chronic_FI_HCR)	&	!mi(Total_FI_HCR_RPPadj)	&	!mi(Chronic_FI_HCR_RPPadj)
 		
+	
 		*	Descriptive stats
 			
 			**	For now we include households with 5+ PFS.
+			**	In this sub-analysis, PFS should be non-missing across all waves (2009,2011,2013,2015,2017)
 			cap	drop	num_nonmiss_PFS
+			cap	drop	num_nonmiss_PFS_RPPadj
 			cap	drop	dyn_sample
-			bys fam_ID_1999: egen num_nonmiss_PFS=count(PFS_glm)
-			gen	dyn_sample=1	if	num_nonmiss_PFS>=5	&	inrange(year,2,10)
+			bys fam_ID_1999: egen num_nonmiss_PFS=count(PFS_glm)		if	inrange(year,6,10)
+			bys fam_ID_1999: egen num_nonmiss_PFS_RPPadj=count(PFS_glm_RPPadj)	if	inrange(year,6,10)
 			
-			*	For time-variance categories (ex. education, region), we use the first year (2001) value (as John suggested)
+			gen	dyn_sample=1	if	num_nonmiss_PFS>=5	&	inrange(year,6,10)
+			
+			br	fam_ID_1999	year	PFS_glm	PFS_glm_RPPadj	PFS_FI_glm	PFS_FI_glm_RPPadj	Total_FI_HCR	Chronic_FI_HCR	Total_FI_HCR_RPPadj	Chronic_FI_HCR_RPPadj	num_nonmiss_PFS	dyn_sample	if	${nonmissing_TFI_CFI}	&	inrange(year,6,10)
+			
+			*	For time-variance categories (ex. education, region), we use the first year (2009) value (as John suggested)
 			local	timevar_cat	highdegree_NoHS highdegree_HS highdegree_somecol highdegree_col	///
 								state_group_NE state_group_MidAt state_group_South state_group_MidWest state_group_West	resid_metro resid_nonmetro
 			foreach	type	of	local	timevar_cat		{
 				
-				gen		`type'_temp	=	1	if	year==2	&	`type'==1
-				replace	`type'_temp	=	0	if	year==2	&	`type'!=1	&	!mi(`type')
-				replace	`type'_temp	=	.n	if	year==2	&	mi(`type')
+				gen		`type'_temp	=	1	if	year==6	&	`type'==1
+				replace	`type'_temp	=	0	if	year==6	&	`type'!=1	&	!mi(`type')
+				replace	`type'_temp	=	.n	if	year==6	&	mi(`type')
 				
-				cap	drop	`type'_2001
-				bys	fam_ID_1999:	egen	`type'_2001	=	max(`type'_temp)
+				cap	drop	`type'_2009
+				bys	fam_ID_1999:	egen	`type'_2009	=	max(`type'_temp)
 				drop	`type'_temp
 				
 			}				
 			
-			*	If 2001 education is missing, use the earliest available education information
+			*	If 2009 education is missing, use the earliest available education information
 			cap	drop	tempyear
-			bys fam_ID_1999: egen tempyear = min(year) if (${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1 & mi(highdegree_NoHS_2001))
+			bys fam_ID_1999: egen tempyear = min(year) if (${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1 & mi(highdegree_NoHS_2009))
 
 			foreach edu in NoHS HS somecol col	{
 				
-				cap	drop	highdegree_`edu'_2001_temp?
-				gen	highdegree_`edu'_2001_temp1	=	highdegree_`edu'	if	year==tempyear
-				bys fam_ID_1999: egen highdegree_`edu'_2001_temp2	=	max(highdegree_`edu'_2001_temp1) if !mi(tempyear)
-				replace	highdegree_`edu'_2001	=	highdegree_`edu'_2001_temp2	if	!mi(tempyear)
-				drop	highdegree_`edu'_2001_temp?
+				cap	drop	highdegree_`edu'_2009_temp?
+				gen	highdegree_`edu'_2009_temp1	=	highdegree_`edu'	if	year==tempyear
+				bys fam_ID_1999: egen highdegree_`edu'_2009_temp2	=	max(highdegree_`edu'_2009_temp1) if !mi(tempyear)
+				replace	highdegree_`edu'_2009	=	highdegree_`edu'_2009_temp2	if	!mi(tempyear)
+				drop	highdegree_`edu'_2009_temp?
 			}
 			drop	tempyear
 			
-			*	(Temporary) For having a child or not, I use a new variable showing whether a HH "ever" had a child. This variable is time-invariant across periods within households.
-			*	We can come up with more complex definition (ex. share of periods having a child, etc.)
-			cap	drop	child_ever_had	child_ever_had_enum1	child_ever_had_enum2	child_nothad	child_had
-			
-			loc	var	child_ever_had
-			bys	fam_ID_1999:	egen	`var'=max(child_in_FU_cat)	//	If HH had a child at leat in 1 period, this value should be 1. Otherwise it is zero.
-			label	var	`var'	"Ever had a child"
-			label	value	`var'	yesno			
-			
-			tab	`var', gen(`var'_enum)
-			rename	(child_ever_had_enum1	child_ever_had_enum2)	(child_nothad	child_had)
-			label	var	child_nothad	"No child at all"
-			label	var	child_had		"Had a child"
-			label value	child_nothad	child_had	yesno
-
-
+		
 			*	Generate statistics for tables
 			local	exceloption	replace
 			foreach	measure	in	HCR	SFIG	{
 			
 				*	Overall			
-				svy, subpop(if ${study_sample} &	!mi(PFS_glm)	& ${nonmissing_TFI_CFI} 	&	dyn_sample==1 ):	///
-					mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-				scalar	prop_trans_all	=	e(b)[1,2]/e(b)[1,1]
-				*scalar	samplesize_all	=	e(N_sub)
-				mat	perm_stat_2000_all	=	e(N_sub),	e(b), prop_trans_all
-				
-				*	Gender
-				svy, subpop(if ${study_sample} &	!mi(PFS_glm) & ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	gender_head_fam_enum2==1):	///
-					mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-				scalar	prop_trans_male	=	e(b)[1,2]/e(b)[1,1]
-				mat	perm_stat_2000_male	=	e(N_sub),	e(b), prop_trans_male
-				
-				svy, subpop(if ${study_sample} &	!mi(PFS_glm) & ${nonmissing_TFI_CFI} 	&	dyn_sample==1 	&	HH_female==1):	///
-					mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-				scalar	prop_trans_female	=	e(b)[1,2]/e(b)[1,1]
-				mat	perm_stat_2000_female	=	e(N_sub),	e(b), prop_trans_female
-				
-				mat	perm_stat_2000_gender	=	perm_stat_2000_male	\	perm_stat_2000_female
-				
-				*	Race
-				foreach	type	in	1	0	{
 					
-					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	HH_race_white==`type'):	///
+					*	PFS (default)
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	& ${nonmissing_TFI_CFI} 	&	dyn_sample==1 ):	///
 						mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-					scalar	prop_trans_race_`type'	=	e(b)[1,2]/e(b)[1,1]
-					mat	perm_stat_2000_race_`type'	=	e(N_sub),	e(b), prop_trans_race_`type'
-					
-				}
+					scalar	prop_trans_all	=	e(b)[1,2]/e(b)[1,1]
+					*scalar	samplesize_all	=	e(N_sub)
+					mat	perm_stat_2000_all	=	e(N_sub),	e(b), prop_trans_all
 				
-				mat	perm_stat_2000_race	=	perm_stat_2000_race_1	\	perm_stat_2000_race_0
-
-				*	Region (based on John's suggestion)
-				foreach	type	in	NE	MidAt South MidWest West	{
-					
-					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	state_group_`type'==1	):	///
-						mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-					scalar	prop_trans_region_`type'	=	e(b)[1,2]/e(b)[1,1]
-					mat	perm_stat_2000_region_`type'	=	e(N_sub),	e(b), prop_trans_region_`type'
-					
-				}
+					*	PFS (RPP-adj)
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm_RPPadj)	& ${nonmissing_TFI_CFI} 	&	dyn_sample==1 ):	///
+						mean Total_FI_`measure'_RPPadj Chronic_FI_`measure'_RPPadj Transient_FI_`measure'_RPPadj	
+					scalar	prop_trans_all_RPPadj	=	e(b)[1,2]/e(b)[1,1]
+					*scalar	samplesize_all	=	e(N_sub)
+					mat	perm_stat_2000_all_RPPadj	=	e(N_sub),	e(b), prop_trans_all_RPPadj
+				
 			
-				mat	perm_stat_2000_region	=	perm_stat_2000_region_NE	\	perm_stat_2000_region_MidAt	\	perm_stat_2000_region_South	\	///
-												perm_stat_2000_region_MidWest	\	perm_stat_2000_region_West
+				*	Region (based on John's suggestion)
+									
+					foreach	type	in	NE	MidAt South MidWest West	{
+						
+						*	PFS (default)
+						svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	state_group_`type'==1	):	///
+							mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
+						scalar	prop_trans_region_`type'	=	e(b)[1,2]/e(b)[1,1]
+						mat	perm_stat_2000_region_`type'	=	e(N_sub),	e(b), prop_trans_region_`type'
+						
+						
+						*	PFS (RPP-adjusted)
+						svy, subpop(if ${study_sample} &	!mi(PFS_glm_RPPadj)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	state_group_`type'==1	):	///
+							mean Total_FI_`measure'_RPPadj Chronic_FI_`measure'_RPPadj Transient_FI_`measure'_RPPadj	
+						scalar	prop_trans_`type'_RPPadj	=	e(b)[1,2]/e(b)[1,1]
+						mat	perm_stat_2000_`type'_RPPadj	=	e(N_sub),	e(b), prop_trans_`type'_RPPadj
+						
+						
+					}
+			
+			
+			
+					mat	perm_stat_2000_region	=	perm_stat_2000_region_NE	\	perm_stat_2000_region_MidAt	\	perm_stat_2000_region_South	\	///
+													perm_stat_2000_region_MidWest	\	perm_stat_2000_region_West
+													
+					mat	perm_stat_2000_region_RPPadj	=	perm_stat_2000_NE_RPPadj	\	perm_stat_2000_MidAt_RPPadj	\	perm_stat_2000_South_RPPadj	\	///
+															perm_stat_2000_MidWest_RPPadj	\	perm_stat_2000_West_RPPadj	
+				
 				
 				*	Metropolitan Area
 				foreach	type	in	metro	nonmetro	{
 					
+					
+					*	PFS
 					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	resid_`type'==1):	///
 						mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
 					scalar	prop_trans_metro_`type'	=	e(b)[1,2]/e(b)[1,1]
 					mat	perm_stat_2000_metro_`type'	=	e(N_sub),	e(b), prop_trans_metro_`type'
 					
+					*	PFS (RPP-adj)
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm_RPPadj)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	resid_`type'==1):	///
+						mean Total_FI_`measure'_RPPadj Chronic_FI_`measure'_RPPadj Transient_FI_`measure'_RPPadj	
+					scalar	prop_trans_`type'_RPPadj	=	e(b)[1,2]/e(b)[1,1]
+					mat	perm_stat_2000_`type'_RPPadj	=	e(N_sub),	e(b), prop_trans_`type'_RPPadj
+					
 				}
 			
 				mat	perm_stat_2000_metro	=	perm_stat_2000_metro_metro	\	perm_stat_2000_metro_nonmetro
+				mat	perm_stat_2000_metro_RPPadj	=	perm_stat_2000_metro_RPPadj	\	perm_stat_2000_nonmetro_RPPadj
 				
-				*	Ever had a child
-				foreach	type	in	nothad	had	{
-					
-					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	child_`type'==1):	///
-						mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-					scalar	prop_trans_child_`type'	=	e(b)[1,2]/e(b)[1,1]
-					mat	perm_stat_2000_child_`type'	=	e(N_sub),	e(b), prop_trans_child_`type'
-					
-				}
-			
-				mat	perm_stat_2000_child	=	perm_stat_2000_child_nothad	\	perm_stat_2000_child_had
-				
-				
-				*	Education degree (Based on 2001 degree)
-				foreach	degree	in	NoHS	HS	somecol	col	{
-					
-					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1	&	highdegree_`degree'_2001==1):	///
-						mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-					scalar	prop_trans_edu_`degree'	=	e(b)[1,2]/e(b)[1,1]
-					mat	perm_stat_2000_edu_`degree'	=	e(N_sub),	e(b), prop_trans_edu_`degree'
-					
-				}
-				
-				mat	perm_stat_2000_edu	=	perm_stat_2000_edu_NoHS	\	perm_stat_2000_edu_HS	\	perm_stat_2000_edu_somecol	\	perm_stat_2000_edu_col
-
-				
-				 *	Further decomposition
-			   cap	mat	drop	perm_stat_2000_decomp_`measure'
-			   cap	mat	drop	Pop_ratio
-			   svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1):	///
-				mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure' 
-			   local	subsample_tot=e(N_subpop)		   
-			   
-			   foreach	race	in	 HH_race_color	HH_race_white	{	//	Black, white
-					foreach	gender	in	HH_female	gender_head_fam_enum2	{	//	Female, male
-						foreach	edu	in	NoHS	HS	somecol	col   	{	//	No HS, HS, some col, col
-							svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	&	dyn_sample==1  & `gender'==1 & `race'==1 & highdegree_`edu'_2001==1): mean Total_FI_`measure' Chronic_FI_`measure' Transient_FI_`measure'	
-							local	Pop_ratio	=	e(N_subpop)/`subsample_tot'
-							scalar	prop_trans_edu_race_gender	=	e(b)[1,2]/e(b)[1,1]
-							mat	perm_stat_2000_decomp_`measure'	=	nullmat(perm_stat_2000_decomp_`measure')	\	`Pop_ratio',	e(b), prop_trans_edu_race_gender
-						}	// edu			
-					}	//	gender	
-			   }	//	race
-
 				
 				*	Combine results (Table 6)
 				mat	define	blankrow	=	J(1,5,.)
-				mat	perm_stat_2000_allcat_`measure'	=	perm_stat_2000_all	\	blankrow	\	perm_stat_2000_gender	\	blankrow	\	perm_stat_2000_race	\	///
-												blankrow	\	perm_stat_2000_region	\	blankrow	\	perm_stat_2000_metro	\	blankrow \	///
-												perm_stat_2000_child	\	blankrow	\	perm_stat_2000_edu	//	To be combined with category later.
-				mat	perm_stat_2000_combined_`measure'	=	perm_stat_2000_allcat_`measure'	\	blankrow	\	blankrow	\	perm_stat_2000_decomp_`measure'
+				mat	perm_stat_allcat_`measure'	=	perm_stat_2000_all	\	blankrow	\		///
+														perm_stat_2000_region	\	blankrow	\	perm_stat_2000_metro
+				mat	perm_stat_allcat_`measure'_RPPadj	=	perm_stat_2000_all_RPPadj	\	blankrow	\		///
+														perm_stat_2000_region_RPPadj	\	blankrow	\	perm_stat_2000_metro_RPPadj
 
-				putexcel	set "${PSID_outRaw}/perm_stat", sheet(perm_stat_`measure') `exceloption'
-				putexcel	A3	=	matrix(perm_stat_2000_combined_`measure'), names overwritefmt nformat(number_d1)
+				putexcel	set "${PSID_outRaw}/perm_stat", sheet(perm_stat_`measure'_RPPadj) `exceloption'
+				putexcel	A3	=	matrix(perm_stat_allcat_`measure'), names overwritefmt nformat(number_d1)
+				putexcel	A23	=	matrix(perm_stat_allcat_`measure'_RPPadj), names overwritefmt nformat(number_d1)
 				
-				esttab matrix(perm_stat_2000_combined_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_perm_stat_`measure'.tex", replace	
+				esttab matrix(perm_stat_allcat_`measure'_RPPadj, fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_perm_stat_`measure'_RPPadj.tex", replace	
 				
 				local	exceloption	modify
 			}	//	measure
 			
-			*	Plot Figure 5: Chronic Food Insecurity by Group (HCR)
-			preserve
-			
-				clear
-				
-				set	obs	16
-				gen		race_gender	=	1	in	1/4
-				replace	race_gender	=	2	in	5/8
-				replace	race_gender	=	3	in	9/12
-				replace	race_gender	=	4	in	13/16
-				
-				label	define	race_gender	1	"Non-White/Female"	2	"Non-White/Male"	3	"White/Female"	4	"White/Male",	replace
-				label	values	race_gender	race_gender
-				
-				gen		education	=	mod(_n,4)
-				replace	education	=	4	if	education==0
-				
-				label	define	education	1	"Less than High School"	2	"High School"	3	"Some College"	4	"College",	replace
-				label	values	education	education
-				
-				gen	edu_fig5	=	_n
-				
-				//	Currently we use the value for the proportion of each category from the pre-calculated value. It would be better if we can automatically update it as analyses are updated.
-				label	define	edu_fig5	1	"Less than High School (2%)"	2	"High School (2.4%)"	3	"Some College (1.4%)"	4	"College (0.6%)"	///
-											5	"Less than High School (0.8%)"	6	"High School (2.7%)"	7	"Some College (2.7%)"	8	"College (1.9%)"	///
-											9	"Less than High School (1.5%)"	10	"High School (5.6%)"	11	"Some College (4.6%)"	12	"College (4%)"		///
-											13	"Less than High School (4.7%)"	14	"High School (21.4%)"	15	"Some College (16.3%)"	16	"College (27.5%)",	replace
-				label	values	edu_fig5	edu_fig5
-				
-			
-				
-				svmat	perm_stat_2000_decomp_HCR
-				rename	perm_stat_2000_decomp_HCR?	(pop_ratio	TFI	CFI	TFF_minus_CFI	ratio_CFI_TFI)
-				
-				*	Figure 5
-				graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
-									legend(lab (1 "TFI") lab(2 "CFI") /*size(vsmall)*/ rows(1))	bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
-				graph	export	"${PSID_outRaw}/Fig_5_TFI_CFI_bygroup.png", replace
-				graph	close
-				
 					
-			restore
-			
 			
 			
 			*	Categorize HH into four categories
 			*	First, generate dummy whether (1) always or not-always FI (2) Never or sometimes FI
+				
+				*	PFS
 				loc	var1	PFS_FI_always_glm
 				loc	var2	PFS_FI_never_glm
 				cap	drop	`var1'
 				cap	drop	`var2'
-				bys	fam_ID_1999:	egen	`var1'	=	min(PFS_FI_glm)	//	1 if always FI (persistently poor), 0 if sometimes FS (not persistently poor)
-				bys	fam_ID_1999:	egen	`var2'	=	min(PFS_FS_glm)	//	1 if never FI, 0 if sometimes FI (transient)
-				replace	`var1'=.	if	year==1
-				replace	`var2'=.	if	year==1
+				bys	fam_ID_1999:	egen	`var1'	=	min(PFS_FI_glm)	if	inrange(year,6,10)	//	1 if always FI (persistently poor), 0 if sometimes FS (not persistently poor)
+				bys	fam_ID_1999:	egen	`var2'	=	min(PFS_FS_glm)	if	inrange(year,6,10)	//	1 if never FI, 0 if sometimes FI (transient)
+				replace	`var1'=.	if	inrange(year,1,5)
+				replace	`var2'=.	if	inrange(year,1,5)
+				
+				*	PFS (RPP-adj)
+				loc	var1	PFS_FI_always_glm_RPPadj
+				loc	var2	PFS_FI_never_glm_RPPadj
+				cap	drop	`var1'
+				cap	drop	`var2'
+				bys	fam_ID_1999:	egen	`var1'	=	min(PFS_FI_glm_RPPadj)	if	inrange(year,6,10)	//	1 if always FI (persistently poor), 0 if sometimes FS (not persistently poor)
+				bys	fam_ID_1999:	egen	`var2'	=	min(PFS_FS_glm_RPPadj)	if	inrange(year,6,10)	//	1 if never FI, 0 if sometimes FI (transient)
+				replace	`var1'=.	if	inrange(year,1,5)
+				replace	`var2'=.	if	inrange(year,1,5)
 			
 			local	exceloption	modify
 			foreach	measure	in	HCR	SFIG	{
 				
 				
-				assert	Total_FI_`measure'==0 if PFS_FI_never_glm==1	//	Make sure TFI=0 when HH is always FS (PFS>cut-off PFS)
+				assert	Total_FI_`measure'==0 		if PFS_FI_never_glm==1		//	Make sure TFI=0 when HH is always FS (PFS>cut-off PFS)
+				assert	Total_FI_`measure'_RPPadj==0 if PFS_FI_never_glm_RPPadj==1	//	Make sure TFI=0 when HH is always FS (PFS>cut-off PFS)
 				
 				*	Categorize households
-				cap	drop	PFS_perm_FI_`measure'
-				gen		PFS_perm_FI_`measure'=1	if	Chronic_FI_`measure'>0	&	!mi(Chronic_FI_`measure')	&	PFS_FI_always_glm==1	///
-					//	Persistently FI (CFI>0, always FI)
-				replace	PFS_perm_FI_`measure'=2	if	Chronic_FI_`measure'>0	&	!mi(Chronic_FI_`measure')	&	PFS_FI_always_glm==0	///
-					//	Chronically but not persistently FI (CFI>0, not always FI)
-				replace	PFS_perm_FI_`measure'=3	if	Chronic_FI_`measure'==0	&	!mi(Chronic_FI_`measure')	&	PFS_FI_never_glm==0		///
-					//	Transiently FI (CFI=0, not always FS)
-				replace	PFS_perm_FI_`measure'=4	if	Chronic_FI_`measure'==0	&	!mi(Chronic_FI_`measure')	&	Total_FI_`measure'==0	///
-					//	Always FS (CFI=TFI=0)
+					
+					*	PFS
+					cap	drop	PFS_perm_FI_`measure'
+					gen		PFS_perm_FI_`measure'=1	if	Chronic_FI_`measure'>0	&	!mi(Chronic_FI_`measure')	&	PFS_FI_always_glm==1	///
+						//	Persistently FI (CFI>0, always FI)
+					replace	PFS_perm_FI_`measure'=2	if	Chronic_FI_`measure'>0	&	!mi(Chronic_FI_`measure')	&	PFS_FI_always_glm==0	///
+						//	Chronically but not persistently FI (CFI>0, not always FI)
+					replace	PFS_perm_FI_`measure'=3	if	Chronic_FI_`measure'==0	&	!mi(Chronic_FI_`measure')	&	PFS_FI_never_glm==0		///
+						//	Transiently FI (CFI=0, not always FS)
+					replace	PFS_perm_FI_`measure'=4	if	Chronic_FI_`measure'==0	&	!mi(Chronic_FI_`measure')	&	Total_FI_`measure'==0	///
+						//	Always FS (CFI=TFI=0)
+						
+					*	PFS (RPP-adjusted)
+					cap	drop	PFS_perm_FI_`measure'_RPPadj
+					gen		PFS_perm_FI_`measure'_RPPadj=1	if	Chronic_FI_`measure'_RPPadj>0	&	!mi(Chronic_FI_`measure'_RPPadj)	&	PFS_FI_always_glm_RPPadj==1	///
+						//	Persistently FI (CFI>0, always FI)
+					replace	PFS_perm_FI_`measure'_RPPadj=2	if	Chronic_FI_`measure'_RPPadj>0	&	!mi(Chronic_FI_`measure'_RPPadj)	&	PFS_FI_always_glm_RPPadj==0	///
+						//	Chronically but not persistently FI (CFI>0, not always FI)
+					replace	PFS_perm_FI_`measure'_RPPadj=3	if	Chronic_FI_`measure'_RPPadj==0	&	!mi(Chronic_FI_`measure'_RPPadj)	&	PFS_FI_never_glm_RPPadj==0		///
+						//	Transiently FI (CFI=0, not always FS)
+					replace	PFS_perm_FI_`measure'_RPPadj=4	if	Chronic_FI_`measure'_RPPadj==0	&	!mi(Chronic_FI_`measure'_RPPadj)	&	Total_FI_`measure'_RPPadj==0	///
+						//	Always FS (CFI=TFI=0)
 					
 				label	define	PFS_perm_FI	1	"Persistently FI"	///
 											2	"Chronically, but not persistently FI"	///
@@ -700,102 +679,104 @@
 											4	"Never FI"	///
 											,	replace
 			
-				label values	PFS_perm_FI_`measure'	PFS_perm_FI
+				label values	PFS_perm_FI_`measure'	PFS_perm_FI_`measure'_RPPadj
+			
+			
+			
+			*	A quick check
+			/*
+			br	fam_ID_1999	year	PFS_glm	PFS_glm_RPPadj	PFS_FI_glm	PFS_FS_glm	PFS_FI_glm_RPPadj	PFS_FS_glm_RPPadj	Chronic_FI_HCR	PFS_perm_FI_HCR	PFS_perm_FI_HCR_RPPadj
+			local	type	NE
+			local	measure	HCR
+					
+			unique	fam_ID_1999	if	${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	state_group_`type'==1
+			
+			br	fam_ID_1999	year	state_resid_fam	state_group_`type'	dyn_sample	PFS_glm	PFS_glm_RPPadj	PFS_FI_glm	PFS_FI_glm_RPPadj	PFS_FI_always_glm	PFS_FI_always_glm_RPPadj	///
+				if	${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	state_group_`type'==1
 				
+			br	fam_ID_1999	year	state_resid_fam	state_group_`type'	dyn_sample	PFS_glm	PFS_glm_RPPadj	PFS_FI_glm	PFS_FI_glm_RPPadj	PFS_FI_always_glm	PFS_FI_always_glm_RPPadj	///
+				if	fam_ID_1999==72
+			*/		
+			
 			*	Descriptive stats
 			
 				*	Overall
-				svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): proportion	PFS_perm_FI_`measure'
-				mat	PFS_perm_FI_all	=	e(N_sub),	e(b)
-				
-				*	Gender
-				svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	gender_head_fam_enum2):	///
-					proportion PFS_perm_FI_`measure'
-				mat	PFS_perm_FI_male	=	e(N_sub),	e(b)
-				svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	HH_female):	///
-					proportion PFS_perm_FI_`measure'
-				mat	PFS_perm_FI_female	=	e(N_sub),	e(b)
-				
-				mat	PFS_perm_FI_gender	=	PFS_perm_FI_male	\	PFS_perm_FI_female
-				
-			
-				*	Race
-				foreach	type	in	1	0	{
 					
-					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	HH_race_white==`type'):	///
-						proportion PFS_perm_FI_`measure'
-					mat	PFS_perm_FI_race_`type'	=	e(N_sub),	e(b)
+					*	PFS
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): proportion	PFS_perm_FI_`measure'
+					mat	PFS_perm_FI_all	=	e(N_sub),	e(b)
 					
-				}
-				
-				mat	PFS_perm_FI_race	=	PFS_perm_FI_race_1	\	PFS_perm_FI_race_0
+					*	PFS (RPP-adjusted)
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm_RPPadj)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): proportion	PFS_perm_FI_`measure'_RPPadj
+					mat	PFS_perm_FI_all_RPPadj	=	e(N_sub),	e(b)
+							
 				
 				*	Region
 				foreach	type	in	NE	MidAt	South	MidWest West	{
 					
+					*	PFS
 					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	state_group_`type'==1):	///
 						proportion PFS_perm_FI_`measure'
 					mat	PFS_perm_FI_region_`type'	=	e(N_sub),	e(b)
+					
+					*	PFS (RPP-adjusted)
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm_RPPadj)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	state_group_`type'==1):	///
+						proportion PFS_perm_FI_`measure'_RPPadj
+					mat	PFS_perm_FI_`type'_RPPadj	=	e(N_sub),	e(b)
 					
 				}
 				
 				mat	PFS_perm_FI_region	=	PFS_perm_FI_region_NE	\	PFS_perm_FI_region_MidAt	\	PFS_perm_FI_region_South	\	///
 											PFS_perm_FI_region_MidWest	\	PFS_perm_FI_region_West
+											
+				mat	PFS_perm_FI_region_RPPadj	=	PFS_perm_FI_NE_RPPadj	\	PFS_perm_FI_MidAt_RPPadj	\	PFS_perm_FI_South_RPPadj	\	///
+													PFS_perm_FI_MidWest_RPPadj	\	PFS_perm_FI_West_RPPadj
 				
 				*	Metropolitan
 				foreach	type	in	metro	nonmetro	{
 					
+					*	PFS
 					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	resid_`type'==1):	///
 						proportion PFS_perm_FI_`measure'
 					mat	PFS_perm_FI_metro_`type'	=	e(N_sub),	e(b)
 					
-				}
-				
-				mat	PFS_perm_FI_metro	=	PFS_perm_FI_metro_metro	\	PFS_perm_FI_metro_nonmetro
-				
-				*	Child
-				foreach	type	in	nothad	had	{
-					
-					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	child_`type'==1):	///
-						proportion PFS_perm_FI_`measure'
-					mat	PFS_perm_FI_child_`type'	=	e(N_sub),	e(b)
+					*	PFS (RPP-adj)
+					svy, subpop(if ${study_sample} &	!mi(PFS_glm_RPPadj)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	resid_`type'==1):	///
+						proportion PFS_perm_FI_`measure'_RPPadj
+					mat	PFS_perm_FI_`type'_RPPadj	=	e(N_sub),	e(b)
 					
 				}
 				
-				mat	PFS_perm_FI_child	=	PFS_perm_FI_child_nothad	\	PFS_perm_FI_child_had
-				
-				
-				*	Education
-				foreach	degree	in	NoHS	HS	somecol	col	{
-				    
-					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	highdegree_`degree'_2001==1):	///
-						proportion PFS_perm_FI_`measure'
-					mat	PFS_perm_FI_edu_`degree'	=	e(N_sub),	e(b)
-					
-				}
-				mat	PFS_perm_FI_edu	=	PFS_perm_FI_edu_NoHS	\	PFS_perm_FI_edu_HS	\	PFS_perm_FI_edu_somecol	\	PFS_perm_FI_edu_col
+				mat	PFS_perm_FI_metro			=	PFS_perm_FI_metro_metro	\	PFS_perm_FI_metro_nonmetro
+				mat	PFS_perm_FI_metro_RPPadj	=	PFS_perm_FI_metro_RPPadj	\	PFS_perm_FI_nonmetro_RPPadj
 				
 
 				*	Combine results (Table 9 of 2020/11/16 draft)
 				mat	define	blankrow	=	J(1,5,.)
-				mat	PFS_perm_FI_combined_`measure'	=	PFS_perm_FI_all	\	blankrow	\	PFS_perm_FI_gender	\	blankrow	\	PFS_perm_FI_race	\	blankrow	\	///
-														PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro	\	blankrow	\	PFS_perm_FI_child	\	blankrow	\	PFS_perm_FI_edu
+				mat	PFS_perm_FI_combined_`measure'	=	PFS_perm_FI_all	\	blankrow	\	///
+														PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro
+				mat	PFS_perm_FI_combined_`measure'_RPPadj	=	PFS_perm_FI_all_RPPadj	\	blankrow	\	///
+																PFS_perm_FI_region_RPPadj	\	blankrow	\	PFS_perm_FI_metro_RPPadj	
 				
 				mat	list	PFS_perm_FI_combined_`measure'
+				mat	list	PFS_perm_FI_combined_`measure'_RPPadj
 				
 				di "excel option is `exceloption'"
-				putexcel	set "${PSID_outRaw}/perm_stat", sheet(FI_perm_`measure') `exceloption'
+				putexcel	set "${PSID_outRaw}/perm_stat", sheet(FI_perm_`measure'_RPPadj) `exceloption'
 				putexcel	A3	=	matrix(PFS_perm_FI_combined_`measure'), names overwritefmt nformat(number_d1)
+				putexcel	A23	=	matrix(PFS_perm_FI_combined_`measure'_RPPadj), names overwritefmt nformat(number_d1)
 			
-				esttab matrix(PFS_perm_FI_combined_`measure', fmt(%9.2f)) using "${PSID_outRaw}/PFS_perm_FI_`measure'.tex", replace	
+				*esttab matrix(PFS_perm_FI_combined_`measure', fmt(%9.2f)) using "${PSID_outRaw}/PFS_perm_FI_`measure'.tex", replace	
 				
 				*	Table 5 & 6 (combined) of Dec 20 draft
-				mat	define Table_5_`measure'	=	perm_stat_2000_allcat_`measure',	PFS_perm_FI_combined_`measure'[.,2...]
+				mat	define Table_5_`measure'		=	perm_stat_2000_allcat_`measure',	PFS_perm_FI_combined_`measure'[.,2...]
+				mat	define Table_5_`measure'_RPPadj	=	perm_stat_allcat_`measure'_RPPadj,	PFS_perm_FI_combined_`measure'_RPPadj[.,2...]
 				
-				putexcel	set "${PSID_outRaw}/perm_stat", sheet(Table5_`measure') `exceloption'
+				putexcel	set "${PSID_outRaw}/perm_stat", sheet(Table5_`measure'_RPPadj) `exceloption'
 				putexcel	A3	=	matrix(Table_5_`measure'), names overwritefmt nformat(number_d1)
+				putexcel	A23	=	matrix(Table_5_`measure'_RPPadj), names overwritefmt nformat(number_d1)
 			
-				esttab matrix(Table_5_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_`measure'.tex", replace
+				*esttab matrix(Table_5_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_`measure'.tex", replace
 				
 				local	exceloption	modify
 				
@@ -806,28 +787,20 @@
 			
 			local measure HCR
 			
-			foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	{
-				
-				
-				*	Without controls/time FE
-				qui	svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' ${regionvars}
-				est	store	`depvar'_nocontrols
+			foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	Total_FI_`measure'_RPPadj	Chronic_FI_`measure'_RPPadj		{
 				
 				
 				*	With controls/time FE
-				qui	svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' ${regionvars}	///
-					${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}
+				qui	svy, subpop(if ${study_sample} &	 ${nonmissing_TFI_CFI} 	& dyn_sample==1): regress `depvar' ${regionvars}	///
+					${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	year_enum7-year_enum10
 				est	store	`depvar'
+				
+				
 			}
 			
 			*	Output
-			esttab	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols	Transient_FI_`measure'_nocontrols Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	using "${PSID_outRaw}/TFI_CFI_regression.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
-					title(Regression of TFI/CFI on Characteristics) 	///
-					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
-					replace
 					
-			esttab	Total_FI_`measure'	Chronic_FI_`measure'		using "${PSID_outRaw}/TFI_CFI_regression.tex", ///
+			esttab	Total_FI_`measure'	Chronic_FI_`measure'	Total_FI_`measure'_RPPadj	Chronic_FI_`measure'_RPPadj		using "${PSID_outRaw}/TFI_CFI_regression_RPPadj.csv", ///
 					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
@@ -841,27 +814,29 @@
 				ds	state_group?	state_group1?	state_group2?
 				local groupstates `r(varlist)'		
 				
-				foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	{
+				foreach	depvar	in	Total_FI_`measure'	Chronic_FI_`measure'	Total_FI_`measure'_RPPadj	Chronic_FI_`measure'_RPPadj	{
 					
 					*	Unadjusted
 					cap	drop	_mysample
 					regress `depvar' 	${demovars}		${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	///
-									${foodvars}		${changevars}	 ${regionvars}	${timevars}	///
-									if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1
+									${foodvars}		${changevars}	 ${regionvars}	year_enum7-year_enum10	///
+									if ${study_sample} &	 ${nonmissing_TFI_CFI} 	& dyn_sample==1
 					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled) 
 					
-					mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
-					mata : st_matrix("`depvar'_shapley_sum", colsum(st_matrix("`depvar'_shapley_indiv")))
+					mat	`depvar'_shapind	=	e(shapley),	e(shapley_rel)
+					mata : st_matrix("`depvar'_shapsum", colsum(st_matrix("`depvar'_shapind")))
 					
-					mat	`depvar'_shapley	=	`depvar'_shapley_indiv	\	`depvar'_shapley_sum
+					mat	`depvar'_shapley	=	`depvar'_shapind	\	`depvar'_shapsum
 					
 					
-					*	Survey-adjusted
+					*	Survey-adjusted (not used since it cannot be decomposed. Check the comment below)
+					/*
 					cap	drop	_mysample
 					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1):	///
 						regress `depvar'  	${demovars}		${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	///
-								${foodvars}		${changevars}	 ${regionvars}	${timevars}
+								${foodvars}		${changevars}	 ${regionvars}	year_enum7-year_enum10
 					shapley2, stat(r2) force group(`groupstates', highdegree_NoHS highdegree_somecol highdegree_col,age_head_fam age_head_fam_sq, HH_female, HH_race_black HH_race_other,marital_status_cat,ln_income_pc,food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal,num_FU_fam ratio_child emp_HH_simple phys_disab_head	mental_problem no_longer_employed	no_longer_married	no_longer_own_house	became_disabled)
+					*/
 					
 					*	For some reason, Shapely decomposition does not work properly under the adjusted regression model (they don't sum up to 100%)
 					*mat	`depvar'_shapley_indiv	=	e(shapley),	e(shapley_rel)
@@ -871,78 +846,30 @@
 				
 				}	//	depvar			
 			}	//	shapley
-			
-			mat	TFI_CFI_`measure'_shapley	=	Total_FI_`measure'_shapley,	Chronic_FI_`measure'_shapley
-			
+					
+			mat	TFI_CFI_`measure'_shapley		=	Total_FI_`measure'_shapley,	Chronic_FI_`measure'_shapley
+			mat	TFI_CFI_`measure'_shap_RPPadj	=	Total_FI_`measure'_RPPadj_shapley,	Chronic_FI_`measure'_RPPadj_shapley
+				
 			putexcel	set "${PSID_outRaw}/perm_stat", sheet(shapley) /*replace*/	modify
 			putexcel	A3	=	matrix(TFI_CFI_`measure'_shapley), names overwritefmt nformat(number_d1)
+			putexcel	H3	=	matrix(TFI_CFI_`measure'_shap_RPPadj), names overwritefmt nformat(number_d1)
 			
-			esttab matrix(TFI_CFI_`measure'_shapley, fmt(%9.3f)) using "${PSID_outRaw}/Tab_7_TFI_CFI_`measure'_shapley.tex", replace	
+			*esttab matrix(TFI_CFI_`measure'_shapley, fmt(%9.3f)) using "${PSID_outRaw}/Tab_7_TFI_CFI_`measure'_shapley.tex", replace	
 		
-
 				
-			*	Northeast & Mid-Atlantic
-				
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1	state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
-										title(Northeast and Mid-Atlantic)	name(TFI_CFI_FE_NE_MA, replace) /*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_NE.png", replace
-				graph	close
-
-			/*
-			*	Mid-Atlantic
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI	Chronic_FI, keep(state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
-										title(TFI_CFI_Mid_Atlantic)	name(TFI_CFI_FE_MA, replace)	xscale(range(-0.05(0.05) 0.10))
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_MA.png", replace
-				graph	close
-			*/
-			
-			*	South
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group6 state_group7 state_group8 state_group9 state_group10 state_group11)		xline(0)	graphregion(color(white)) bgcolor(white)	///
-										title(South)	name(TFI_CFI_FE_South, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_South.png", replace
-				graph	close
-				
-			*	Mid-West
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group12 state_group13 state_group14 state_group15 state_group16 state_group17)		xline(0)	graphregion(color(white)) bgcolor(white)	///
-										title(Mid-West)	name(TFI_CFI_FE_MW, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_MW.png", replace
-				graph	close
-			
-			*	West
-				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group18 state_group19 state_group20 state_group21)		xline(0)	graphregion(color(white)) bgcolor(white)	///
-										title(West)		name(TFI_CFI_FE_West, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_West.png", replace
-				graph	close
-	
-		/*
-			graph combine	TFI_CFI_FE_NE_MA	TFI_CFI_FE_South	TFI_CFI_FE_MW	TFI_CFI_FE_West, title(Region Fixed Effects)
-			graph	export	"${PSID_outRaw}/TFI_CFI_region_FE.png", replace
-			graph	close
+		local	measure HCR
 		
-		
-	
-		
-		grc1leg2		TFI_CFI_FE_NE_MA	TFI_CFI_FE_South	TFI_CFI_FE_MW	TFI_CFI_FE_West,	///
-											title(Region Fixed Effects) legendfrom(TFI_CFI_FE_NE_MA)	///
-											graphregion(color(white))	/*xtob1title	*/
-											/*	note(Vertical line is the average retirement age of the year in the sample)	*/
-							graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_region_FE.png", replace
-							graph	close
-		
-		*/
-		
-		coefplot	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols, 	///
+		coefplot	Total_FI_`measure'	Total_FI_`measure'_RPPadj, 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
-					xline(0)	graphregion(color(white)) bgcolor(white)	/*title(Regional Fixed Effects)*/	legend(lab (2 "TFI") lab(4 "CFI") /*size(vsmall)*/ rows(1))	name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_nocontrol.png", replace
-				graph	close
-				
-	
-		coefplot	Total_FI_`measure'	Chronic_FI_`measure', 	///
+					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "TFI (RPP-adjusted)") 	rows(1))	name(TFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
+		graph	export	"${PSID_outRaw}/Fig_6_TFI_`measure'_groupstateFE_All_RPP.png", replace
+		graph	close
+		
+		coefplot	Chronic_FI_`measure'	Chronic_FI_`measure'_RPPadj, 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
-					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "CFI") rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/Fig_6_TFI_CFI_`measure'_groupstateFE_All.png", replace
-				graph	close
+					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "CFI") lab(4 "CFI (RPP-adjusted)") 	rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
+		graph	export	"${PSID_outRaw}/Fig_6_CFI_`measure'_groupstateFE_All_RPP.png", replace
+		graph	close
 			
 		*	Quick check the sequence of FS under HFSM
 		cap	drop	HFSM_FS_always
