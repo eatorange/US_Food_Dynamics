@@ -1,13 +1,17 @@
 	
 	local	seam_period=0
-	local	RPP=1
-	
+	local	RPP=0
+	local	HFSM_dynamics=0	//	Replicate spells analysis using HFSM
+	local	check_dist=0
 	
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
 	include	"${PSID_doAnl}/Macros_for_analyses.do"
 	
+	*	In 2003 (year 3), 11.2% are food insecure
+	*	However, there's huge gap between 
 	
+	tab	fs_cat_IS if year==3
 	
 	if	`seam_period==1'	{
 	
@@ -169,6 +173,7 @@
 			gen	balanced_PFSs_all=1		if	balanced_PFS==1			&	balanced_PFS_RPPadj==1			//	All HH observations which has balanced PFS and RPP-adj PFS
 			gen	balanced_PFSs_0917=1	if	balanced_PFSs_all==1	&	inrange(year2,2009,2017)		//	HH with balanced PFS and RPP-adj PFS, only from 2009 to 2017 
 			
+			
 			*	Summary stats of spell lengths among FI incidence, using only balanced subsample defind above
 			*mat	summ_spell_length	=	J(9,2,.)	
 		
@@ -269,12 +274,12 @@
 					scalar	entry_`year'		=	e(b)[1,1]
 					
 					*	Marginal distribution (for persistence and entry), PFS (RPP-adj)
-					svy, subpop(if ${study_sample}==1 & balanced_PFSs_all==1 &	inrange(year2,2011,2017)	& year_enum`year'): proportion	PFS_FS_glm	if	l1_PFS_FS_glm_RPPadj==0	&	!mi(PFS_FS_glm_RPPadj)	//	Previously FI
+					svy, subpop(if ${study_sample}==1 & balanced_PFSs_all==1 &	inrange(year2,2011,2017)	& year_enum`year'): proportion	PFS_FS_glm_RPPadj	if	l1_PFS_FS_glm_RPPadj==0	&	!mi(PFS_FS_glm_RPPadj)	//	Previously FI
 					scalar	persistence_`year'_RPPadj	=	e(b)[1,1]
-					svy, subpop(if ${study_sample}==1 &	balanced_PFSs_all==1 &	inrange(year2,2011,2017)	& year_enum`year'): proportion	PFS_FS_glm	if	l1_PFS_FS_glm_RPPadj==1	&	!mi(PFS_FS_glm_RPPadj)	//	Previously FS
+					svy, subpop(if ${study_sample}==1 &	balanced_PFSs_all==1 &	inrange(year2,2011,2017)	& year_enum`year'): proportion	PFS_FS_glm_RPPadj	if	l1_PFS_FS_glm_RPPadj==1	&	!mi(PFS_FS_glm_RPPadj)	//	Previously FS
 					scalar	entry_`year'_RPPadj		=	e(b)[1,1]
 					
-					mat	trans_2by2_`year'	=	samplesize_`year',	trans_2by2_joint_`year',	persistence_`year',	entry_`year'	
+					mat	trans_2by2_`year'			=	samplesize_`year',	trans_2by2_joint_`year',	persistence_`year',	entry_`year'	
 					mat	trans_2by2_`year'_RPPadj	=	samplesize_`year'_RPPadj,	trans_2by2_joint_`year'_RPPadj,	persistence_`year'_RPPadj,	entry_`year'_RPPadj	
 					
 					mat	trans_2by2_year	=	nullmat(trans_2by2_year)	\	trans_2by2_`year'
@@ -897,4 +902,472 @@
 		
 	}
 	
+	if	`HFSM_dynamics==1'	{
+	    
+	*	To compare similarity in dynamics, we replicate spells approach using both HFSM and the PFS, using only the households that both outcomes are non-missing.	
+			
+		*	Define subsample
+		*	Since we do spells approach only, we restrict our sample to hosueholds with non-missing PFS and HFSM in 2001, 2003, 2015 and 2017
+		
+			*	PFS
+			capture	drop	num_nonmissing_PFS
+			cap	drop	balanced_PFS
+			bys fam_ID_1999: egen num_nonmissing_PFS=count(PFS_FI_glm)	if	inlist(year,2,3,9,10)
+			gen	balanced_PFS=1	if	num_nonmissing_PFS==4
+		
+			*	HFSM
+			capture	drop	num_nonmiss_HFSM
+			cap	drop	balanced_HFSM
+			bys fam_ID_1999: egen num_nonmiss_HFSM=count(fs_cat_fam_simp)	if	inlist(year,2,3,9,10)
+			gen	balanced_HFSM=1	if	num_nonmiss_HFSM==4	//	4 waves total
+			
+			*	Define subsample; households that have (1) balanced PFS across all study waaves (sample as main analysis)  (2)balanced RPP-adj PFS across study waves and (3) 2009-2017 (when both measures are available)
+			cap	drop	balanced_PFS_HFSM
+			gen		balanced_PFS_HFSM=1		if	balanced_PFS==1			&	balanced_HFSM==1			//	All HH observations which has balanced PFS and RPP-adj PFS
+			*gen	balanced_PFSs_all=1		if	balanced_PFS==1			&	balanced_PFS_RPPadj==1			//	All HH observations which has balanced PFS and RPP-adj PFS
+			*gen	balanced_PFSs_0917=1	if	balanced_PFSs_all==1	&	inrange(year2,2009,2017)		//	HH with balanced PFS and RPP-adj PFS, only from 2009 to 2017 
+			
+
+	*	We only have two single-transition periods (2001-2003, 2015-2017), so we cannot use spell lengths here.
 	
+	*	Transition matrices	
+		
+		*	Preamble
+		mat drop _all
+		cap	drop	??_PFS_FS_glm	??_PFS_FI_glm	??_PFS_LFS_glm	??_PFS_VLFS_glm	??_PFS_cat_glm
+		sort	fam_ID_1999	year
+			
+		*	Generate lagged FS dummies from PFS and HFSM, as svy: command does not support factor variable so we can't use l.'
+		cap	drop	fs_cat_FS
+		gen			fs_cat_FS	=	0	if	fs_cat_IS==1
+		replace		fs_cat_FS	=	1	if	fs_cat_IS==0
+		lab	var		fs_cat_FS	"Food secure (HFSM)"
+		
+		cap	drop	l1_PFS_FI_glm		l1_PFS_FS_glm	l1_fs_cat_IS	l1_fs_cat_FS
+		gen	l1_PFS_FI_glm	=	l1.PFS_FI_glm
+		gen	l1_PFS_FS_glm	=	l1.PFS_FS_glm
+		gen	l1_fs_cat_IS	=	l1.fs_cat_IS
+		gen	l1_fs_cat_FS	=	l1.fs_cat_FS
+		
+		*	2 X 2 (FS, FI)	-	FS status over two subsequent periods
+			
+			local	PFS_var		PFS_FS_glm
+			local	HFSM_var	fs_cat_FS
+				
+			tab		PFS_FI_glm
+			tab		fs_cat_FS
+				
+			svy, subpop(if ${study_sample}==1 & year_enum3): tabulate PFS_FI_glm	
+			svy, subpop(if ${study_sample}==1 & year_enum3): tabulate fs_cat_FS
+					
+			svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 &	year_enum3): tabulate l1_PFS_FS_glm	PFS_FS_glm
+			svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 &	year_enum3): tabulate l1_fs_cat_FS	fs_cat_FS
+					
+			*	Year
+			foreach	depvar	in	PFS	HFSM	{
+			foreach year in 3 10	{			// Only these years are available for transition analysis in this practice.
+
+				cap	mat	drop	trans_2by2_year_`depvar'	trans_change_year_`depvar'	
+				
+				*	Joint distribution	(two-way tabulate), PFS (default)
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 &	year_enum`year'): tabulate l1_``depvar'_var'	``depvar'_var'
+				mat	trans_2by2_joint_`year'_`depvar' = 	e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_`year'_`depvar'	=	e(N_sub)	//	Sample size
+				
+				*	Marginal distribution (for persistence and entry), PFS (default)
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 &	year_enum`year'): proportion	``depvar'_var'	if	l1_``depvar'_var'==0	//	Previously FI
+				scalar	persistence_`year'_`depvar'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 &	balanced_PFS_HFSM==1 &	year_enum`year'): proportion	``depvar'_var'	if	l1_``depvar'_var'==1	//	Previously FS
+				scalar	entry_`year'_`depvar'		=	e(b)[1,1]
+				
+				mat	trans_2by2_`year'_`depvar'	=	samplesize_`year'_`depvar',	trans_2by2_joint_`year'_`depvar',	persistence_`year'_`depvar',	entry_`year'_`depvar'	
+				
+				mat	trans_2by2_year_`depvar'	=	nullmat(trans_2by2_year_`depvar')	\	trans_2by2_`year'_`depvar'
+				
+							
+			}	//	year
+			}	//	depvar (HFSM, PFS)
+			
+					
+			*	Gender
+			
+			
+			
+			
+				*	Male, Joint
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 &	gender_head_fam_enum2): tabulate l1_``depvar'_var'	``depvar'_var'
+				mat	trans_2by2_joint_male_`depvar' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_male_`depvar'	=	e(N_sub)	//	Sample size
+				
+				*	Female, Joint
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 & HH_female): tabulate l1_``depvar'_var'	``depvar'_var'
+				mat	trans_2by2_joint_female_`depvar' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_female_`depvar'	=	e(N_sub)	//	Sample size
+				
+				*	Male, Marginal distribution (for persistence and entry)
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 & gender_head_fam_enum2):qui proportion	``depvar'_var'	if	l1_``depvar'_var'==0	//	Previously FI
+				scalar	persistence_male_`depvar'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 & gender_head_fam_enum2):qui proportion	``depvar'_var'	if	l1_``depvar'_var'==1	//	Previously FS
+				scalar	entry_male_`depvar'	=	e(b)[1,1]
+				
+				*	Female, Marginal distribution (for persistence and entry)
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 & HH_female):qui proportion	``depvar'_var'	if	l1_``depvar'_var'==0	//	Previously FI
+				scalar	persistence_female_`depvar'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & balanced_PFS_HFSM==1 & HH_female):qui proportion	``depvar'_var'	if	l1_``depvar'_var'==1	//	Previously FS
+				scalar	entry_female_`depvar'	=	e(b)[1,1]
+				
+				mat	trans_2by2_male_`depvar'		=	samplesize_male_`depvar',	trans_2by2_joint_male_`depvar',	persistence_male_`depvar',	entry_male_`depvar'	
+				mat	trans_2by2_female_`depvar'	=	samplesize_female_`depvar',	trans_2by2_joint_female_`depvar',	persistence_female_`depvar',	entry_female_`depvar'
+				
+				mat	trans_2by2_gender_`depvar'	=	trans_2by2_male_`depvar'	\	trans_2by2_female_`depvar'
+		
+	
+			*	Race
+							
+				foreach	type	in	1	0	{	//	white/color
+					
+					*	Joint
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_race_white==`type'): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+					mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+					scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+					
+					*	Marginal
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_race_white==`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+					scalar	persistence_`type'	=	e(b)[1,1]
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & HH_race_white==`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+					scalar	entry_`type'	=	e(b)[1,1]
+					
+					mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'		
+				}
+				
+				mat	trans_2by2_race	=	trans_2by2_1	\	trans_2by2_0
+
+			*	Region (based on John's suggestion)
+			
+				foreach	type	in	NE MidAt South MidWest	West	{
+				
+					*	Joint
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & state_group_`type'==1): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+					mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+					scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+					
+					*	Marginal
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & state_group_`type'==1):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+					scalar	persistence_`type'	=	e(b)[1,1]
+					svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & state_group_`type'==1):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+					scalar	entry_`type'	=	e(b)[1,1]
+					
+					mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'		
+				}
+				
+				mat	trans_2by2_region	=	trans_2by2_NE	\	trans_2by2_MidAt	\	trans_2by2_South	\	trans_2by2_MidWest	\		trans_2by2_West
+			
+			*	Education
+			
+			foreach	type	in	NoHS	HS	somecol	col	{
+				
+				*	Joint
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & highdegree_`type'): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+				
+				*	Marginal
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & highdegree_`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+				scalar	persistence_`type'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & highdegree_`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+				scalar	entry_`type'	=	e(b)[1,1]
+				
+				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
+				
+			}
+			mat	trans_2by2_degree	=	trans_2by2_NoHS	\	trans_2by2_HS	\	trans_2by2_somecol	\	trans_2by2_col
+			
+			
+			*	Disability
+			capture	drop	phys_nodisab_head
+			gen		phys_nodisab_head=0	if	phys_disab_head==1
+			replace	phys_nodisab_head=1	if	phys_disab_head==0
+			
+			foreach	type	in	nodisab	disab	{
+				
+				*	Joint
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & phys_`type'_head): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+				
+				*	Marginal
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & phys_`type'_head):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+				scalar	persistence_`type'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & phys_`type'_head):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+				scalar	entry_`type'	=	e(b)[1,1]
+				
+				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
+				
+			}
+			
+			mat	trans_2by2_disability	=	trans_2by2_nodisab	\	trans_2by2_disab
+			
+			*	Child status (by age)
+			foreach	type	in	nochild	presch	sch	both	{
+				
+				*	Joint
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & childage_in_FU_`type'): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+				
+				*	Marginal
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & childage_in_FU_`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+				scalar	persistence_`type'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & childage_in_FU_`type'):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+				scalar	entry_`type'	=	e(b)[1,1]
+				
+				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
+				
+			}
+			
+			mat	trans_2by2_child	=	trans_2by2_nochild	\	trans_2by2_presch	\	trans_2by2_sch	\	trans_2by2_both
+			
+			*	Food Stamp
+			cap drop	food_nostamp_used_1yr
+			gen		food_nostamp_used_1yr=1	if	food_stamp_used_1yr==0
+			replace	food_nostamp_used_1yr=0	if	food_stamp_used_1yr==1
+			
+			foreach	type	in	nostamp	stamp	{
+				
+				*	Joint
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & food_`type'_used_1yr): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+				
+				*	Marginal
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & food_`type'_used_1yr):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+				scalar	persistence_`type'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & food_`type'_used_1yr):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+				scalar	entry_`type'	=	e(b)[1,1]
+				
+				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
+				
+			}
+			
+			mat	trans_2by2_foodstamp	=	trans_2by2_nostamp	\	trans_2by2_stamp
+			
+			*	Shock vars
+			*	Create temporary vars to easily write a loop code.
+			cap	drop	emp_shock noemp_shock marriage_shock nomarriage_shock disab_shock nodisab_shock	newstamp_shock nonewstamp_shock
+			
+			clonevar	emp_shock	=	no_longer_employed
+			clonevar	marriage_shock	=	no_longer_married
+			clonevar	disab_shock		=	became_disabled
+			gen 		newstamp_shock=0
+			replace		newstamp_shock=1	if	food_stamp_used_1yr==0	&	l.food_stamp_used_1yr==1
+			
+			gen			noemp_shock=0	if	emp_shock==1
+			replace		noemp_shock=1	if	emp_shock==0
+			gen			nomarriage_shock=0	if	marriage_shock==1
+			replace		nomarriage_shock=1	if	marriage_shock==0
+			gen			nodisab_shock=0	if	disab_shock==1
+			replace		nodisab_shock=1	if	disab_shock==0
+			gen			nonewstamp_shock=0	if	newstamp_shock==1
+			replace		nonewstamp_shock=1	if	newstamp_shock==0
+			
+			cap	mat	drop	trans_2by2_shock
+			foreach	type	in	/*noemp*/ emp /*nomarriage*/ marriage /*nodisab*/ disab /*nonewstamp*/ newstamp	{
+				
+				*	Joint
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & `type'_shock): tabulate l1_PFS_FS_glm	PFS_FS_glm	
+				mat	trans_2by2_joint_`type' = e(b)[1,1], e(b)[1,2], e(b)[1,3], e(b)[1,4]	
+				scalar	samplesize_`type'	=	e(N_sub)	//	Sample size
+				
+				*	Marginal
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & `type'_shock):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==0	&	!mi(PFS_FS_glm)	//	Previously FI
+				scalar	persistence_`type'	=	e(b)[1,1]
+				svy, subpop(if ${study_sample}==1 & ${nonmissing_PFS_lags} & `type'_shock):qui proportion	PFS_FS_glm	if	l1_PFS_FS_glm==1	&	!mi(PFS_FS_glm)	//	Previously FS
+				scalar	entry_`type'	=	e(b)[1,1]
+				
+				mat	trans_2by2_`type'	=	samplesize_`type',	trans_2by2_joint_`type',	persistence_`type',	entry_`type'
+				
+				mat	trans_2by2_shock	=	nullmat(trans_2by2_shock)	\	trans_2by2_`type'
+			}
+
+		*	Combine transition matrices (Table 6 of 2020/11/16 draft)
+		
+		mat	define	blankrow	=	J(1,7,.)
+		mat	trans_2by2_combined	=	trans_2by2_year	\	blankrow	\	trans_2by2_gender	\	blankrow	\	///
+									trans_2by2_race	\	blankrow	\	trans_2by2_region	\	blankrow	\	trans_2by2_degree	\	blankrow	\	///
+									trans_2by2_disability	\	blankrow	\	trans_2by2_child	\	blankrow \	trans_2by2_foodstamp	\	blankrow	\	///
+									trans_2by2_shock
+		
+		mat	list	trans_2by2_combined
+			
+		putexcel	set "${PSID_outRaw}/Tab_5_Transition_Matrices", sheet(2by2) replace	/*modify*/
+		putexcel	A3	=	matrix(trans_2by2_combined), names overwritefmt nformat(number_d1)
+		
+		esttab matrix(trans_2by2_combined, fmt(%9.2f)) using "${PSID_outRaw}/Tab_5_Trans_2by2_combined.tex", replace	
+		
+		putexcel	set "${PSID_outRaw}/Tab_5_Transition_Matrices", sheet(change) /*replace*/	modify
+		putexcel	A3	=	matrix(trans_change_year), names overwritefmt nformat(number_d1)
+		putexcel	A13	=	matrix(FI_still_year_all), names overwritefmt nformat(number_d1)
+		putexcel	A23	=	matrix(FI_newly_year_all), names overwritefmt nformat(number_d1)
+		
+		*	Figure 3 & 4
+		*	Need to plot from matrix, thus create a temporary dataset to do this
+		preserve
+		
+			clear
+			
+			set	obs	8
+			gen	year	=	_n
+			replace	year	=	2001	+	(2*year)
+			
+			*	Matrix for Figure 3
+			svmat trans_change_year
+			rename	(trans_change_year?)	(still_FI	newly_FI	status_unknown)
+			label var	still_FI		"Still food insecure"
+			label var	newly_FI		"Newly food insecure"
+			label var	status_unknown	"Previous status unknown"
+
+			egen	FI_prevalence	=	rowtotal(still_FI	newly_FI	status_unknown)
+			label	var	FI_prevalence	"Annual FI prevalence"
+			
+			*	Matrix for Figure 4a
+			**	Figure 4 matrices (FI_still_year_all, FI_newly_year_all) have years in column and category as row, so they need to be transposed)
+			foreach	fs_category	in	FI_still_year_all	FI_newly_year_all	{
+				
+				mat		`fs_category'_tr=`fs_category''
+				svmat 	`fs_category'_tr
+			}
+			
+			*	Figure 3	(Change in food security status by year)
+			graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
+						graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(orange)) bar(3, fcolor(gs12))	///
+						ytitle(Population prevalence(%))	ylabel(0(.025)0.153)
+			graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
+			graph	close
+				
+			*	Figure 4 (Change in Food Security Status by Group)
+			*	Figure 4a
+			graph bar FI_newly_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Population prevalence(%))	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Newly Food Insecure)	name(Newly_FI, replace) scale(0.8)     
+			
+			
+			*	Figure 4b
+			graph bar FI_still_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))*/	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI, replace)	scale(0.8)  
+						
+						
+			grc1leg Newly_FI Still_FI, rows(1) legendfrom(Newly_FI)	graphregion(color(white)) /*(white)*/
+			graph	export	"${PSID_outRaw}/Fig_4_FI_change_status_bygroup.png", replace
+			graph	close
+			
+			
+			*	Figure 4c (legend on the right side. For presentation)
+			
+			*	Figure 4aa
+			graph bar FI_newly_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Population prevalence(%))	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))		///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Newly Food Insecure)	name(Newly_FI_aa, replace) scale(0.8)     
+			
+			
+			*	Figure 4bb
+			graph bar FI_still_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))*/	ylabel(0(.025)0.1)	///
+						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
+						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))	///
+						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
+						bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI_bb, replace)	scale(0.8)  
+			
+			
+			
+			*	Figure 4c (legend on the right side. For presentation)
+			grc1leg Newly_FI_aa Still_FI_bb, rows(1) cols(2) legendfrom(Newly_FI_aa)	graphregion(color(white)) position(3)	graphregion(color(white))	name(Fig4c, replace) ysize(4) xsize(9.0)
+			graph display Fig4c, ysize(4) xsize(9.0)
+			graph	export	"${PSID_outRaw}/Fig_4c_FI_change_status_bygroup_ppt.png", as(png) replace
+			graph	close
+			
+			
+		restore
+			
+	
+	
+	}	
+
+	if	`check_dist==1'	{
+		
+		*	All households (balanced and unbalanced)
+		
+		*	Balanced households (study sample)
+		use	"${PSID_dtFin}/fs_const_long.dta", clear
+		include	"${PSID_doAnl}/Macros_for_analyses.do"
+		isid	fam_ID_1999	year
+		
+		*	Distribution of per-capita food expenditure, per 5 random years
+		*	Distribution seems to be Gamma or Poisson, flattened over time
+		graph twoway 	(kdensity food_exp_stamp_pc if ${study_sample}, lpattern(dash))	///
+						(kdensity food_exp_stamp_pc if ${study_sample} & year2==1999)	///
+						(kdensity food_exp_stamp_pc if ${study_sample} & year2==2007)	///
+						(kdensity food_exp_stamp_pc if ${study_sample} & year2==2013)	///
+						(kdensity food_exp_stamp_pc if ${study_sample} & year2==2017),	///
+						legend(lab (1 "All") lab(2 "2005")	lab(3 "2009")	lab(4 "2013")	lab(5 "2017") rows(1))	///
+						title(Distribution of per capita food expenditure)
+		
+		summ food_exp_stamp_pc if ${study_sample}
+		summ food_exp_stamp_pc if ${study_sample} & year2==1999
+		summ food_exp_stamp_pc if ${study_sample} & year2==2005
+		summ food_exp_stamp_pc if ${study_sample} & year2==2009
+		summ food_exp_stamp_pc if ${study_sample} & year2==2013
+		summ food_exp_stamp_pc if ${study_sample} & year2==2017
+		
+		graph	export	"${PSID_outRaw}/foodexp_dist_byyear.png", as(png) replace
+		graph	close
+
+						
+		
+		*	We try to fit distribution with 2009 distribution which is in the middle.
+		cap	drop rgamma_?_?
+		forval a=1/5	{
+			forval	b=1/5	{
+			
+				gen	rgamma_`a'_`b'=rgamma(`a',`b')
+				lab	var	rgamma_`a'_`b' "Gamma (`a',`b')"
+			
+			}
+		}
+		
+		graph twoway 	(kdensity rgamma_1_1)	///
+						(kdensity rgamma_2_1)	///
+						(kdensity rgamma_3_1)	///
+						(kdensity rgamma_4_1)	///
+						(kdensity rgamma_5_1)
+		
+		
+		graph twoway 	(kdensity rgamma_3_1)	///
+						(kdensity rgamma_3_2)	///
+						(kdensity rgamma_3_3)	///
+						(kdensity rgamma_3_4)	///
+						(kdensity rgamma_3_5)
+		
+			*	Test if it is normal
+			swilk food_exp_stamp_pc if ${study_sample} //  (Shapiro-Wilk Test) P-value==0.0000. Reject it is normally distributed
+			sfrancia food_exp_stamp_pc if ${study_sample}	// (Shapiro-Francia Test) P-value==0.0000. Reject it is normally distributed
+			
+			*	Test Gamma distribution with different distribution parameters
+			loc	var	gamma_01_01
+			cap	drop	`var'
+			gen	`var'	=	rgamma(5,0.5)	if ${study_sample}
+			kdensity	food_exp_stamp_pc
+			
+			
+			
+			graph	twoway	(kdensity	food_exp_stamp_pc)	(kdensity	`var')
+	
+			*	K-S test syntax
+			// ksmirnov x = normal((x-mean)/stdev). normal(.) is standard cdf with z=.
+			
+	}
