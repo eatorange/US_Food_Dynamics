@@ -1,6 +1,6 @@
 	
 	local	seam_period=0
-	local	RPP=0
+	local	RPP=1
 	local	HFSM_dynamics=0	//	Replicate spells analysis using HFSM
 	local	check_dist=0
 	
@@ -1369,5 +1369,203 @@
 	
 			*	K-S test syntax
 			// ksmirnov x = normal((x-mean)/stdev). normal(.) is standard cdf with z=.
+			
+			
+		*	Generate PFS with different distributions to see robustness
+		use	"${PSID_dtFin}/fs_const_long.dta", clear
+		include	"${PSID_doAnl}/Macros_for_analyses.do"
+		
+			*	Normal distribution
+			local	depvar		food_exp_stamp_pc
+			
+				*	Step 1
+				svy, subpop(${study_sample}): reg 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}
+				est	sto	normal_step1
+				
+				*	Predict fitted value and residual
+				gen	normal_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
+				
+				predict double mean1_foodexp_normal	if	normal_step1_sample==1
+				predict double e1_foodexp_normal	if	normal_step1_sample==1,r
+				gen e1_foodexp_sq_normal = (e1_foodexp_normal)^2
+				
+				*	Step 2
+				local	depvar	e1_foodexp_sq_normal
+			
+				svy, subpop(${study_sample}): reg 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}
+		
+				est store normal_step2
+				gen	normal_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
+				*svy:	reg `e(depvar)' `e(selected)'
+				predict	double	var1_foodexp_normal	if	normal_step2_sample==1	
+				gen	double		sd_foodexp_normal	=	sqrt(var1_foodexp_normal)
+				
+				*	Step 3
+				gen thresh_normal=(foodexp_W_thrifty-mean1_foodexp_normal)/sd_foodexp_normal	//	Z-score of log(poverty line)
+				gen prob_below_normal=normal(thresh_normal)
+				gen PFS_normal=1-prob_below_normal
+				lab	var	PFS_normal			"PFS (normal)"
+		
+			*	Gamma distribution with default link function (negative inverse)
+			local	depvar		food_exp_stamp_pc
+			
+				*	Step 1
+				svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	//link(log)
+				gen	gamma_inv_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
+			
+				predict double mean1_foodexp_gamma_inv	if	gamma_inv_step1_sample==1
+				predict double e1_foodexp_gamma_inv		if	gamma_inv_step1_sample==1,r
+				gen e1_foodexp_sq_gamma_inv = (e1_foodexp_gamma_inv)^2
+		
+				*	Step 2
+				local	depvar	e1_foodexp_sq_gamma_inv
+				
+				svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	, family(gamma)	//link(log)
+			
+				est store gamma_inv_step2
+				gen	gamma_inv_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
+				*svy:	reg `e(depvar)' `e(selected)'
+				predict	double	var1_foodexp_gamma_inv	if	glm_step2_sample==1	
+				
+				
+				*	Step 3
+				gen alpha1_foodexp_pc_gamma_inv	= (mean1_foodexp_gamma_inv)^2 / var1_foodexp_gamma_inv	//	shape parameter of Gamma (alpha)
+				gen beta1_foodexp_pc_gamma_inv	= var1_foodexp_gamma_inv / mean1_foodexp_gamma_inv	//	scale parameter of Gamma (beta)
+				
+				*	Generate PFS by constructing CDF
+				gen PFS_gamma_inv = gammaptail(alpha1_foodexp_pc_gamma_inv, foodexp_W_thrifty/beta1_foodexp_pc_gamma_inv)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+				label	var	PFS_gamma_inv "PFS (Gamma with negative inverse link)"
+	
+	
+			*	Normal (with IHS food expenditure)
+			cap	drop	IHS_food_exp_stamp_pc	IHS_foodexp_W_thrifty
+			gen	IHS_food_exp_stamp_pc	=	asinh(food_exp_stamp_pc)
+			gen	IHS_foodexp_W_thrifty	=	asinh(foodexp_W_thrifty)
+			
+			local	depvar		IHS_food_exp_stamp_pc
+			
+				*	Step 1
+				svy, subpop(${study_sample}): reg 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}
+				est	sto	lnormal_step1
+				
+				*	Predict fitted value and residual
+				gen	lnormal_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
+				
+				predict double mean1_foodexp_lnormal	if	lnormal_step1_sample==1
+				predict double e1_foodexp_lnormal	if	lnormal_step1_sample==1,r
+				gen e1_foodexp_sq_lnormal = (e1_foodexp_lnormal)^2
+				
+				*	Step 2
+				local	depvar	e1_foodexp_sq_lnormal
+			
+				svy, subpop(${study_sample}): reg 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}
+		
+				est store lnormal_step2
+				gen	lnormal_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
+				*svy:	reg `e(depvar)' `e(selected)'
+				predict	double	var1_foodexp_lnormal	if	lnormal_step2_sample==1	
+				gen	double		sd_foodexp_lnormal	=	sqrt(var1_foodexp_lnormal)
+				
+				*	Step 3
+				gen thresh_lnormal=(IHS_foodexp_W_thrifty-mean1_foodexp_lnormal)/sd_foodexp_lnormal	//	Z-score of log(poverty line)
+				gen prob_below_lnormal=normal(thresh_lnormal)
+				gen PFS_lnormal=1-prob_below_lnormal
+				lab	var	PFS_lnormal			"PFS (log normal)"
+			
+			
+			* Poission
+			local	depvar		food_exp_stamp_pc
+			
+				*	Step 1
+				svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(poisson)	//link(log)
+				gen	poisson_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
+				predict double mean1_foodexp_poisson	if	poisson_step1_sample==1
+				
+				*	Step 3
+				gen PFS_poisson = poissontail(mean1_foodexp_poisson,foodexp_W_thrifty)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+				label	var	PFS_poisson "PFS (Poisson)"
+
+
+			
+		*	Evaluate the performance
+		
+			*	Graph per capita food expenditure and conditional means
+			twoway	(kdensity food_exp_stamp_pc, 		 lc(green) lp(solid) lwidth(medium) graphregion(fcolor(white)) legend(label(1 "Food expenditure per capita")))	///
+					(kdensity mean1_foodexp_normal, 	 lc(blue) lp(dash) lwidth(medium) graphregion(fcolor(white)) legend(label(2 "Cond.mean (Normal)")))	///
+					(kdensity mean1_foodexp_glm, lc(purple) lp(dot) lwidth(medium) graphregion(fcolor(white)) legend(label(3 "Cond.mean (Gamma log link)")))	///
+					(kdensity mean1_foodexp_gamma_inv, lc(red) lp(dashdot) lwidth(medium) graphregion(fcolor(white)) legend(label(4 "Cond.mean (Gamma neg inv)")))	///
+					(kdensity mean1_foodexp_poisson, lc(black) lp(longdash) lwidth(medium) graphregion(fcolor(white)) legend(label(5 "Cond.mean (Poisson)"))),	///
+					title("Per capita food expenditure and conditional means") ytitle("Density") xtitle("Expenditure")
+			graph	export	"${PSID_outRaw}/Foodexp_cond_means.png", as(png) replace
+			graph	close
+			
+			*	Graph PFS under different distributional assumptions
+			twoway	(kdensity PFS_normal, 		 lc(green) lp(solid) lwidth(medium) graphregion(fcolor(white)) legend(label(1 "Normal")))	///
+					(kdensity PFS_glm, 	 lc(blue) lp(dash) lwidth(medium) graphregion(fcolor(white)) legend(label(2 "Gamma log link")))	///
+					(kdensity PFS_gamma_inv, lc(purple) lp(dot) lwidth(medium) graphregion(fcolor(white)) legend(label(3 "Gamma negative inverse link")))	///
+					(kdensity PFS_poisson, lc(red) lp(dashdot) lwidth(medium) graphregion(fcolor(white)) legend(label(4 "Poisson")))	///
+					(kdensity PFS_lnormal, lc(black) lp(longdash) lwidth(medium) graphregion(fcolor(white)) legend(label(5 "Normal with IHS food expenditure"))),	///
+					title("PFS under different distributions") ytitle("Density") xtitle("PFS")
+			graph	export	"${PSID_outRaw}/PFS_distributions.png", as(png) replace
+			graph	close
+			
+		
+			*	MSE (1st moment, diff between actual value and conditional mean)
+			cap	drop	diff_m_*
+
+			gen	diff_m_foodexp_normal		=	(food_exp_stamp_pc	-	mean1_foodexp_normal)^2		//	Normal
+			gen	diff_m_foodexp_gamma		=	(food_exp_stamp_pc	-	mean1_foodexp_glm)^2		//	Gamma
+			gen	diff_m_foodexp_gamma_iuv	=	(food_exp_stamp_pc	-	mean1_foodexp_gamma_inv)^2	//	Gamma
+			gen	diff_m_foodexp_lnormal		=	(IHS_food_exp_stamp_pc	-	mean1_foodexp_lnormal)^2	//	Log-normal (Note: It should be lower than other differences, as )
+			gen	diff_m_foodexp_poisson		=	(food_exp_stamp_pc	-	mean1_foodexp_poisson)^2	//	Poisson
+			
+			tabstat	diff_m_*, save
+			mat	MSE_1st_moment =	r(StatTotal)'
+			
+			*	MSE (2nd moment, diff between squared residual and conditional variance)
+			cap	drop	diff_v_*
+			
+			gen	diff_v_foodexp_normal		=	(e1_foodexp_sq_normal		-	var1_foodexp_normal)^2		//	Normal
+			gen	diff_v_foodexp_gamma		=	(e1_foodexp_sq_glm			-	var1_foodexp_glm)^2		//	Gamma
+			gen	diff_v_foodexp_gamma_iuv	=	(e1_foodexp_sq_gamma_inv	-	var1_foodexp_gamma_inv)^2	//	Gamma
+			gen	diff_v_foodexp_lnormal		=	(e1_foodexp_sq_lnormal		-	var1_foodexp_lnormal)^2	//	Log-normal (Note: It should be lower than other differences, as )
+			
+			tabstat	diff_v_*, save
+			mat	MSE_2nd_moment =	r(StatTotal)'
+			
+			
+			
+			tabstat	diff_*, save
+			mat	MSE_PFS	=	r(StatTotal)'
+			
+			
+			putexcel	I2	=	"RMSE of conditional mean"
+			putexcel	I3	=	matrix(RMSE_cond_mean), names overwritefmt nformat(number_d1)
+			
+			summ PFS_glm PFS_normal
+			
+			local	depvar		food_exp_stamp_pc
+			glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(igaussian)	//link(log)
+			
+			
+			
+			
+			
+			
+			twoway	(kdensity food_exp_stamp_pc, 		 lc(green) lp(solid) lwidth(medium) graphregion(fcolor(white)) legend(label(1 "Food expenditure per capita")))	///
+					(kdensity mean1_foodexp_glm, 	 lc(blue) lp(dash) lwidth(medium) graphregion(fcolor(white)) legend(label(2 "Cond.mean (Gammma)")))	///
+					(kdensity mean1_foodexp_normal, lc(purple) lp(dot) lwidth(medium) graphregion(fcolor(white)) legend(label(3 "Cond.mean (Normal)")))	///
+					(kdensity mean1_foodexp_gamma_inv, lc(red) lp(dashdot) lwidth(medium) graphregion(fcolor(white)) legend(label(4 "Cond.mean (Gamma neg inv)"))),	///
+					title("Distribution of All Exp and conditional means") ytitle("Density") xtitle("Expenditure")
+			
+			
+			
+			
+			
+			graph	twoway	(kdensity	PFS_glm)	(kdensity	PFS_normal)	(kdensity	PFS_gamma_inv)	(kdensity	PFS_lnormal)	(kdensity	PFS_poisson)
+					
+			di (1/exp(-3.2))
+					
+			
 			
 	}
