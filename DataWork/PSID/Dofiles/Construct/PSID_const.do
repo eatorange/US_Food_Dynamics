@@ -1479,16 +1479,19 @@
 		
 	
 	*	Save it as long format
-		tempfile	fs_const_long
-		save		`fs_const_long'
+		
+	
+		save	"${PSID_dtFin}/fs_const_long_beforePFS.dta", replace
 	
 		
 	/****************************************************************
 		SECTION 3: Construct PFS	 									
 	****************************************************************/		
 	
+	use	"${PSID_dtFin}/fs_const_long_beforePFS.dta", clear
 	*	Run do-file which includes macros needed for constructing PFS
 	*	This file should have already been executed while "PSID_MasterDofile.do" was executed, but run it again just to make sure.
+	
 	include	"${PSID_doAnl}/Macros_for_analyses.do"
 	
 	*	Asess model performance among GLM, LASSO and Random Forest
