@@ -56,7 +56,8 @@
 	*log using	"${bl_do_cleaning}/logs/`name_do'", replace
 	
 	/* Git setup */
-	cd	"${PSID_doCln}"	stgit9
+	cd	"${PSID_doCln}"
+	stgit9
 	di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
 	di "Git branch `r(branch)'; commit `r(sha)'."
 	
@@ -64,7 +65,7 @@
 		SECTION 1: Retrieve variables on interest and construct a panel data
 	****************************************************************/	
 	
-	local	retrieve_vars	0
+	local	retrieve_vars	1
 	local	clean_vars		1
 	
 	
