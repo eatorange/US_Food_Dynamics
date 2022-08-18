@@ -1478,10 +1478,18 @@
 		svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
 		
 	
-	*	Save it as long format
-		
+	*	Construct RPP-adjusted thrifty food plan
+	*	Note(2022-8-17): I lost the original code, so I re-wrote it. Results may slightly differ.
 	
-		save	"${PSID_dtFin}/fs_const_long_beforePFS.dta", replace
+		*	Import RPP data (2009-2017)
+		decode	state_resid_fam, gen(state_str)
+		merge	m:1 year2 state_str resid_metro using "${PSID_dtInt}/RPP_2008_2020.dta", nogen keep(1 3)
+		
+		gen	foodexp_W_thrifty_RPPadj	=	foodexp_W_thrifty	*	(RPP/100)
+		lab	var	foodexp_W_thrifty_RPPadj	"TFP cost (RPP-adjusted)"
+	
+	*	Save it as long format
+	save	"${PSID_dtFin}/fs_const_long_beforePFS.dta", replace
 	
 		
 	/****************************************************************
@@ -1880,8 +1888,11 @@
 		gen beta1_foodexp_pc_glm	= var1_foodexp_glm / mean1_foodexp_glm	//	scale parameter of Gamma (beta)
 		
 		*	Generate PFS by constructing CDF
-		gen PFS_glm = gammaptail(alpha1_foodexp_pc_glm, foodexp_W_thrifty/beta1_foodexp_pc_glm)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+		gen PFS_glm 		= gammaptail(alpha1_foodexp_pc_glm, foodexp_W_thrifty/beta1_foodexp_pc_glm)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
+		gen	PFS_glm_RPPadj	=	gammaptail(alpha1_foodexp_pc_glm, foodexp_W_thrifty_RPPadj/beta1_foodexp_pc_glm)	//	Use RPP-adjusted cost instead.
+		
 		label	var	PFS_glm "PFS"
+		label	var	PFS_glm_RPPadj	"PFS (RPP-adjusted)"
 		
 		
 	/****************************************************************
@@ -1932,7 +1943,7 @@
 		
 			*	Categorize food security status based on the PFS.
 			 quietly	{
-				foreach	type	in	glm	/*ls	rf*/	{
+				foreach	type	in	glm	glm_RPPadj	/*ls	rf*/	{
 
 						
 						gen	PFS_FS_`type'	=	0	if	!mi(PFS_`type')	//	Food secure
@@ -1945,6 +1956,8 @@
 						gen	PFS_threshold_`type'=.
 						
 						foreach	year	in	2	3	4	5	6	7	8	9	10	{
+							
+							if	"`type'"=="glm_RPPadj" & inrange(`year',2,5) continue	
 							
 							di	"current loop is `plan',  in year `year'"
 							xtile pctile_`type'_`year' = PFS_`type' if !mi(PFS_`type')	&	year==`year', nq(1000)
