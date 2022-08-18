@@ -2,7 +2,7 @@
 	local	seam_period=0
 	local	RPP=1
 	local	HFSM_dynamics=0	//	Replicate spells analysis using HFSM
-	local	check_dist=0
+	local	GLM_dist=0
 	
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
@@ -142,15 +142,17 @@
 		tab	PFS_FI_glm	if	${study_sample}	&	seam_24_less==1
 	
 	}
-	
-	
+
 	if	`RPP==1'	{
 		
 	*	Replicate Table using both PFS and RPP-adjusted PFS
 	*	Make sure to use only the sample which has both PFS and RPP-adj PFS, as the latter is available only in certain years
-	
 	*	Note that the code below is mainly copied from the original code. 
 	*	Once we decide to make this code replicable later (ex. include in the Appendix), we can incorporate it into the main analyses do-file.
+	
+	use	"${PSID_dtFin}/fs_const_long.dta", clear
+	
+	include	"${PSID_doAnl}/Macros_for_analyses.do"
 	
 		*	Spell length (Table 1)
 		
@@ -176,6 +178,8 @@
 			
 			*	Summary stats of spell lengths among FI incidence, using only balanced subsample defind above
 			*mat	summ_spell_length	=	J(9,2,.)	
+			
+			sort fam_ID_1999 year	//	Need for conditional persistence
 		
 				*	PFS (default)
 					cap drop	_seq	_spell	_end
@@ -193,7 +197,7 @@
 						svy, subpop(if	l._seq==`i'	&	!mi(PFS_FS_glm) &	balanced_PFSs_0917==1): proportion PFS_FS_glm		//	Previously FI
 						mat	pers_upon_spell_PFS[`i',1]	=	/*e(N),*/ e(b)[1,1], r(table)[2,1]	//	append the share of households that are NOT food secure (thus remain food insecure)
 					}
-				
+				svy, subpop(if	l._seq==1	&	!mi(PFS_FS_glm) &	balanced_PFSs_0917==1): proportion PFS_FS_glm		//	Previously FI
 				*	PFS (RPP-adjusted)
 					cap drop	_seq	_spell	_end
 					tsspell, cond(year>=6 & PFS_FI_glm_RPPadj==1)
@@ -896,9 +900,483 @@
 		
 		
 		
+		*	Kernel density plot by region
+			*	Average threshold over 5 years
+			*	Annual sample sizes are nearly the same, so should be safe to aggregate
+			summ PFS_threshold_glm if !mi(PFS_glm) & inrange(year2,2009,2017)
+			local	PFS_threshold=round(r(mean),0.01)
+			summ PFS_threshold_glm_RPPadj if !mi(PFS_glm_RPPadj) & inrange(year2,2009,2017)
+			local	PFS_RPPadj_threshold=round(r(mean),0.01)
+			
+
+			twoway	(kdensity PFS_glm	if	state_group_NE==1	& inrange(year2,2009,2017), 	xline(`PFS_threshold', lc(blue) lpattern(dot)) lc(green) lp(solid) lwidth(medium) graphregion(fcolor(white)) legend(label(1 "NE")))	///
+					(kdensity PFS_glm	if	state_group_MidWest==1	& inrange(year2,2009,2017), 	xline(`PFS_RPPadj_threshold', lc(green) lpattern(dash))   lc(blue) lp(dash) lwidth(medium) graphregion(fcolor(white)) legend(label(2 "Midwest")))	///
+					(kdensity PFS_glm_RPPadj	if	state_group_NE==1	& inrange(year2,2009,2017), 	lc(purple) lp(dot) lwidth(medium) graphregion(fcolor(white)) legend(label(3 "NE (RPP-adj)")))	///
+					(kdensity PFS_glm_RPPadj	if	state_group_MidWest==1	& inrange(year2,2009,2017),   lc(black) lp(dash_dot) lwidth(medium) graphregion(fcolor(white)) legend(label(4 "Midwest (RPP-adj)"))),	///
+					title("PFS distribution by region and thresholds (2009-2017)") ytitle("Density") xtitle("PFS")
+			graph	export	"${PSID_outRaw}/PFS_dist_NE_Midwest.png",as(png) replace
+			graph	close	
 	}
 
 	
+		
+	}
+	
+	if	`sample_rep'==1	{
+	    
+		use	"${PSID_dtFin}/fs_const_long.dta", clear
+		include	"${PSID_doAnl}/Macros_for_analyses.do"
+		
+		*	We found a sampling issue; the ratio of food insecure households under the HFSM in the balanced study sample is different from that in the USDA report.
+		*	To address this concern, we check if "ordering" is preserved
+		
+		*	First we observe the discrepancy in FI prevalence between the raw data and our study sample
+		local	sample_discrepancy=0
+		if	`sample_discrepancy'==1	{
+		
+			*	PSID raw data (family-level )
+				
+				*	1999
+				use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\fam1999er.dta", clear	
+				di	_N	//	6,997 obs
+				tab	ER14331U			//	10.0% are food insecure (6,997)
+				tab	ER14331U	[aw=ER16518]	//	(longitudinal weight, 7.8% are food insecure (6,851)
+				tab	ER14331U	[aw=ER16519]	//	(cross-sectional weight, 8.1% are food insecure (6,997)	
+				
+				
+				*	2001
+				use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\fam2001er.dta", clear	
+				di	_N	//	7,406 obs
+				tab ER18470U	//	8.9% are food insecure
+				tab	ER18470U	[aw=ER20394]	//	(longitudinal weight, 6.1% are food insecure (7,195)
+				tab	ER18470U	[aw=ER20459]	//	(cross-sectional weight, 6.6% are food insecure (7,406)
+				
+				*	2003
+				use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\fam2003er.dta", clear	
+				di	_N	//	9,048 obs
+				tab	ER21735U	//	16.9% are food insecure
+				tab	ER21735U	[aw=ER24179]	//	(longitudinal weight, 6.8% are food insecure (7,565)
+				tab	ER21735U	[aw=ER24180]	//	(cross-sectional weight, 6.8% are food insecure (7,822)
+				
+				*	2015
+				*	(note: no cross-sectional weight available in this year)
+				use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\fam2015er.dta", clear	
+				di	_N	//	9,048 obs
+				tab	ER60799	//	16.9% are food insecure 
+				tab	ER60799	[aw=ER65492]	//	(longitudinal weight, 12.5% are food insecure (9,048)
+				
+				*	2017
+				use "E:\Box\US Food Security Dynamics\DataWork\PSID\DataSets\Raw\Main\fam2017er.dta", clear	
+				di	_N	//	9,607 obs
+				tab	ER66847	//	15.6% are food insecure
+				tab	ER66847	[aw=ER71570]	//	(longitudinal weight, 10.0% are food insecure (9,155)
+				tab	ER66847	[aw=ER71571]	//	(cross-sectional weight, 12.3% are food insecure (9,607)
+			
+			
+		/*
+		*	PSID raw data (individual-level, unweighted)
+		use	"${PSID_dtInt}/PSID_raw_ind.dta", clear
+		keep	x11102_2003		fs_cat_fam2003
+		duplicates drop
+		drop	if	mi(x11102_2003)	//	7,822 obs
+		tab fs_cat_fam2003	//	9.0% are food insecure, same as above
+		
+		*	PSID cleaned data (indiv-level, unweighted)
+		use	"${PSID_dtInt}/PSID_cleaned_ind.dta", clear
+		keep	x11102_2003	fs_cat_fam2003
+		duplicates drop	
+		drop	if	mi(x11102_2003)	//	7,822 obs
+		tab fs_cat_fam2003	//	9.0% are food insecure, same as above
+		*/
+		
+
+		*	PSID mid-constructed data (indiv-level) - same as raw data, as no observations have been dropped
+		/*	(2022-8-17) I lost the code generating "fs_const_wide_allind.dta", so I temporarily disable it. I don't think it is necessary anyway.
+		use	"${PSID_dtFin}/fs_const_wide_allind.dta", clear
+		
+		preserve
+		foreach	year	in	1999	2001	2003	2015	2017	{
+		    
+			keep	x11102_`year'	fs_cat_fam_simp`year'	 weight_long_fam`year'
+			duplicates drop	
+			drop	if	mi(x11102_`year')	//	Sample size
+			tab fs_cat_fam_simp`year'	//	Food insecure category
+			tab fs_cat_fam_simp`year'	[aw=weight_long_fam`year']	//	Food insecure category
+			
+			restore,	preserve
+		}
+		*/
+	
+			*	PSID (Balanced sample)
+			use	"${PSID_dtFin}/fs_const_long.dta", clear
+			include	"${PSID_doAnl}/Macros_for_analyses.do"
+			isid	fam_ID_1999	year
+			
+			
+				*	To have a brief understanding, here the difference in summary stats of same sample (1999) across different methods
+				*	We can conclude that weight methods doesn't really matter a lot, while weight itself does matter.
+				
+					*	Balanced sample 1999 including immigrants
+					*	It shows the different weight methods between aw and pw are very trival (7.037 vs 7.042)
+					summ	fs_cat_IS	if	year2==1999	//	unweighted
+					summ	fs_cat_IS	 [aw=weight_long_fam]	if	year2==1999	//	analytic weight using longitudinal family weight. This is the method used by Hoynes et al. (2016 AER paper)
+					svy, subpop(if	year2==1999):	mean	fs_cat_IS	//	sampling weight suggested by the PSID. This is the one we have been using so far.
+				
+					*	Balanced sample 1999 excluding immigrants
+					*	It also shows the difference b/w aw and pw are trivial (5.6 vs 5.7)
+					summ	fs_cat_IS	if	year2==1999	&	sample_source_SRC_SEO==1	//	unweighted
+					summ	fs_cat_IS	 [aw=weight_long_fam]	if	year2==1999	&	sample_source_SRC_SEO==1	//	analytic weight using longitudinal family weight. This is the method used by Hoynes et al. (2016 AER paper)
+					svy, subpop(if	year2==1999	&	sample_source_SRC_SEO==1):	mean	fs_cat_IS	//	sampling weight suggested by the PSID. This is the one we have been using so far.
+
+			
+			foreach	year2	in	1999	2001	2003	2005	2007	2009	2011	2013	2015	2017	{
+				
+				di	"year is `year2'"
+				
+				if	inlist(`year2',1999,2001,2003,2015,2017)	{
+				
+				*	HFSM, Unweighted
+				tab	fs_cat_IS	if	year2==`year2'	//	including immigrants
+				tab	fs_cat_IS	if	year2==`year2'	& sample_source_SRC_SEO==1	//	excluding immigransts (study sample)
+				
+			
+				*	HFSM, Weighted
+				svy, subpop(if year2==`year2'):	mean	fs_cat_IS	//	including immigrants
+				svy, subpop(if year2==`year2' & sample_source_SRC_SEO==1):	mean	fs_cat_IS	//	excluding immigransts (study sample)
+				
+				}
+				
+				*	PFS, weighted (should match the USDA statistics)
+				if	inrange(`year2',2001,2017)	{
+								
+					svy, subpop(if year2==`year2' & ${study_sample}):	mean	PFS_FI_glm	//	including immigrants
+				
+				}
+				
+			}
+			
+		}	//	sample_discrepancy
+				
+		*	Categorize under new thresholds
+		cap	drop	PFS_glm_newratio
+		clonevar	PFS_glm_newratio	=	PFS_glm
+		
+		*	Categorization	
+		local	run_categorization=1
+		if	`run_categorization'==1	{
+							
+				*	For food security threshold value, we use the ratio from the annual USDA reports.
+				*	(https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-us/readings/#reports)
+				
+				*** One thing we need to be careful is that, we need to match the USDA ratio to the "population ratio(weighted)", NOT the "sample ratio(unweighted)"
+				*	To get population ratio, we should use "svy: mean"	or "svy: proportion"
+				*	The best way to do is let STATA find them automatically, but for now (2020/10/6) I will find them manually.
+					*	One idea I have to do it automatically is to use loop(while) until we get the threshold value matching the USDA ratio.
+				*	Due to time constraint, I only found it for 2015 (year=9) for OLS, which is needed to generate validation table.
+				
+				
+				local	prop_FI_1	=	0.057	// 
+				local	prop_FI_2	=	0.043	//
+				local	prop_FI_3	=	0.040	// 
+				*local	prop_FI_4	=	0.110	// 
+				*local	prop_FI_5	=	0.111	// 
+				*local	prop_FI_6	=	0.147	// 
+				*local	prop_FI_7	=	0.149	// 
+				*local	prop_FI_8	=	0.143	// 
+				local	prop_FI_9	=	0.071	//
+				local	prop_FI_10	=	0.049	// 
+				
+				*local	prop_VLFS_1		=	0.030	// 1999: 10.1% are food insecure (7.1% are low food secure, 3.0% are very low food secure)
+				*local	prop_VLFS_2		=	0.033	// 2001: 10.7% are food insecure (7.4% are low food secure, 3.3% are very low food secure)
+				**local	prop_VLFS_4		=	0.039	// 2005: 11.0% are food insecure (7.1% are low food secure, 3.9% are very low food secure)
+				*local	prop_VLFS_6		=	0.057	// 2009: 14.7% are food insecure (9.0% are low food secure, 5.7% are very low food secure)
+				*local	prop_VLFS_7		=	0.057	// 2011: 14.9% are food insecure (9.2% are low food secure, 5.7% are very low food secure)
+				*local	prop_VLFS_8		=	0.056	// 2013: 14.3% are food insecure (8.7% are low food secure, 5.6% are very low food secure)
+				*local	prop_VLFS_9		=	0.050	// 2015: 12.7% are food insecure (7.7% are low food secure, 5.0% are very low food secure)
+				*local	prop_VLFS_10	=	0.045	// 2017: 11.8% are food insecure (7.3% are low food secure, 4.5% are very low food secure)
+			
+				*	Categorize food security status based on the PFS.
+				* quietly	{
+					foreach	type	in	glm_newratio		/*ls	rf*/	{
+
+							
+							gen	PFS_FS_`type'	=	0	if	!mi(PFS_`type')	//	Food secure
+							gen	PFS_FI_`type'	=	0	if	!mi(PFS_`type')	//	Food insecure (low food secure and very low food secure)
+							*gen	PFS_LFS_`type'	=	0	if	!mi(PFS_`type')	//	Low food secure
+							*gen	PFS_VLFS_`type'	=	0	if	!mi(PFS_`type')	//	Very low food secure
+							*gen	PFS_cat_`type'	=	0	if	!mi(PFS_`type')	//	Categorical variable: FS, LFS or VLFS
+													
+							*	Generate a variable for the threshold PFS
+							gen	PFS_threshold_`type'=.
+							
+							foreach	year	in	2	3	/*4	5	6	7	8*/	9	10	{
+								
+								di	"current loop is `plan',  in year `year'"
+								xtile pctile_`type'_`year' = PFS_`type' if !mi(PFS_`type')	&	year==`year', nq(1000)
+		
+								* We use loop to find the threshold value for categorizing households as food (in)secure
+								local	counter 	=	1	//	reset counter
+								local	ratio_FI	=	0	//	reset FI population ratio
+								*local	ratio_VLFS	=	0	//	reset VLFS population ratio
+								
+								foreach	indicator	in	FI	/*VLFS*/	{
+									
+									local	counter 	=	1	//	reset counter
+									local	ratio_`indicator'	=	0	//	reset population ratio
+								
+									* To decrease running time, we first loop by 10 
+									while (`counter' < 1000 & `ratio_`indicator''<`prop_`indicator'_`year'') {	//	Loop until population ratio > USDA ratio
+										
+										qui di	"current indicator is `indicator', counter is `counter'"
+										qui	replace	PFS_`indicator'_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',1,`counter')	//	categorize certain number of households at bottom as FI
+										qui	svy, subpop(year_enum`year'): mean 	PFS_`indicator'_`type'	//	Generate population ratio
+										local ratio_`indicator' = _b[PFS_`indicator'_`type']
+										
+										local counter = `counter' + 10	//	Increase counter by 10
+									}
+
+									*	Since we first looped by unit of 10, we now have to find to exact value by looping 1 instead of 10.
+									qui di "internediate counter is `counter'"
+									local	counter=`counter'-10	//	Adjust the counter, since we added extra 10 at the end of the first loop
+
+									while (`counter' > 1 & `ratio_`indicator''>`prop_`indicator'_`year'') {	//	Loop until population ratio < USDA ratio
+										
+										qui di "counter is `counter'"
+										qui	replace	PFS_`indicator'_`type'=0	if	year==`year'	&	inrange(pctile_`type'_`year',`counter',1000)
+										qui	svy, subpop(year_enum`year'): mean 	PFS_`indicator'_`type'
+										local ratio_`indicator' = _b[PFS_`indicator'_`type']
+										
+										local counter = `counter' - 1
+									}
+									qui di "Final counter is `counter'"
+
+									*	Now we finalize the threshold value - whether `counter' or `counter'+1
+										
+										*	Counter
+										local	diff_case1	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
+
+										*	Counter + 1
+										qui	replace	PFS_`indicator'_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',1,`counter'+1)
+										qui	svy, subpop(year_enum`year'): mean 	PFS_`indicator'_`type'
+										local	ratio_`indicator' = _b[PFS_`indicator'_`type']
+										local	diff_case2	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
+										qui	di "diff_case2 is `diff_case2'"
+
+										*	Compare two threshold values and choose the one closer to the USDA value
+										if	(`diff_case1'<`diff_case2')	{
+											global	threshold_`indicator'_`plan'_`type'_`year'	=	`counter'
+										}
+										else	{	
+											global	threshold_`indicator'_`plan'_`type'_`year'	=	`counter'+1
+										}
+									
+									*	Categorize households based on the finalized threshold value.
+									qui	{
+										replace	PFS_`indicator'_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',1,${threshold_`indicator'_`plan'_`type'_`year'})
+										replace	PFS_`indicator'_`type'=0	if	year==`year'	&	inrange(pctile_`type'_`year',${threshold_`indicator'_`plan'_`type'_`year'}+1,1000)		
+									}	
+									di "thresval of `indicator' in year `year' is ${threshold_`indicator'_`plan'_`type'_`year'}"
+								}	//	indicator
+								
+								*	Food secure households
+								replace	PFS_FS_`type'=0	if	year==`year'	&	inrange(pctile_`type'_`year',1,${threshold_FI_`plan'_`type'_`year'})
+								replace	PFS_FS_`type'=1	if	year==`year'	&	inrange(pctile_`type'_`year',${threshold_FI_`plan'_`type'_`year'}+1,1000)
+								
+								*	Low food secure households
+								*replace	PFS_LFS_`type'=1	if	year==`year'	&	PFS_FI_`type'==1	&	PFS_VLFS_`type'==0	//	food insecure but NOT very low food secure households			
+								
+								*	Categorize households into one of the three values: FS, LFS and VLFS						
+								*replace	PFS_cat_`type'=1	if	year==`year'	&	PFS_VLFS_`type'==1
+								*replace	PFS_cat_`type'=2	if	year==`year'	&	PFS_LFS_`type'==1
+								*replace	PFS_cat_`type'=3	if	year==`year'	&	PFS_FS_`type'==1
+								*assert	PFS_cat_`type'!=0	if	year==`year'
+								
+								*	Save threshold PFS as global macros and a variable, the average of the maximum PFS among the food insecure households and the minimum of the food secure households					
+								qui	summ	PFS_`type'	if	year==`year'	&	PFS_FS_`type'==1	//	Minimum PFS of FS households
+								local	min_FS_PFS	=	r(min)
+								qui	summ	PFS_`type'	if	year==`year'	&	PFS_FI_`type'==1	//	Maximum PFS of FI households
+								local	max_FI_PFS	=	r(max)
+								
+								*	Save the threshold PFS
+								replace	PFS_threshold_`type'	=	(`min_FS_PFS'	+	`max_FI_PFS')/2		if	year==`year'
+								*global	PFS_threshold_`type'_`year'	=	(`min_FS_PFS'	+	`max_FI_PFS')/2
+								
+								
+							}	//	year
+							
+							label	var	PFS_FI_`type'	"Food Insecurity (PFS) (`type')"
+							label	var	PFS_FS_`type'	"Food security (PFS) (`type')"
+							*label	var	PFS_LFS_`type'	"Low food security (PFS) (`type')"
+							*label	var	PFS_VLFS_`type'	"Very low food security (PFS) (`type')"
+							*label	var	PFS_cat_`type'	"PFS category: FS, LFS or VLFS"
+							
+
+					}	//	type
+					
+					*lab	define	PFS_category	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food security(FS)"
+					*lab	value	PFS_cat_*	PFS_category
+					
+				* }	//	qui
+		
+		*	See the ratio matches
+		svy, subpop(if year2==2001 & ${study_sample}):	mean	PFS_FI_glm_newratio	//	should be 5.7%
+		svy, subpop(if year2==2003 & ${study_sample}):	mean	PFS_FI_glm_newratio	//	should be 4.3%
+		svy, subpop(if year2==2015 & ${study_sample}):	mean	PFS_FI_glm_newratio	//	should be 7.1%
+		svy, subpop(if year2==2017 & ${study_sample}):	mean	PFS_FI_glm_newratio	//	should be 4.9%
+		
+		}	//	Categorization			
+		
+		*	Draw a scatter plot
+		*	Doesn't really give new info, since technically it is just a change in threshold.
+		graph	twoway	(scatter	fs_scale_fam_rescale	PFS_glm if year2==2017 & PFS_FI_glm==1) 	///
+						(scatter	fs_scale_fam_rescale	PFS_glm if year2==2017 & PFS_FI_glm_newratio==1)
+						
+						
+		
+		*	Check demographic distributions of FI households under different measures
+		
+			*	Gender
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	mean	HH_female		//	HFSM
+			scalar	female_HFSM	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	mean	HH_female		//	PFS (current measure)
+			scalar	female_PFS	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	mean	HH_female		//	PFS (new ratio)
+			scalar	female_PFS_new	=	e(b)[1,1]
+			
+			mat	demo_dist_female	=	female_HFSM	,	female_PFS,	female_PFS_new
+			scalar	drop	female_HFSM	female_PFS	female_PFS_new
+			mat	list	demo_dist_female
+		
+			*	Race (non-White)
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	mean	HH_race_color		//	HFSM
+			scalar	nonWhite_HFSM	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	mean	HH_race_color		//	PFS (current measure)
+			scalar	nonWhite_PFS	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	mean	HH_race_color		//	PFS (new ratio)
+			scalar	nonWhite_PFS_new	=	e(b)[1,1]
+			
+			mat	demo_dist_nonWhite	=	nonWhite_HFSM	,	nonWhite_PFS,	nonWhite_PFS_new
+			scalar	drop	nonWhite_HFSM	nonWhite_PFS	nonWhite_PFS_new
+			mat	list	demo_dist_nonWhite
+			
+			*	Marrital status (married)
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	mean	marital_status_cat		//	HFSM
+			scalar	married_HFSM	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	mean	marital_status_cat		//	PFS (current measure)
+			scalar	married_PFS	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	mean	marital_status_cat		//	PFS (new ratio)
+			scalar	married_PFS_new	=	e(b)[1,1]
+			
+			mat	demo_dist_married	=	married_HFSM	,	married_PFS,	married_PFS_new
+			scalar	drop	married_HFSM	married_PFS	married_PFS_new
+			mat	list	demo_dist_married
+			
+			*	Disability
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	mean	phys_disab_head		//	HFSM
+			scalar	disab_HFSM	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	mean	phys_disab_head		//	PFS (current measure)
+			scalar	disab_PFS	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	mean	phys_disab_head		//	PFS (new ratio)
+			scalar	disab_PFS_new	=	e(b)[1,1]
+			
+			mat	demo_dist_disab	=	disab_HFSM	,	disab_PFS,	disab_PFS_new
+			scalar	drop	disab_HFSM	disab_PFS	disab_PFS_new
+			mat	list	demo_dist_disab
+			
+			*	Employment		
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	mean	emp_HH_simple		//	HFSM
+			scalar	emp_HFSM	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	mean	emp_HH_simple		//	PFS (current measure)
+			scalar	emp_PFS	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	mean	emp_HH_simple		//	PFS (new ratio)
+			scalar	emp_PFS_new	=	e(b)[1,1]
+			
+			mat	demo_dist_emp	=	emp_HFSM	,	emp_PFS,	emp_PFS_new
+			scalar	drop	emp_HFSM	emp_PFS	emp_PFS_new
+			mat	list	demo_dist_emp
+			
+			*	Education (grade completed)
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	proportion	grade_comp_cat		//	HFSM
+			mat	edu_HFSM	=	e(b)'
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	proportion	grade_comp_cat		//	PFS (current measure)
+			mat	edu_PFS	=	e(b)'
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	proportion	grade_comp_cat		//	PFS (new ratio)
+			mat	edu_PFS_new	=	e(b)'
+			
+			mat	demo_dist_edu	=	edu_HFSM	,	edu_PFS,	edu_PFS_new
+			*scalar	drop	edu_HFSM	edu_PFS	edu_PFS_new
+			mat	list	demo_dist_edu
+			
+			*	Region
+			cap	drop	state_group_cat
+			gen		state_group_cat=1	if	state_group_NE==1
+			replace	state_group_cat=2	if	state_group_MidAt==1
+			replace	state_group_cat=3	if	state_group_South==1
+			replace	state_group_cat=4	if	state_group_MidWest==1
+			replace	state_group_cat=5	if	state_group_West==1
+			
+			lab	define	state_group_cat	1	"Northest"	2	"Mid-Atlantic"	3	"South"	4	"Mid-West"	5	"West", replace
+			lab	val	state_group_cat	state_group_cat
+			
+			lab	var	state_group_cat	"Region of Residence (category)"
+			
+			
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	proportion	state_group_cat		//	HFSM
+			mat	region_HFSM	=	e(b)'
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	proportion	state_group_cat		//	PFS (current measure)
+			mat	region_PFS	=	e(b)'
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	proportion	state_group_cat		//	PFS (new ratio)
+			mat	region_PFS_new	=	e(b)'
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_RPPadj==1):	proportion	state_group_cat		// PFS (RPP-adj)
+			mat	region_PFS_RPPadj	=	e(b)'
+			
+			mat	demo_dist_region	=	region_HFSM	,	region_PFS,	region_PFS_new
+			*scalar	drop	edu_HFSM	edu_PFS	edu_PFS_new
+			mat	list	demo_dist_region
+			
+			
+			*	Food stamp received this year
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	fs_cat_IS==1):	proportion	food_stamp_used_0yr		//	HFSM
+			scalar	stamp_HFSM	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	proportion	food_stamp_used_0yr		//	HFSM
+			scalar	stamp_PFS	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	proportion	food_stamp_used_0yr		//	PFS (new ratio)
+			scalar	stamp_PFS_new	=	e(b)[1,1]
+			
+			mat	demo_dist_stamp	=	stamp_HFSM,	stamp_PFS,	stamp_PFS_new
+			scalar	drop	stamp_HFSM	stamp_PFS	stamp_PFS_new
+			mat	list	demo_dist_stamp
+
+		*	Combine distribution matrices
+		
+		*mat	define	blankrow	=	J(1,3,.)
+		mat	demo_dist_combined	=	demo_dist_female	\	demo_dist_nonWhite	\	demo_dist_married	\	demo_dist_disab	\	demo_dist_emp	\	///
+									demo_dist_edu	\	demo_dist_region  \ demo_dist_stamp
+								
+		matrix rownames demo_dist_combined = Female non-White Married Disabled Employed Edu_noHS Edu_HS Edu_somecol Edu_col NE MidAt South MidWest West Stamp
+		matrix colnames demo_dist_combined = HFSM PFS PFS_newcutoff
+		
+		putexcel	set "${PSID_outRaw}/Demo_dist_sample", sheet(Demo_dist_sample) /*modify*/	replace
+		putexcel	A5	=	matrix(demo_dist_combined), names overwritefmt nformat(number_d1)
+		
+		esttab matrix(demo_dist_combined, fmt(%9.2f)) using "${PSID_outRaw}/demo_dist_combined.tex", replace	
+
+		
+		
+		*	Marrital status (married)
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	marital_status_cat==0):	mean	fs_cat_IS PFS_FI_glm 		//	HFSM
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	marital_status_cat==1):	mean	fs_cat_IS PFS_FI_glm 		//	HFSM
+			
+			scalar	married_HFSM	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm==1):	mean	marital_status_cat		//	PFS (current measure)
+			scalar	married_PFS	=	e(b)[1,1]
+			svy, subpop(if ${study_sample} & !mi(fs_cat_IS)	&	!mi(PFS_glm)	&	inlist(year2,2001,2003,2015,2017)	&	PFS_FI_glm_newratio==1):	mean	marital_status_cat		//	PFS (new ratio)
+			scalar	married_PFS_new	=	e(b)[1,1]
+			
+			mat	demo_dist_married	=	married_HFSM	,	married_PFS,	married_PFS_new
+			scalar	drop	married_HFSM	married_PFS	married_PFS_new
+			mat	list	demo_dist_married
+		
 		
 	}
 	
@@ -1298,7 +1776,7 @@
 	
 	}	
 
-	if	`check_dist==1'	{
+	if	`GLM_dist==1'	{
 		
 		*	All households (balanced and unbalanced)
 		
