@@ -4,11 +4,10 @@
 *	Will be integrated into the main do-files once discussed.
 
 
-include	"${PSID_doAnl}/Macros_for_analyses.do"
 
-local	AER_followup_const=1
-*local	AER_followup_analyses=1
-
+*	(2022-8-18) Note: The construction part was imported into "const" file (no longer updated). So I disable it by default. DO NOT make changes here..
+local	AER_followup_const=0
+local	AER_followup_analyses=1
 
 if	`AER_followup_const'==1	{
 	
@@ -235,10 +234,13 @@ if	`AER_followup_const'==1	{
 	
 }
 
-	use	"${PSID_dtFin}/AER_followup_const.dta",	clear
+	
+	
+
 	
 *	Analyses
-	
+use	"${PSID_dtFin}/fs_const_long.dta", clear
+include	"${PSID_doAnl}/Macros_for_analyses.do"	
 	
 *	Rank correlation between HFSM and PFS, E
 {
