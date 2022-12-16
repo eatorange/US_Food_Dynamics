@@ -2338,7 +2338,8 @@
 			nonumbers mtitles("SNAP" "No SNAP") ///
 			title (Summary Statistics)	csv 
 		
-	
+			svy, subpop(if ${study_sample} & !mi(PFS_glm) &  income_to_poverty<1.3 &	HH_race_white==1 ): mean	food_stamp_used_0yr
+			svy, subpop(if ${study_sample} & !mi(PFS_glm) &  income_to_poverty<1.3 &	HH_race_white==0 ): mean	food_stamp_used_0yr
 					
 	}
 	
