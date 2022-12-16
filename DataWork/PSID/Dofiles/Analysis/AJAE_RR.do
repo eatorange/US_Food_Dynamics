@@ -1,4 +1,5 @@
 	
+	local	recall_period=0
 	local	seam_period=0
 	local	RPP=0
 	local	sample_rep=1
@@ -10,6 +11,12 @@
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
 	include	"${PSID_doAnl}/Macros_for_analyses.do"
+	
+	if	`local_period==1'	{
+		
+		tab	food_stamp_freq_0yr	if	${study_sample}	&	food_stamp_freq_0yr!=0
+		
+	}
 	
 	if	`seam_period'==1	{
 	
@@ -1387,6 +1394,8 @@
 		
 		
 	}
+
+	
 	
 	if	`HFSM_dynamics'==1	{
 	    
@@ -2294,7 +2303,42 @@
 	
 		
 		
+		
+		*	Household characteristics b/w SNAP and non-SNAP recepients.
+		local	demovars	age_head_fam	HH_race_white	HH_race_color	marital_status_cat	HH_female	
+		local	econvars	income_pc	food_exp_stamp_pc
+		local	empvars		emp_HH_simple
+		local	healthvars	phys_disab_head	mental_problem
+		local	familyvars	num_FU_fam ratio_child	childage_in_FU_nochild childage_in_FU_presch childage_in_FU_sch childage_in_FU_both
+		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
+		local	foodvars	food_stamp_used_0yr	child_meal_assist 
+		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		
+		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'
+
+		
+			*	No SNAP, IPR<1.3
+			svy, subpop(if ${study_sample} & !mi(PFS_glm) & food_stamp_used_0yr==0 & income_to_poverty<1.3): mean	`sumvars'
+			estat sd
+			estadd matrix mean = r(mean)
+			estadd matrix sd = r(sd)
+			estadd scalar N = e(N_sub), replace
+			eststo	NoSNAP
+		
+			*	SNAP, IRP<1.3
+			svy, subpop(if ${study_sample} & !mi(PFS_glm) & food_stamp_used_0yr==1 & income_to_poverty<1.3): mean	`sumvars'
+			estat sd
+			estadd matrix mean = r(mean)
+			estadd matrix sd = r(sd)
+			estadd scalar N = e(N_sub), replace
+			eststo	SNAP
 			
+			esttab SNAP	NoSNAP  using "${PSID_outRaw}/AJAE_RR_SNAP_noSNAP_comparison.csv", replace ///
+			cells("mean(pattern(1 1) fmt(2)) sd(pattern(1 1) fmt(2))") label	///
+			nonumbers mtitles("SNAP" "No SNAP") ///
+			title (Summary Statistics)	csv 
+		
+	
 					
 	}
 	
