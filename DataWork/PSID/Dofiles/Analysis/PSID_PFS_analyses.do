@@ -115,7 +115,7 @@
 		local	healthvars	phys_disab_head	mental_problem
 		local	familyvars	num_FU_fam ratio_child	childage_in_FU_nochild childage_in_FU_presch childage_in_FU_sch childage_in_FU_both
 		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
-		local	foodvars	food_stamp_used_1yr	child_meal_assist 
+		local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist // 2022-12-15: Changed "last year" to "this year", since we add this year's stamp value to food expenditure.
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		
 		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'
