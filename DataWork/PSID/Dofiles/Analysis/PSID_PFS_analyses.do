@@ -117,8 +117,9 @@
 		local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
 		local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist // 2022-12-15: Changed "last year" to "this year", since we add this year's stamp value to food expenditure.
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+		local 	outcomevars	PFS_glm
 		
-		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'
+		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'	`outcomevars'
 
 		*cap	drop	sample_source?
 		*tab sample_source, gen(sample_source)
@@ -754,7 +755,7 @@
 		esttab matrix(dist_spell_length_byyear, fmt(%9.2f)) using "${PSID_outRaw}/Tab_4_Dist_spell_length.tex", replace	
 		
 		
-		*	Figure 2
+		*	Figure 1
 		preserve
 			
 			clear
@@ -769,7 +770,7 @@
 			gen	spell_length	=	(2*_n)
 			
 			
-			*	Figure 2 (Spell Length of Food Insecurity (2003-2015))
+			*	Figure 1 (Spell Length of Food Insecurity (2003-2015))
 			local	marker_2003	mcolor(blue)	msymbol(circle)
 			local	marker_2005	mcolor(red)		msymbol(diamond)
 			local	marker_2007	mcolor(green)	msymbol(triangle)
@@ -785,7 +786,7 @@
 					(connected	yr_2011	spell_length	in	1/3, `marker_2011'	lpattern(shortdash))		(connected	yr_2011	spell_length	in	4, `marker_2011')	///
 					(connected	yr_2013	spell_length	in	1/2, `marker_2013'	lpattern(shortdash_dot))	(connected	yr_2013	spell_length	in	3, `marker_2013')	///
 					(connected	yr_2015	spell_length	in	1/6, `marker_2015'	lpattern(longdash))			(connected	yr_2015	spell_length	in	2, `marker_2015'),	///
-					xtitle(Years)	ytitle(Percentage)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(1))	///
+					xtitle(Years)	ytitle(Fraction)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(1))	///
 					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
 			
 			graph	export	"${PSID_outRaw}/Fig_2_FI_spell_length.png", replace
@@ -801,7 +802,7 @@
 					(connected	yr_2005	spell_length	in	1/6, `marker_2005'	lpattern(dash))				(connected	yr_2005	spell_length	in	7, `marker_2005')	///
 					(connected	yr_2007	spell_length	in	1/5, `marker_2007'	lpattern(dot))				(connected	yr_2007	spell_length	in	6, `marker_2007')	///
 					(connected	yr_2013	spell_length	in	1/2, `marker_2013'	lpattern(shortdash_dot))	(connected	yr_2013	spell_length	in	3, `marker_2013'),	///
-					xtitle(Years)	ytitle(Percentage)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2013") rows(1))	///
+					xtitle(Years)	ytitle(Fraction)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2013") rows(1))	///
 					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
 			
 			graph	export	"${PSID_outRaw}/Fig_2a_FI_spell_length_ppt.png", replace
@@ -1147,13 +1148,13 @@
 			*	Figure 3	(Change in food security status by year)
 			graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
 						graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(orange)) bar(3, fcolor(gs12))	///
-						ytitle(Population prevalence(%))	ylabel(0(.025)0.153)
+						ytitle(Fraction of Population)	ylabel(0(.025)0.153)
 			graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
 			graph	close
 				
 			*	Figure 4 (Change in Food Security Status by Group)
 			*	Figure 4a
-			graph bar FI_newly_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Population prevalence(%))	ylabel(0(.025)0.1)	///
+			graph bar FI_newly_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Fraction of Population)	ylabel(0(.025)0.1)	///
 						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
 						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
 						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
@@ -1176,7 +1177,7 @@
 			*	Figure 4c (legend on the right side. For presentation)
 			
 			*	Figure 4aa
-			graph bar FI_newly_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Population prevalence(%))	ylabel(0(.025)0.1)	///
+			graph bar FI_newly_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Fraction of Population)	ylabel(0(.025)0.1)	///
 						legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
 						lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))		///
 						bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///

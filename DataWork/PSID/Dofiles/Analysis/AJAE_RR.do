@@ -1394,8 +1394,6 @@
 		
 		
 	}
-
-	
 	
 	if	`HFSM_dynamics'==1	{
 	    
@@ -1732,7 +1730,102 @@
 			
 			esttab matrix(trans_2by2_combined_HFSM, fmt(%9.2f)) using "${PSID_outRaw}/Tab_5_Trans_2by2_combined_HFSM.tex", replace	
 			esttab matrix(trans_2by2_combined_PFS, fmt(%9.2f)) using "${PSID_outRaw}/Tab_5_Trans_2by2_combined_PFS.tex", replace	
+			
+			
+			*	Tag households that are persisently food insecure in PFS, but not in HFSM
+			loc	var		PFS_FI_01_03
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0	if	year==2	&	!mi(PFS_glm) 	&   !mi(f1.PFS_glm)
+			replace	`var'=1	if	year==2	&	PFS_FI_glm==1	&	f1.PFS_FI_glm==1
+			lab	var	`var'	"Food insecure(PFS) both in 01 and 03"
+			
+			loc	var	PFS_FI_15_17
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0	if	year==9	&	!mi(PFS_glm) 	&   !mi(f1.PFS_glm)
+			replace	`var'=1	if	year==9	&	PFS_FI_glm==1	&	f1.PFS_FI_glm==1
+			lab	var	`var'	"Food insecure(PFS) both in 15 and 17"	
+			
+			loc	var	HFSM_FI_01_03
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0	if	year==2	&	!mi(fs_cat_FS) 	&   !mi(f1.fs_cat_FS)
+			replace	`var'=1	if	year==2	&	fs_cat_FS==0	&	f1.fs_cat_FS==0
+			lab	var	`var'	"Food insecure(HFSM) both in 01 and 03"
+			
+			loc	var	HFSM_FI_15_17
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0	if	year==9	&	!mi(fs_cat_FS) 	&   !mi(f1.fs_cat_FS)
+			replace	`var'=1	if	year==9	&	fs_cat_FS==0	&	f1.fs_cat_FS==0
+			lab	var	`var'	"Food insecure(HFSM) both in 15 and 17"
+			
+			*	HH that are both FI under the PFS over 2-year period (01-03, 15-17), but not under the HFSM
+			loc	var		HFSM_FI_PFS_FS
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0	if	!mi(PFS_FI_01_03)	&	!mi(HFSM_FI_01_03)
+			replace	`var'=0	if	!mi(PFS_FI_15_17)	&	!mi(HFSM_FI_15_17)
+			replace	`var'=1	if	PFS_FI_01_03==1	&	HFSM_FI_01_03==0	//	FI(PFS) over 01-03, but not under FI(HFSM)
+			replace	`var'=1	if	PFS_FI_15_17==1	&	HFSM_FI_15_17==0	//	FI(PFS) over 15-17, but not under FI(HFSM)
+			lab	var	`var'	"FI(PFS) over 01-03 or 15-17, but not FI(HFSM)"
+			
+			*	HH that are both FI under the both PFS and the HFSM
+			loc	var		HFSM_FI_PFS_FI
+			cap	drop	`var'
+			gen		`var'=.
+			replace	`var'=0	if	!mi(PFS_FI_01_03)	&	!mi(HFSM_FI_01_03)
+			replace	`var'=0	if	!mi(PFS_FI_15_17)	&	!mi(HFSM_FI_15_17)
+			replace	`var'=1	if	PFS_FI_01_03==1	&	HFSM_FI_01_03==1	//	FI(PFS) over 01-03, but not under FI(HFSM)
+			replace	`var'=1	if	PFS_FI_15_17==1	&	HFSM_FI_15_17==1	//	FI(PFS) over 15-17, but not under FI(HFSM)
+			lab	var	`var'	"FI(PFS) and FI(HFSM) over 01-03 or 15-17"
+			
+			*	Summary stats of the households above
+			*	Declare variables
+			local	demovars	age_head_fam	HH_race_white	HH_race_color	marital_status_cat	HH_female	
+			local	econvars	income_pc	food_exp_stamp_pc
+			local	empvars		emp_HH_simple
+			local	healthvars	phys_disab_head	mental_problem
+			local	familyvars	num_FU_fam ratio_child	childage_in_FU_nochild childage_in_FU_presch childage_in_FU_sch childage_in_FU_both
+			local	eduvars		highdegree_NoHS	highdegree_HS	highdegree_somecol	highdegree_col
+			local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist // 2022-12-15: Changed "last year" to "this year", since we add this year's stamp value to food expenditure.
+			local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
+			
+			local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'
+			
+			*	Total sample
+			svy, subpop(if ${study_sample} & !mi(PFS_glm)): mean	`sumvars'
+			estat sd
+			estadd matrix mean = r(mean)
+			estadd matrix sd = r(sd)
+			estadd scalar N = e(N_sub), replace
+			eststo	Total
+			
+			*	FI(PFS) and FI(HFSM) over 2-year (01-03, 15-17)
+			svy, subpop(if ${study_sample} & !mi(PFS_glm)	&	HFSM_FI_PFS_FI==1): mean	`sumvars'
+			estat sd
+			estadd matrix mean = r(mean)
+			estadd matrix sd = r(sd)
+			estadd scalar N = e(N_sub), replace
+			eststo	HFSM_FI_PFS_FI
+			
+			*	FI(PFS) over 2-year, but not under HFSM
+			svy, subpop(if ${study_sample} & !mi(PFS_glm)	&	HFSM_FI_PFS_FS==1): mean  `sumvars'
+			estat sd
+			estadd matrix mean = r(mean)
+			estadd matrix sd = r(sd)
+			estadd scalar N = e(N_sub), replace
+			eststo	HFSM_FS_PFS_FI
 				
+			
+			*	Table 1 (Summary Statistics)
+			esttab Total	HFSM_FI_PFS_FI	HFSM_FS_PFS_FI using "${PSID_outRaw}/AJAE_RR_sumstats_transition.csv", replace ///
+			cells("mean(pattern(1 1 1) fmt(2)) sd(pattern(1 1 1) fmt(2))") label	///
+			nonumbers mtitles("Sample") ///
+			title (Summary Statistics)	csv 
+			
+			
 	}	
 
 	if	`GLM_dist'==1	{
@@ -2056,6 +2149,15 @@
 		*	Balanced households (study sample)
 		use	"${PSID_dtFin}/fs_const_long.dta", clear
 		include	"${PSID_doAnl}/Macros_for_analyses.do"
+		
+		*	Share of households reporting zero non-SNAP expenditure, among SNAP households.
+			loc	var		zero_food_exp
+			cap	drop	`var'
+			gen		`var'=0
+			replace	`var'=1	if	food_exp_pc==0
+			tab	`var'	if ${study_sample} & food_stamp_used_0yr==1
+		
+		
 		
 		*	Construct PFS with food expenditure excluding stamp value
 		
