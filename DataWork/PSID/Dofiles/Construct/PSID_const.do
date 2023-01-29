@@ -1517,7 +1517,9 @@
 		
 			
 	*	GLM
-	
+		
+		sort	fam_ID_1999 year
+		
 		*	Declare variables
 		local	depvar		food_exp_stamp_pc
 		
@@ -1538,8 +1540,9 @@
 		gen e1_foodexp_sq_glm = (e1_foodexp_glm)^2
 		
 		egen e1_total_glm=total(e1_foodexp_sq_glm) if glm_step1_sample==1 & year==10
-		gen rmspe_step1_glm = sqrt(e1_total_glm/step1_N_glm)
+		gen rmspe_step1_glm = sqrt(e1_total_glm/step1_N_glm)	//
 	
+		summ	rmspe_step1_glm	//	1.83
 	
 	
 	
@@ -1573,11 +1576,12 @@
 		**	Note: "cvlasso" using training data (2001-2015) gives lse-optimal lambda=45467.265, which does penalize "ALL" variables except those we intentionally didn't penalize (time and state FE). It gives RMPSE=2.600
 		**	Thus, we manually tested all the values from 50 to 50000, with increment 100. We found lambda=50 minimuzes MSPE (lopt) and the largest lambda within 1-stdev is lambda=11,800	
 		
-		local	run_cvlasso=0
+		local	run_cvlasso=1
 		
 		if	`run_cvlasso'==1	{
 			
 			numlist "50000(50)1", descending
+			
 			*	Finding optimal lambda using cross-validation (computationally intensive)
 			cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	${study_sample}==1 & year!=10,	///
 				/*lopt lse*/  lambda(`r(numlist)')	seed(20200505)	notpen(`regionvars'	`timevars')	 rolling	/*h(1) fe	prestd 	postres	ols*/	plotcv 
@@ -1629,7 +1633,8 @@
 
 			egen e1_total_lasso=total(e1_foodexp_sq_lasso) if lasso_step1_sample==1 & year==10
 			gen rmspe_step1_lasso = sqrt(e1_total_lasso/step1_N_lasso)
-
+			
+			summ	rmspe_step1_lasso // 1.78
 	
 	
 	*	Random forest
@@ -1763,7 +1768,7 @@
 			egen e1_total_rf=total(e1_foodexp_sq_rf) if rf_step1_sample==1 & year==10
 			gen rmspe_step1_rf = sqrt(e1_total_rf/step1_N_rf)
 		
-
+			summ	rmspe_step1_rf	//	1.83
 		
 	}
 	
@@ -1780,34 +1785,34 @@
 			
 			cap	drop	glm_order2	glm_order3	glm_order4	glm_order5
 			
-			local	statevars	lag_food_exp_stamp_pc_th_1
+			local	statevars	lag_food_exp_stamp_pc_1
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	glm_step1_order1
 			
-			local	statevars	lag_food_exp_stamp_pc_th_1	lag_food_exp_stamp_pc_th_2
+			local	statevars	lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
 			est	sto	glm_step1_order2
 			predict glm_order2	if	e(sample)==1 & `=e(subpop)'
 			
-			local	statevars	lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_3
+			local	statevars	lag_food_exp_stamp_pc_1 lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3 // lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_3
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
 			est	sto	glm_step1_order3
 			predict glm_order3	if	e(sample)==1 & `=e(subpop)'
 			
-			local	statevars	lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_4
+			local	statevars	lag_food_exp_stamp_pc_1 lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
 			est	sto	glm_step1_order4
 			predict glm_order4	if	e(sample)==1 & `=e(subpop)'
 			
-			local	statevars	lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_5
+			local	statevars	lag_food_exp_stamp_pc_1 lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5
 			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
 			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
 			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
@@ -1818,15 +1823,16 @@
 			**	AER requires NOT to use asterisk(*) to display significance level, so we don't display it here
 			**	We can display them by modifying some options
 			
-			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${PSID_outRaw}/GLM_model_selection.csv", ///
-					cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N aic2 bic2, fmt(%8.0fc %8.2fc %8.2fc)) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${PSID_outRaw}/GLM_model_selection.csv", replace ///
+					cells(b(nostar fmt(%8.3f)) se(fmt(3) par)) stats(N aic2 bic2, fmt(%8.0fc %8.3fc %8.3fc)) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
+					keep(lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5)	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
-					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
-					replace
+					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	
 					
 			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${PSID_outRaw}/GLM_model_selection.tex", ///
-					cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N aic2 bic2, fmt(%8.0fc %8.2fc %8.2fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
+					cells(b(nostar fmt(%8.3f)) se(fmt(3) par)) stats(N aic2 bic2, fmt(%8.0fc %8.3fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	///
+					keep(lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5)	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
 					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
@@ -1873,11 +1879,11 @@
 		**	If we want to diplay star, renable "star" option inside "cells" and "star(* 0.10 ** 0.05 *** 0.01)"
 		
 			esttab	glm_step1	glm_step2	using "${PSID_outRaw}/GLM_pooled.csv", ///
-					cells(b(star fmt(%8.2f)) se(fmt(2) par)) stats(N_sub /*r2*/) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
+					cells(b(star fmt(%8.2f)) se(fmt(3) par)) stats(N_sub /*r2*/) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
 					title(Conditional Mean and Variance of Food Expenditure per capita) 	replace
 					
 			esttab	glm_step1	glm_step2	using "${PSID_outRaw}/GLM_pooled.tex", ///
-					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(nostar fmt(%8.3f)) & se(fmt(3) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Conditional Mean and Variance of Food Expenditure per capita)		replace		
 		
 		
@@ -2086,7 +2092,7 @@
 	
 	
 	
-	*	Construct E (ratio of food exp to thrifty food plan)
+	*	Construct NME (Normalized Monetary Expenditure)
 	*	It is a response to the AER comment.
 	
 	local	const_ratio_fooexp_TFP=1
