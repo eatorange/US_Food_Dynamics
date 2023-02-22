@@ -340,7 +340,7 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 		SECTION 5: Household-level Dynamics
 	****************************************************************/	
 		
-	local	run_spell_length	0	//	Spell length
+	local	run_spell_length	1	//	Spell length
 	local	run_transition_matrix	0	//	Transition matrix
 	local	run_perm_approach	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	test_stationary	0	//	Test whether PFS is stationary (computationally intensive)
@@ -367,9 +367,10 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 		mat	summ_spell_length	=	e(b)[1..1,2..10]'
 
 		*	Persistence rate conditional upon spell length (Table 7 of 2020/11/16 draft)
+		tsset // need to run befor the code below
 		mat	persistence_upon_spell	=	J(9,2,.)	
 		forvalues	i=1/8	{
-			svy, subpop(if	l._seq==`i'	&	!mi(E_FS) &	balanced_E==1): proportion E_FS		//	Previously FI
+			svy, subpop(if l._seq==`i'	&	!mi(E_FS) &	balanced_E==1): proportion E_FS		//	Previously FI
 			mat	persistence_upon_spell[`i',1]	=	/*e(N),*/ e(b)[1,1], r(table)[2,1]
 		}
 
@@ -438,13 +439,13 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 			
 			
 			*	Figure 2 (Spell Length of Food Insecurity (2003-2015))
-			local	marker_2003	mcolor(blue)	msymbol(circle)
-			local	marker_2005	mcolor(red)		msymbol(diamond)
-			local	marker_2007	mcolor(green)	msymbol(triangle)
-			local	marker_2009	mcolor(gs5)		msymbol(square)
-			local	marker_2011	mcolor(orange)	msymbol(plus)
-			local	marker_2013	mcolor(brown)	msymbol(X)
-			local	marker_2015	mcolor(gs13)	msymbol(V)			
+			local	marker_2003	mcolor(gs0)	msymbol(circle)
+			local	marker_2005	mcolor(gs2)		msymbol(diamond)
+			local	marker_2007	mcolor(gs4)	msymbol(triangle)
+			local	marker_2009	mcolor(gs6)		msymbol(square)
+			local	marker_2011	mcolor(gs8)	msymbol(plus)
+			local	marker_2013	mcolor(gs10)	msymbol(X)
+			local	marker_2015	mcolor(gs12)	msymbol(V)			
 			
 			twoway	(connected	yr_2003	spell_length	in	1/7, `marker_2003'	lpattern(solid))			(connected	yr_2003	spell_length	in	8, `marker_2003')	///
 					(connected	yr_2005	spell_length	in	1/6, `marker_2005'	lpattern(dash))				(connected	yr_2005	spell_length	in	7, `marker_2005')	///
@@ -453,10 +454,10 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 					(connected	yr_2011	spell_length	in	1/3, `marker_2011'	lpattern(shortdash))		(connected	yr_2011	spell_length	in	4, `marker_2011')	///
 					(connected	yr_2013	spell_length	in	1/2, `marker_2013'	lpattern(shortdash_dot))	(connected	yr_2013	spell_length	in	3, `marker_2013')	///
 					(connected	yr_2015	spell_length	in	1/6, `marker_2015'	lpattern(longdash))			(connected	yr_2015	spell_length	in	2, `marker_2015'),	///
-					xtitle(Years)	ytitle(Percentage)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(1))	///
+					xtitle(Years)	ytitle(Percentage)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(2))	///
 					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
 			
-			graph	export	"${PSID_outRaw}/Fig_2_FI_spell_length_E.png", replace
+			graph	export	"${PSID_outRaw}/Fig_B1_FI_spell_length_E.png", replace
 			graph	close
 			
 			
@@ -777,9 +778,9 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 			
 			*	Figure 3	(Change in food security status by year)
 			graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
-						graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(orange)) bar(3, fcolor(gs12))	///
-						ytitle(Population prevalence(%))	ylabel(0(.025)0.153)
-			graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear_E.png", replace
+						graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(gs11)) bar(2, fcolor(gs6)) bar(3, fcolor(gs1))	///
+							ytitle(Fraction of Population)	ylabel(0(.025)0.153)
+			graph	export	"${PSID_outRaw}/Fig_B2_FI_change_status_byyear_E.png", replace
 			graph	close
 				
 			*	Figure 4 (Change in Food Security Status by Group)
@@ -800,7 +801,7 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 						
 						
 			grc1leg Newly_FI Still_FI, rows(1) legendfrom(Newly_FI)	graphregion(color(white)) /*(white)*/
-			graph	export	"${PSID_outRaw}/Fig_4_FI_change_status_bygroup_E.png", replace
+			graph	export	"${PSID_outRaw}/Fig_B3_FI_change_status_bygroup_E.png", replace
 			graph	close
 		
 		restore
@@ -1093,8 +1094,8 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 				
 				*	Figure 5
 				graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
-									legend(lab (1 "TFI") lab(2 "CFI") /*size(vsmall)*/ rows(1))	bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
-				graph	export	"${PSID_outRaw}/Fig_5_TFI_CFI_bygroup_E.png", replace
+									legend(lab (1 "Total Food Insecurity (TFI)") lab(2 "Chronic Food Insecurity (CFI)") size(vsmall) rows(1))	bar(1, fcolor(gs3*0.5)) bar(2, fcolor(gs12*0.6))	graphregion(color(white)) bgcolor(white)
+				graph	export	"${PSID_outRaw}/Fig_B4_TFI_CFI_bygroup_E.png", replace
 				graph	close
 				
 					
@@ -1361,11 +1362,10 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_nocontrol_E.png", replace
 				graph	close
 				
-	
-		coefplot	Total_FI_`measure'	Chronic_FI_`measure', 	///
+		coefplot	(Total_FI_`measure', mcolor(gs2) msymbol(diamond))	(Chronic_FI_`measure', mcolor(gs9)	msymbol(circle)), 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "CFI") rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/Fig_6_TFI_CFI_`measure'_groupstateFE_All_E.png", replace
+				graph	export	"${PSID_outRaw}/Fig_B5_TFI_CFI_`measure'_groupstateFE_All_E.png", replace
 				graph	close
 			
 		*	Quick check the sequence of FS under HFSM
@@ -1688,8 +1688,8 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 				
 				*	Figure 7	(Food Insecurity Prevalence and Severity by Group)
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
-							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
-				graph	export	"${PSID_outRaw}/Fig_7_FGT_group_decomposition_E.png", replace
+							bar(1, fcolor(gs03*0.5)) bar(2, fcolor(gs10*0.6))	graphregion(color(white)) bgcolor(white)
+				graph	export	"${PSID_outRaw}/Fig_B6_FGT_group_decomposition_E.png", replace
 				graph	close
 				
 				/*
@@ -1739,7 +1739,7 @@ include	"${PSID_doAnl}/Macros_for_analyses.do"
 							
 				*	Figure 8 (Food Security Status By Group and Yea)
 				grc1leg Fig8_HCR Fig8_SFIG, rows(2) legendfrom(Fig8_HCR)	graphregion(color(white)) /*(white)*/
-				graph	export	"${PSID_outRaw}/Fig_8_FGT_group_change_E.png", replace
+				graph	export	"${PSID_outRaw}/Fig_B7_FGT_group_change_E.png", replace
 				graph	close
 				
 				
