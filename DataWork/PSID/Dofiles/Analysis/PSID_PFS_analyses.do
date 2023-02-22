@@ -118,8 +118,9 @@
 		local	foodvars	/*food_stamp_used_1yr*/	food_stamp_used_0yr	child_meal_assist // 2022-12-15: Changed "last year" to "this year", since we add this year's stamp value to food expenditure.
 		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
 		local 	outcomevars	PFS_glm
+		local	regionvars	state_group_NE state_group_MidAt state_group_South state_group_MidWest state_group_West
 		
-		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'	`outcomevars'
+		local	sumvars	`demovars'	`eduvars'		`empvars'	`healthvars'	`econvars'	`familyvars'		`foodvars'		`changevars'	`outcomevars'	`regionvars'
 
 		*cap	drop	sample_source?
 		*tab sample_source, gen(sample_source)
@@ -302,7 +303,7 @@
 	}
 	
 	/****************************************************************
-		SECTION 3: Correlation between the PFS and HFSM
+		SECTION 3: Correlation between the PFS and FSSS
 	****************************************************************/	
 	
 	{
@@ -354,10 +355,10 @@
 			
 			spearman	fs_scale_fam_rescale	PFS_glm		///
 				if ${study_sample}	&	inlist(year,2,3,9,10),	stats(rho obs p)
-			mat	corr_spearman	=	r(rho)	
+			mat	corr_spearman	=	r(rho)	//	0.31
 			ktau 	fs_scale_fam_rescale	PFS_glm		///
 				if ${study_sample}	&	inlist(year,2,3,9,10), stats(taua taub p)
-			mat	corr_kendall	=	r(tau_b)
+			mat	corr_kendall	=	r(tau_b)	//	0.25
 			
 			/*
 			*	By PFS decile
@@ -382,7 +383,7 @@
 				mat list corr_all
 			*/
 						
-			*	Frequencyy table of the HFSM (goes to footnote: 90% of HHs have HFSM 1, )
+			*	Frequencyy table of the FSSS (goes to footnote: 90% of HHs have HFSM 1, )
 			svy, subpop(if ${study_sample}==1 & !mi(PFS_glm) & !mi(fs_scale_fam_rescale)): tab fs_scale_fam_rescale
 			
 			*	Summarize PFS (https://www.stata.com/support/faqs/statistics/percentiles-for-survey-data/) (Goes to the FN11 and Fig A2)
@@ -395,7 +396,7 @@
 								(kdensity PFS_glm	if	inlist(year,2,3,9,10)	&	!mi(fs_scale_fam_rescale)),	///
 								/*title (Density Estimates of the USDA scale and the PFS)*/	xtitle(Scale) ytitle(Density)		///
 								name(thrifty, replace) graphregion(color(white)) bgcolor(white)		///
-								legend(lab (1 "HFSM (rescaled)") lab(2 "PFS") rows(1))					
+								legend(lab (1 "FSSS (rescaled)") lab(2 "PFS") rows(1))					
 			graph	export	"${PSID_outRaw}/Fig_A2_Density_HFSM_PFS.png", replace
 			
 			
@@ -568,7 +569,7 @@
 			label	variable	dev_from_lifeexp	"Deviation from the life expectancy by year and gender"
 			
 					
-			*	W.R.T. average retirement age
+			*	W.R.T. average retirement age 
 				
 				*	Average retirement age by year
 				forval	year=1999(2)2017	{
@@ -605,6 +606,7 @@
 						graphregion(color(white)) bgcolor(white)	///
 						title(2017)	name(fv_age_retire_2017, replace)
 				
+				*	(Fig D3)
 				grc1leg2		fv_age_retire_1999	fv_age_retire_2005	fv_age_retire_2011	fv_age_retire_2017,	///
 								/*title(Predicted PFS over age)*/ legendfrom(fv_age_retire_1999)	///
 								graphregion(color(white))	/*xtob1title	*/
@@ -677,7 +679,7 @@
 	local	run_transition_matrix	0	//	Transition matrix
 	local	run_perm_approach	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	test_stationary	0	//	Test whether PFS is stationary (computationally intensive)
-		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
+		local	shapley_decomposition	0	//	Shapley decompsition of TFI/CFI (takes time)
 
 			
 	*	Spell length
@@ -700,6 +702,7 @@
 		mat	summ_spell_length	=	e(b)[1..1,2..10]'
 
 		*	Persistence rate conditional upon spell length (Table 7 of 2020/11/16 draft)
+		tsset // need to run befor the code below
 		mat	persistence_upon_spell	=	J(9,2,.)	
 		forvalues	i=1/8	{
 			svy, subpop(if	l._seq==`i'	&	!mi(PFS_FS_glm) &	balanced_PFS==1): proportion PFS_FS_glm		//	Previously FI
@@ -713,6 +716,7 @@
 		putexcel	set "${PSID_outRaw}/Tab_5_Transition_Matrices", sheet(spell_dist_comb) modify	/*replace*/
 		putexcel	A5	=	matrix(spell_dist_comb), names overwritefmt nformat(number_d1)
 		
+		*	Table 1
 		esttab matrix(spell_dist_comb, fmt(%9.2f)) using "${PSID_outRaw}/Spell_dist_combined.tex", replace	
 
 		drop	_seq _spell _end
@@ -771,13 +775,13 @@
 			
 			
 			*	Figure 1 (Spell Length of Food Insecurity (2003-2015))
-			local	marker_2003	mcolor(blue)	msymbol(circle)
-			local	marker_2005	mcolor(red)		msymbol(diamond)
-			local	marker_2007	mcolor(green)	msymbol(triangle)
-			local	marker_2009	mcolor(gs5)		msymbol(square)
-			local	marker_2011	mcolor(orange)	msymbol(plus)
-			local	marker_2013	mcolor(brown)	msymbol(X)
-			local	marker_2015	mcolor(gs13)	msymbol(V)			
+			local	marker_2003	mcolor(gs0)	msymbol(circle)
+			local	marker_2005	mcolor(gs2)		msymbol(diamond)
+			local	marker_2007	mcolor(gs4)	msymbol(triangle)
+			local	marker_2009	mcolor(gs6)		msymbol(square)
+			local	marker_2011	mcolor(gs8)	msymbol(plus)
+			local	marker_2013	mcolor(gs10)	msymbol(X)
+			local	marker_2015	mcolor(gs12)	msymbol(V)			
 			
 			twoway	(connected	yr_2003	spell_length	in	1/7, `marker_2003'	lpattern(solid))			(connected	yr_2003	spell_length	in	8, `marker_2003')	///
 					(connected	yr_2005	spell_length	in	1/6, `marker_2005'	lpattern(dash))				(connected	yr_2005	spell_length	in	7, `marker_2005')	///
@@ -786,7 +790,7 @@
 					(connected	yr_2011	spell_length	in	1/3, `marker_2011'	lpattern(shortdash))		(connected	yr_2011	spell_length	in	4, `marker_2011')	///
 					(connected	yr_2013	spell_length	in	1/2, `marker_2013'	lpattern(shortdash_dot))	(connected	yr_2013	spell_length	in	3, `marker_2013')	///
 					(connected	yr_2015	spell_length	in	1/6, `marker_2015'	lpattern(longdash))			(connected	yr_2015	spell_length	in	2, `marker_2015'),	///
-					xtitle(Years)	ytitle(Fraction)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(1))	///
+					xtitle(Years)	ytitle(Fraction)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(2))	///
 					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
 			
 			graph	export	"${PSID_outRaw}/Fig_2_FI_spell_length.png", replace
@@ -1145,12 +1149,23 @@
 				svmat 	`fs_category'_tr
 			}
 			
-			*	Figure 3	(Change in food security status by year)
-			graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
-						graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(orange)) bar(3, fcolor(gs12))	///
-						ytitle(Fraction of Population)	ylabel(0(.025)0.153)
-			graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
-			graph	close
+			*	Figure 2	(Change in food security status by year)
+				
+				*	B&W 
+				graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
+							graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(gs11)) bar(2, fcolor(gs6)) bar(3, fcolor(gs1))	///
+							ytitle(Fraction of Population)	ylabel(0(.025)0.153)
+				graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
+				graph	close
+				
+				/*
+				*	Color
+				graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
+							graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(orange)) bar(3, fcolor(gs12))	///
+							ytitle(Fraction of Population)	ylabel(0(.025)0.153)
+				graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
+				graph	close
+				*/
 				
 			*	Figure 4 (Change in Food Security Status by Group)
 			*	Figure 4a
@@ -1518,7 +1533,7 @@
 				
 				*	Figure 5
 				graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
-									legend(lab (1 "TFI") lab(2 "CFI") /*size(vsmall)*/ rows(1))	bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
+									legend(lab (1 "Total Food Insecurity (TFI)") lab(2 "Chronic Food Insecurity (CFI)") size(vsmall) rows(1))	bar(1, fcolor(gs3*0.5)) bar(2, fcolor(gs12*0.6))	graphregion(color(white)) bgcolor(white)
 				graph	export	"${PSID_outRaw}/Fig_5_TFI_CFI_bygroup.png", replace
 				graph	close
 				
@@ -1648,7 +1663,7 @@
 				putexcel	set "${PSID_outRaw}/perm_stat", sheet(FI_perm_`measure') `exceloption'
 				putexcel	A3	=	matrix(PFS_perm_FI_combined_`measure'), names overwritefmt nformat(number_d1)
 			
-				esttab matrix(PFS_perm_FI_combined_`measure', fmt(%9.2f)) using "${PSID_outRaw}/PFS_perm_FI_`measure'.tex", replace	
+				esttab matrix(PFS_perm_FI_combined_`measure', fmt(%9.3f)) using "${PSID_outRaw}/PFS_perm_FI_`measure'.tex", replace	
 				
 				*	Table 5 & 6 (combined) of Dec 20 draft
 				mat	define Table_5_`measure'	=	perm_stat_2000_allcat_`measure',	PFS_perm_FI_combined_`measure'[.,2...]
@@ -1695,8 +1710,8 @@
 					replace		
 			
 			
-			local	shapley_decomposition=1
 			*	Shapley Decomposition
+			local	shapley_decomposition=0
 			if	`shapley_decomposition'==1	{
 				
 				ds	state_group?	state_group1?	state_group2?
@@ -1792,14 +1807,15 @@
 		
 		*/
 		
+
 		coefplot	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols, 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	/*title(Regional Fixed Effects)*/	legend(lab (2 "TFI") lab(4 "CFI") /*size(vsmall)*/ rows(1))	name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_nocontrol.png", replace
 				graph	close
 				
-	
-		coefplot	Total_FI_`measure'	Chronic_FI_`measure', 	///
+
+		coefplot	(Total_FI_`measure', mcolor(gs2) msymbol(diamond))	(Chronic_FI_`measure', mcolor(gs9)	msymbol(circle)), 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "CFI") rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/Fig_6_TFI_CFI_`measure'_groupstateFE_All.png", replace
@@ -2154,7 +2170,7 @@
 				
 				*	Figure 7	(Food Insecurity Prevalence and Severity by Group)
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
-							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white)
+							bar(1, fcolor(gs03*0.5)) bar(2, fcolor(gs10*0.6))	graphregion(color(white)) bgcolor(white)
 				graph	export	"${PSID_outRaw}/Fig_7_FGT_group_decomposition.png", replace
 				graph	close
 				
@@ -2203,7 +2219,7 @@
 							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
 							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
 							asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
-							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Headcount Ratio)	name(Fig8_HCR, replace) scale(0.8)     
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Headcount Ratio (HCR))	name(Fig8_HCR, replace) scale(0.8)     
 
 							
 				*	Figure 8b	(SFIG)
@@ -2211,7 +2227,7 @@
 							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
 							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
 							asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
-							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Squared Food Insecurity Gap)	name(Fig8_SFIG, replace) scale(0.8)   
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Squared Food Insecurity Gap (SFIG))	name(Fig8_SFIG, replace) scale(0.8)   
 							
 				*	Figure 8 (Food Security Status By Group and Year)
 				grc1leg Fig8_HCR Fig8_SFIG, rows(2) legendfrom(Fig8_HCR)	graphregion(color(white)) /*(white)*/
@@ -2231,7 +2247,7 @@
 							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
 							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))	///
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
-							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Squared Food Insecurity Gap)	name(Fig8bb_SFIG, replace) scale(0.8)  
+							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Squared Food Insecurity Gap (SFIG))	name(Fig8bb_SFIG, replace) scale(0.8)  
 				
 				*	Figure 8c	(Figure 8 with different legend for presentation)
 				grc1leg Fig8aa_HCR Fig8bb_SFIG, rows(1) cols(2) legendfrom(Fig8aa_HCR)	graphregion(color(white)) position(3)	graphregion(color(white))	name(Fig8c, replace) 
