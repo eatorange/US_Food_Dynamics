@@ -1,9 +1,9 @@
 	
 	local	recall_period=0
 	local	seam_period=0
-	local	RPP=0
-	local	sample_rep=1
-	local	HFSM_dynamics=1	//	Replicate spells analysis using HFSM
+	local	RPP=1
+	local	sample_rep=0
+	local	HFSM_dynamics=0	//	Replicate spells analysis using HFSM
 	local	GLM_dist=0
 	local	complexity=0	//	Complexity of the PFS
 	local	foodexp_nostamp=0	//	PFS with food expenditure excluding food stamp.
@@ -12,7 +12,7 @@
 	
 	include	"${PSID_doAnl}/Macros_for_analyses.do"
 	
-	if	`local_period==1'	{
+	if	`recall_period==1'	{
 		
 		tab	food_stamp_freq_0yr	if	${study_sample}	&	food_stamp_freq_0yr!=0
 		
@@ -20,7 +20,8 @@
 	
 	if	`seam_period'==1	{
 	
-	
+		sort	fam_ID_1999	year
+		
 		*	Food security transition status
 		loc	var		FS_trans_status
 		cap	drop	`var'
@@ -352,11 +353,18 @@
 				putexcel	A25	=	matrix(trans_2by2_region), names overwritefmt nformat(number_d1)
 				putexcel	A35	=	matrix(trans_2by2_region_RPPadj), names overwritefmt nformat(number_d1)
 				
+				
+				*	As Tex
+				mat	define	blankrow_1by7	=	J(1,7,.)
+				mat	TabC2	=	trans_2by2_year		\	blankrow_1by7	\	trans_2by2_year_RPPadj	\	blankrow_1by7	\	///
+								trans_2by2_region	\	blankrow_1by7	\	trans_2by2_region_RPPadj
+				esttab matrix(TabC2, fmt(%9.2f)) using "${PSID_outRaw}/Tab_C2_Spell_dist_combined_RPPadj.tex", replace	
+				
 			}
 		
 		
 		*	Table 3 (Permanent approach) - Total and Region only
-		
+		local	run_perm_approach=1
 		if	`run_perm_approach'==1	{
 		
 		local	test_stationary=0
@@ -544,7 +552,7 @@
 		
 			*	Generate statistics for tables
 			local	exceloption	replace
-			foreach	measure	in	HCR	SFIG	{
+			foreach	measure	in	HCR	/*SFIG*/	{
 			
 				*	Overall			
 					
@@ -610,27 +618,28 @@
 					
 				}
 			
-				mat	perm_stat_2000_metro	=	perm_stat_2000_metro_metro	\	perm_stat_2000_metro_nonmetro
+				mat	perm_stat_2000_metro		=	perm_stat_2000_metro_metro	\	perm_stat_2000_metro_nonmetro
 				mat	perm_stat_2000_metro_RPPadj	=	perm_stat_2000_metro_RPPadj	\	perm_stat_2000_nonmetro_RPPadj
 				
 				
 				*	Combine results (Table 6)
 				mat	define	blankrow	=	J(1,5,.)
-				mat	perm_stat_allcat_`measure'	=	perm_stat_2000_all	\	blankrow	\		///
-														perm_stat_2000_region	\	blankrow	\	perm_stat_2000_metro
+				cap	mat	drop	perm_stat_allcat_`measure'	
+				cap	mat	drop	perm_stat_allcat_`measure'_RPPadj	
+				mat	perm_stat_allcat_`measure'			=	perm_stat_2000_all	\	blankrow	\		///
+															perm_stat_2000_region	\	blankrow	\	perm_stat_2000_metro
 				mat	perm_stat_allcat_`measure'_RPPadj	=	perm_stat_2000_all_RPPadj	\	blankrow	\		///
-														perm_stat_2000_region_RPPadj	\	blankrow	\	perm_stat_2000_metro_RPPadj
+															perm_stat_2000_region_RPPadj	\	blankrow	\	perm_stat_2000_metro_RPPadj
 
 				putexcel	set "${PSID_outRaw}/perm_stat", sheet(perm_stat_`measure'_RPPadj) `exceloption'
 				putexcel	A3	=	matrix(perm_stat_allcat_`measure'), names overwritefmt nformat(number_d1)
 				putexcel	A23	=	matrix(perm_stat_allcat_`measure'_RPPadj), names overwritefmt nformat(number_d1)
 				
+				esttab matrix(perm_stat_allcat_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_perm_stat_`measure'_RPP.tex", replace	
 				esttab matrix(perm_stat_allcat_`measure'_RPPadj, fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_perm_stat_`measure'_RPPadj.tex", replace	
 				
 				local	exceloption	modify
 			}	//	measure
-			
-					
 			
 			
 			*	Categorize HH into four categories
@@ -657,7 +666,7 @@
 				replace	`var2'=.	if	inrange(year,1,5)
 			
 			local	exceloption	modify
-			foreach	measure	in	HCR	SFIG	{
+			foreach	measure	in	HCR	/*SFIG*/	{
 				
 				
 				assert	Total_FI_`measure'==0 		if PFS_FI_never_glm==1		//	Make sure TFI=0 when HH is always FS (PFS>cut-off PFS)
@@ -783,14 +792,15 @@
 				*esttab matrix(PFS_perm_FI_combined_`measure', fmt(%9.2f)) using "${PSID_outRaw}/PFS_perm_FI_`measure'.tex", replace	
 				
 				*	Table 5 & 6 (combined) of Dec 20 draft
-				mat	define Table_5_`measure'		=	perm_stat_2000_allcat_`measure',	PFS_perm_FI_combined_`measure'[.,2...]
+				mat	define Table_5_`measure'		=	perm_stat_allcat_`measure',	PFS_perm_FI_combined_`measure'[.,2...]
 				mat	define Table_5_`measure'_RPPadj	=	perm_stat_allcat_`measure'_RPPadj,	PFS_perm_FI_combined_`measure'_RPPadj[.,2...]
 				
 				putexcel	set "${PSID_outRaw}/perm_stat", sheet(Table5_`measure'_RPPadj) `exceloption'
 				putexcel	A3	=	matrix(Table_5_`measure'), names overwritefmt nformat(number_d1)
 				putexcel	A23	=	matrix(Table_5_`measure'_RPPadj), names overwritefmt nformat(number_d1)
 			
-				*esttab matrix(Table_5_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_`measure'.tex", replace
+				esttab matrix(Table_5_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_C3_`measure'.tex", replace
+				esttab matrix(Table_5_`measure'_RPPadj, fmt(%9.3f)) using "${PSID_outRaw}/Tab_C3_`measure'_RPPadj.tex", replace
 				
 				local	exceloption	modify
 				
@@ -825,6 +835,7 @@
 			*	Shapley Decomposition
 			if	`shapley_decomposition'==1	{
 				
+				local measure HCR
 				ds	state_group?	state_group1?	state_group2?
 				local groupstates `r(varlist)'		
 				
@@ -868,21 +879,30 @@
 			putexcel	A3	=	matrix(TFI_CFI_`measure'_shapley), names overwritefmt nformat(number_d1)
 			putexcel	H3	=	matrix(TFI_CFI_`measure'_shap_RPPadj), names overwritefmt nformat(number_d1)
 			
-			*esttab matrix(TFI_CFI_`measure'_shapley, fmt(%9.3f)) using "${PSID_outRaw}/Tab_7_TFI_CFI_`measure'_shapley.tex", replace	
-		
+			esttab matrix(TFI_CFI_`measure'_shapley, fmt(%9.3f)) using "${PSID_outRaw}/Tab_D4_TFI_CFI_`measure'_shapley.tex", replace	
+			esttab matrix(TFI_CFI_`measure'_shap_RPPadj, fmt(%9.3f)) using "${PSID_outRaw}/Tab_D4_TFI_CFI_`measure'_shap_RPPadj.tex", replace	
+
+			mat	TFI_CFI_`measure'_shap_RPP_comb	=	TFI_CFI_`measure'_shapley,	TFI_CFI_`measure'_shap_RPPadj
+			
+			esttab matrix(TFI_CFI_`measure'_shap_RPP_comb, fmt(%9.3f)) using "${PSID_outRaw}/Tab_D4_TFI_CFI_`measure'_shap_comb.tex", replace	
+			
 				
 		local	measure HCR
 		
-		coefplot	Total_FI_`measure'	Total_FI_`measure'_RPPadj, 	///
+		coefplot	(Total_FI_`measure', mcolor(gs2) msymbol(diamond))	(Total_FI_`measure'_RPPadj, mcolor(gs9)	msymbol(circle)), ///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
-					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "TFI (RPP-adjusted)") 	rows(1))	name(TFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
+					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "TFI (RPP-adjusted)") size(vsmall)	rows(1)) 	name(TFI_FE_All, replace)	ylabel(,labsize(small)) 	/*xscale(range(-0.05(0.05) 0.10))*/
 		graph	export	"${PSID_outRaw}/Fig_6_TFI_`measure'_groupstateFE_All_RPP.png", replace
 		graph	close
 		
-		coefplot	Chronic_FI_`measure'	Chronic_FI_`measure'_RPPadj, 	///
+		coefplot	(Chronic_FI_`measure', mcolor(gs2) msymbol(diamond))	(Chronic_FI_`measure'_RPPadj, mcolor(gs9)	msymbol(circle)), 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
-					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "CFI") lab(4 "CFI (RPP-adjusted)") 	rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
+					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "CFI") lab(4 "CFI (RPP-adjusted)") size(vsmall)	rows(1))		name(CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
 		graph	export	"${PSID_outRaw}/Fig_6_CFI_`measure'_groupstateFE_All_RPP.png", replace
+		graph	close
+		
+		graph	combine	TFI_FE_All	CFI_FE_All, plotregion(fcolor(white)) graphregion(fcolor(white))
+		graph	export	"${PSID_outRaw}/Fig_C2_TFI_CFI_`measure'_groupstateFE_All_RPP.png", replace
 		graph	close
 			
 		*	Quick check the sequence of FS under HFSM
@@ -919,7 +939,7 @@
 					(kdensity PFS_glm_RPPadj	if	state_group_NE==1	& inrange(year2,2009,2017), 	lc(purple) lp(dot) lwidth(medium) graphregion(fcolor(white)) legend(label(3 "NE (RPP-adj)")))	///
 					(kdensity PFS_glm_RPPadj	if	state_group_MidWest==1	& inrange(year2,2009,2017),   lc(black) lp(dash_dot) lwidth(medium) graphregion(fcolor(white)) legend(label(4 "Midwest (RPP-adj)"))),	///
 					title("PFS distribution by region and thresholds (2009-2017)") ytitle("Density") xtitle("PFS")
-			graph	export	"${PSID_outRaw}/PFS_dist_NE_Midwest.png",as(png) replace
+			graph	export	"${PSID_outRaw}/Fig_C1_PFS_dist_NE_Midwest.png",as(png) replace
 			graph	close	
 	}
 
@@ -1847,6 +1867,7 @@
 						legend(lab (1 "All") lab(2 "2005")	lab(3 "2009")	lab(4 "2013")	lab(5 "2017") rows(1))	///
 						title(Distribution of per capita food expenditure)
 		
+		*	Summary stats, all and by year
 		summ food_exp_stamp_pc if ${study_sample}
 		summ food_exp_stamp_pc if ${study_sample} & year2==1999
 		summ food_exp_stamp_pc if ${study_sample} & year2==2005
@@ -2069,10 +2090,12 @@
 			mat	MSE_PFS	=	r(StatTotal)'
 			
 			
-			putexcel	I2	=	"RMSE of conditional mean"
-			putexcel	I3	=	matrix(RMSE_cond_mean), names overwritefmt nformat(number_d1)
 			
-			summ PFS_glm PFS_normal
+			mat	list	MSE_1st_moment
+			mat	list	MSE_2nd_moment
+			
+
+		
 			
 			local	depvar		food_exp_stamp_pc
 			glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(igaussian)	//link(log)
@@ -2100,10 +2123,22 @@
 			
 	}
 	
-	if	`complexity'==1	{
+	if	`complexity'==1	{	//	NME
 		
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	include	"${PSID_doAnl}/Macros_for_analyses.do"		
+		
+		*	Correlation
+		
+			*	FSSS, PFS and NME
+			spearman	fs_scale_fam_rescale	PFS_glm	ratio_foodexp_TFP	///
+				if ${study_sample}	&	inlist(year,2,3,9,10),	stats(rho obs p)
+			mat	corr_spearman	=	r(rho)	//	0.31 (PFS), 0.23 (NME)
+			
+			*	Kendall's tau
+			ktau 	fs_scale_fam_rescale	PFS_glm		ratio_foodexp_TFP	///
+				if ${study_sample}	&	inlist(year,2,3,9,10), stats(taua taub p)
+			mat	corr_kendall	=	r(tau_b)	//	0.25 (PFS), 0.18 (NME)
 		
 		*	Non-nested specification test
 		
@@ -2137,11 +2172,19 @@
 				reg	fs_scale_fam_rescale	PFS_glm	ratio_foodexp_TFP	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	${regionvars}
 			est	store	HFSM_PFS_E_cont	
 			
-			esttab	HFSM_PFS_biv_nocont HFSM_PFS_biv_cont	HFSM_PFS_E_nocont	HFSM_E_biv_nocont	HFSM_E_biv_cont	HFSM_PFS_E_cont	///
-				using "${PSID_outRaw}/reg_HFSM_PFS_E.csv", ///
-				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N r2) label legend nobaselevels  star(* 0.10 ** 0.05 *** 0.01)	keep(PFS_glm	ratio_foodexp_TFP)	///
-				title(Regression of HFSM on FI indicators) 	replace
-			
+				* Table B1
+				esttab	HFSM_PFS_biv_nocont 	HFSM_E_biv_nocont	HFSM_PFS_E_nocont	HFSM_PFS_E_cont	///
+					using "${PSID_outRaw}/reg_HFSM_PFS_E.csv", ///
+					cells(b(star fmt(a3)) se(fmt(3) par)) stats(N r2) label legend nobaselevels  star(* 0.10 ** 0.05 *** 0.01)	keep(PFS_glm	ratio_foodexp_TFP)	///
+					title(Regression of HFSM on FI indicators) 	replace
+				
+				esttab	HFSM_PFS_biv_nocont 	HFSM_E_biv_nocont	HFSM_PFS_E_nocont	HFSM_PFS_E_cont	///
+					using "${PSID_outRaw}/reg_HFSM_PFS_E.tex", ///
+					cells(b(star fmt(a3)) se(fmt(3) par)) stats(N r2) label legend nobaselevels  star(* 0.10 ** 0.05 *** 0.01)	keep(PFS_glm	ratio_foodexp_TFP)	///
+					title(Regression of HFSM on FI indicators) 	replace
+					
+				*	Table B2
+				
 	}
 	
 	if	`foodexp_nostamp'==1	{
