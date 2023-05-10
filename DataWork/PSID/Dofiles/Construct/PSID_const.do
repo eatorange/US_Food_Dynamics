@@ -1852,7 +1852,7 @@
 			/*	meglm	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars} [pweight=weight_multi2] if `depvar'>0 || fam_ID_1999: ,	///
 				pweight(weight_multi1)	family(gamma)	link(log)	vce(cluster fam_ID_1999)	*/
 		
-		
+				
 		svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
 		est	sto	glm_step1
 
@@ -1862,6 +1862,12 @@
 		predict double mean1_foodexp_glm	if	glm_step1_sample==1
 		predict double e1_foodexp_glm	if	glm_step1_sample==1,r
 		gen e1_foodexp_sq_glm = (e1_foodexp_glm)^2
+		
+			*	Checking prediction error
+			cap	drop	rmse_foodexp_step1_glm
+			gen			rmse_foodexp_step1_glm	=	sqrt(e1_foodexp_sq_glm)
+			summ	food_exp_stamp_pc	rmse_foodexp_step1_glm	if	${study_sample}	&	glm_step1_sample==1
+			br	food_exp_stamp_pc	mean1_foodexp_glm	e1_foodexp_glm	rmse_foodexp_step1_glm	if	${study_sample}	&	glm_step1_sample==1
 	
 		
 		*	Step 2
