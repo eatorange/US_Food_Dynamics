@@ -1921,16 +1921,35 @@
 			*	K-S test syntax
 			// ksmirnov x = normal((x-mean)/stdev). normal(.) is standard cdf with z=.
 			
+		
+			local	depvar		food_exp_stamp_pc
 			
+			svy, subpop(${study_sample}): reg 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	//
+			
+		
+		
+		
 		*	Generate PFS with different distributions to see robustness
 		use	"${PSID_dtFin}/fs_const_long.dta", clear
 		include	"${PSID_doAnl}/Macros_for_analyses.do"
 		
+			*	Gamma with log-lin function (default)
+			*	Just get AIC
+			local	depvar		food_exp_stamp_pc
+				
+				svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
+				ereturn	list
+				scalar	AIC_gamma_log	=	e(aic)
+			
 			*	Normal distribution
+				*	(2023-5-10) Note: To compare AIC, I replaced "reg" with "glm with guassian distribution", which should be identical. It might cause an error in replicating other results (in that case, just go back to "reg")
 			local	depvar		food_exp_stamp_pc
 			
-				*	Step 1
-				svy, subpop(${study_sample}): reg 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}
+				*	Step 1		
+				*svy, subpop(${study_sample}): reg 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	//				
+				svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gaussian)	//link(log)
+				ereturn	list
+				scalar	AIC_normal	=	e(aic)
 				est	sto	normal_step1
 				
 				*	Predict fitted value and residual
@@ -1962,6 +1981,8 @@
 			
 				*	Step 1
 				svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	//link(log)
+				ereturn	list
+				scalar	AIC_gamma_neginv	=	e(aic)
 				gen	gamma_inv_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
 			
 				predict double mean1_foodexp_gamma_inv	if	gamma_inv_step1_sample==1
@@ -2029,6 +2050,9 @@
 			
 				*	Step 1
 				svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(poisson)	//link(log)
+				ereturn	list
+				scalar	AIC_poisson	=	e(aic)
+				
 				gen	poisson_step1_sample=1	if	e(sample)==1 & `=e(subpop)'	//	We need =`e(subpop)' condition, as e(sample) includes both subpopulation and non-subpopulation.
 				predict double mean1_foodexp_poisson	if	poisson_step1_sample==1
 				
@@ -2036,10 +2060,19 @@
 				gen PFS_poisson = poissontail(mean1_foodexp_poisson,foodexp_W_thrifty)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
 				label	var	PFS_poisson "PFS (Poisson)"
 
-
 			
 		*	Evaluate the performance
 		
+			*	Compare AIC - normal, Gamma (log), Gamma (negative inverse), Poisson
+			di	"AIC (normal) is " AIC_normal
+			di	"AIC (Gamma - log) is " AIC_gamma_log
+			di	"AIC (Gamma - negative inverse) is " AIC_gamma_neginv
+			di	"AIC (Poisson) is " AIC_poisson
+			
+			*	Poisson - Compare conditional mean and conditional distribution
+				summ	mean1_foodexp_poisson
+				bys year: summ	mean1_foodexp_poisson
+			
 			*	Graph per capita food expenditure and conditional means
 			twoway	(kdensity food_exp_stamp_pc, 		 lc(green) lp(solid) lwidth(medium) graphregion(fcolor(white)) legend(label(1 "Food expenditure per capita")))	///
 					(kdensity mean1_foodexp_normal, 	 lc(blue) lp(dash) lwidth(medium) graphregion(fcolor(white)) legend(label(2 "Cond.mean (Normal)")))	///
