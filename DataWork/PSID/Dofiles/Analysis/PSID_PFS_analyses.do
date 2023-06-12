@@ -679,7 +679,7 @@
 	local	run_transition_matrix	0	//	Transition matrix
 	local	run_perm_approach	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	test_stationary	0	//	Test whether PFS is stationary (computationally intensive)
-		local	shapley_decomposition	0	//	Shapley decompsition of TFI/CFI (takes time)
+		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
 
 			
 	*	Spell length
@@ -1153,7 +1153,7 @@
 				
 				*	B&W 
 				graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
-							graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(gs11)) bar(2, fcolor(gs6)) bar(3, fcolor(gs1))	///
+							graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(yellow*0.6)) bar(3, fcolor(gs1))	///
 							ytitle(Fraction of Population)	ylabel(0(.025)0.153)
 				graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
 				graph	close
@@ -1533,7 +1533,7 @@
 				
 				*	Figure 5
 				graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
-									legend(lab (1 "Total Food Insecurity (TFI)") lab(2 "Chronic Food Insecurity (CFI)") size(vsmall) rows(1))	bar(1, fcolor(gs3*0.5)) bar(2, fcolor(gs12*0.6))	graphregion(color(white)) bgcolor(white)
+									legend(lab (1 "Total Food Insecurity (TFI)") lab(2 "Chronic Food Insecurity (CFI)") size(vsmall) rows(1))	bar(1, fcolor(blue*0.5)) bar(2, fcolor(yellow*0.6))	graphregion(color(white)) bgcolor(white)
 				graph	export	"${PSID_outRaw}/Fig_5_TFI_CFI_bygroup.png", replace
 				graph	close
 				
@@ -1711,7 +1711,6 @@
 			
 			
 			*	Shapley Decomposition
-			local	shapley_decomposition=0
 			if	`shapley_decomposition'==1	{
 				
 				ds	state_group?	state_group1?	state_group2?
@@ -1815,7 +1814,7 @@
 				graph	close
 				
 
-		coefplot	(Total_FI_`measure', mcolor(gs2) msymbol(diamond))	(Chronic_FI_`measure', mcolor(gs9)	msymbol(circle)), 	///
+		coefplot	(Total_FI_`measure', mcolor(blue*0.5) msymbol(diamond))	(Chronic_FI_`measure', mcolor(green*0.6)	msymbol(circle)), 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "CFI") rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
 				graph	export	"${PSID_outRaw}/Fig_6_TFI_CFI_`measure'_groupstateFE_All.png", replace
@@ -2170,7 +2169,7 @@
 				
 				*	Figure 7	(Food Insecurity Prevalence and Severity by Group)
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
-							bar(1, fcolor(gs03*0.5)) bar(2, fcolor(gs10*0.6))	graphregion(color(white)) bgcolor(white)
+							bar(1, fcolor(blue*0.5)) bar(2, fcolor(yellow*0.6))	graphregion(color(white)) bgcolor(white)
 				graph	export	"${PSID_outRaw}/Fig_7_FGT_group_decomposition.png", replace
 				graph	close
 				

@@ -889,13 +889,13 @@
 				
 		local	measure HCR
 		
-		coefplot	(Total_FI_`measure', mcolor(gs2) msymbol(diamond))	(Total_FI_`measure'_RPPadj, mcolor(gs9)	msymbol(circle)), ///
+		coefplot	(Total_FI_`measure', mcolor(blue*0.5) msymbol(diamond))	(Total_FI_`measure'_RPPadj, mcolor(green*0.6)	msymbol(circle)), ///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "TFI (RPP-adjusted)") size(vsmall)	rows(1)) 	name(TFI_FE_All, replace)	ylabel(,labsize(small)) 	/*xscale(range(-0.05(0.05) 0.10))*/
 		graph	export	"${PSID_outRaw}/Fig_6_TFI_`measure'_groupstateFE_All_RPP.png", replace
 		graph	close
 		
-		coefplot	(Chronic_FI_`measure', mcolor(gs2) msymbol(diamond))	(Chronic_FI_`measure'_RPPadj, mcolor(gs9)	msymbol(circle)), 	///
+		coefplot	(Chronic_FI_`measure', mcolor(blue*0.5) msymbol(diamond))	(Chronic_FI_`measure'_RPPadj, mcolor(green*0.6)	msymbol(circle)), 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "CFI") lab(4 "CFI (RPP-adjusted)") size(vsmall)	rows(1))		name(CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
 		graph	export	"${PSID_outRaw}/Fig_6_CFI_`measure'_groupstateFE_All_RPP.png", replace
