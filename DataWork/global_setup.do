@@ -63,7 +63,7 @@
    * installed commands leads to different results.
 
   
-       global ado      "${mastData}/ado"
+       global ado      "${dataWorkFolder}/ado"
            adopath ++  "$ado" 
            *adopath ++  "$ado/m" 
            *adopath ++  "$ado/b" 
