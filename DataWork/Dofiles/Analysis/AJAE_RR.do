@@ -10,7 +10,6 @@
 	
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
 	
-	include	"${PSID_doAnl}/Macros_for_analyses.do"
 	
 	if	`recall_period==1'	{
 		
@@ -157,9 +156,7 @@
 	*	Once we decide to make this code replicable later (ex. include in the Appendix), we can incorporate it into the main analyses do-file.
 	
 	use	"${PSID_dtFin}/fs_const_long.dta", clear
-	
-	include	"${PSID_doAnl}/Macros_for_analyses.do"
-	
+		
 		*	Spell length (Table 1)
 		
 			{

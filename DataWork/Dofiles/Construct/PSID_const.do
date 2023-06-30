@@ -1434,25 +1434,24 @@
 	
 		*	Import RPP data (2009-2017)
 		decode	state_resid_fam, gen(state_str)
-		merge	m:1 year2 state_str resid_metro using "${PSID_dtInt}/RPP_2008_2020.dta", nogen keep(1 3)
+		merge	m:1 year2 state_str resid_metro using "${FSD_dtInt}/RPP_2008_2020.dta", nogen keep(1 3)
 		
 		gen	foodexp_W_thrifty_RPPadj	=	foodexp_W_thrifty	*	(RPP/100)
 		lab	var	foodexp_W_thrifty_RPPadj	"TFP cost (RPP-adjusted)"
 	
 	*	Save it as long format
-	save	"${PSID_dtFin}/fs_const_long_beforePFS.dta", replace
+	save	"${FSD_dtInt}/FSD_long_beforePFS.dta", replace
 	
 		
 	/****************************************************************
 		SECTION 3: Construct PFS	 									
 	****************************************************************/		
 	
-	use	"${PSID_dtFin}/fs_const_long_beforePFS.dta", clear
+	use	"${PSID_dtFin}/FSD_long_beforePFS.dta", clear
 	*	Run do-file which includes macros needed for constructing PFS
 	*	This file should have already been executed while "PSID_MasterDofile.do" was executed, but run it again just to make sure.
 	
-	include	"${PSID_doAnl}/Macros_for_analyses.do"
-	
+		
 	*	Asess model performance among GLM, LASSO and Random Forest
 	*	Before constructing PFS, we need to decide which model to use for constructing PFS
 	*	We make decision based on the out-of-sample prediction performance of equation (1) - constructing conditional mean
@@ -1461,7 +1460,7 @@
 	**	This measurement needs not be run every time, thus we toggle it only when needed.
 	**	As of Sep 2021, LASSO(1.78) and random forest (1.82) does not perform significantly better than GLM(1.83)
 	
-	local	model_performance_measure=0
+	local	model_performance_measure=1
 	
 	if	`model_performance_measure'==1	{
 		
