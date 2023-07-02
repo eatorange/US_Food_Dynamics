@@ -74,9 +74,9 @@
 	global PSID_doAnl             "$PSID_do/Analysis" 
 
    *Output sub-folder globals
-	global PSID_out               "$PSID/Output" 
-	global PSID_outRaw            "$PSID_out/Raw" 
-	global PSID_outFin            "$PSID_out/Final" 
+	global FSD_out               "$dataWorkFolder/Output" 
+	global FSD_outTab            "$FSD_out/Tables" 
+	global FSD_outFig            "$FSD_out/Figures" 
 
 
 *iefolder*1*End_FolderGlobals***************************************************

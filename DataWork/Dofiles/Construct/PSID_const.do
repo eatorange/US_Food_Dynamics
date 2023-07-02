@@ -66,8 +66,8 @@
 	/* Git setup */
 	*cd	"${PSID_doCon}"
 	*stgit9
-	di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
-	di "Git branch `r(branch)'; commit `r(sha)'."
+	*di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
+	*di "Git branch `r(branch)'; commit `r(sha)'."
 		
 	/****************************************************************
 		SECTION 1: Construct additional indicators
@@ -1427,7 +1427,29 @@
 		
 		*	To use an alternative approach, change the new surveydata setting as following
 		svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
+	
+	
+	
+	*	Construct NME (Normalized Monetary Expenditure)
+	
+		cap	drop	NME
+		gen	NME	=	food_exp_stamp_pc	/	foodexp_W_thrifty
+		summ NME,d
+		label variable	NME	"E; (Food exp/TFP) ratio"
+
+		*	Generate an indicator that NME*<1
+		cap	drop	NME_below_1
+		gen		NME_below_1	=	.
+		replace	NME_below_1	=	1	if	!mi(NME)	&	NME<1
+		replace	NME_below_1	=	0	if	!mi(NME)	&	NME>=1
+		label	var	NME_below_1	"=1 if food exp is less than TFP"
 		
+
+		cap	drop	FSSS_PFS_available_years
+		gen		FSSS_PFS_available_years=0
+		replace	FSSS_PFS_available_years=1	if	inlist(year,2,3,9,10)
+
+
 	
 	*	Construct RPP-adjusted thrifty food plan
 	*	Note(2022-8-17): I lost the original code, so I re-wrote it. Results may slightly differ.
@@ -1447,281 +1469,8 @@
 		SECTION 3: Construct PFS	 									
 	****************************************************************/		
 	
-	use	"${PSID_dtFin}/FSD_long_beforePFS.dta", clear
-	*	Run do-file which includes macros needed for constructing PFS
-	*	This file should have already been executed while "PSID_MasterDofile.do" was executed, but run it again just to make sure.
-	
-		
-	*	Asess model performance among GLM, LASSO and Random Forest
-	*	Before constructing PFS, we need to decide which model to use for constructing PFS
-	*	We make decision based on the out-of-sample prediction performance of equation (1) - constructing conditional mean
-	*	Performance will be measured by root mean square prediction error (RMSPE), using 2001-2015 as training sample, and 2017 as out-of-sample
-	
-	**	This measurement needs not be run every time, thus we toggle it only when needed.
-	**	As of Sep 2021, LASSO(1.78) and random forest (1.82) does not perform significantly better than GLM(1.83)
-	
-	local	model_performance_measure=1
-	
-	if	`model_performance_measure'==1	{
-		
-		
-			
-	*	GLM
-		
-		sort	fam_ID_1999 year
-		
-		*	Declare variables
-		local	depvar		food_exp_stamp_pc
-		
-		*	Step 1
-		*	Exclude year 10 (to calculate RMPSE)
-		svy, subpop(if ${study_sample} & year!=10): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
-		est	sto	glm_step1
-		
-	
-		*	Predict fitted value and residual
-		gen		glm_step1_sample=1	if	e(sample)==1 & sample_source_SRC_SEO & year!=10	
-		replace	glm_step1_sample=1	if	year==10 & l.glm_step1_sample==1
-		count if glm_step1_sample==1 & year==10	//	Number of 2017 observations used to measure performance
-		scalar step1_N_glm=r(N)
-		
-		predict double mean1_foodexp_glm	if	glm_step1_sample==1
-		predict double e1_foodexp_glm		if	glm_step1_sample==1,r
-		gen e1_foodexp_sq_glm = (e1_foodexp_glm)^2
-		
-		egen e1_total_glm=total(e1_foodexp_sq_glm) if glm_step1_sample==1 & year==10
-		gen rmspe_step1_glm = sqrt(e1_total_glm/step1_N_glm)	//
-	
-		summ	rmspe_step1_glm	//	1.83
-	
-	
-	
-	*	LASSO
-		
-		*	Features to be tested
-		*	To increase predictive power, we include the variables not only those originally included in GLM, but also other variables.
-	
-		local	depvar	food_exp_stamp_pc
-		
-		local	statevars	lag_food_exp_stamp_pc_1-lag_food_exp_stamp_pc_5		//	up to the order of 5
-		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse	mental_problem
-		local	demovars	age_head_fam age_head_fam_sq	HH_race_white HH_race_color	marital_status_cat	///
-							HH_female age_spouse	age_spouse_sq	housing_status_enum1 housing_status_enum3	veteran_head veteran_spouse
-		local	econvars	ln_income_pc	ln_wealth_pc		sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
-		local	empvars		emp_HH_simple	emp_spouse_simple
-		local	familyvars	num_FU_fam ratio_child	child_in_FU_cat	couple_status_enum1-couple_status_enum4
-		local	eduvars		highdegree_NoHS	highdegree_HS		highdegree_somecol	highdegree_col	highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse					
-		local	foodvars	food_stamp_used_0yr food_stamp_used_1yr	child_meal_assist WIC_received_last		elderly_meal
-		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
-		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	state_group? state_group1? state_group2?
-		local	timevars	year_enum2-year_enum9
-		
-		
-		set	seed	20200505
-		
-		*	Select optimal lambda
-		*	We choose optimal lambda by doing cross-validation, but it takes too much time. Thus we run it only when needed
-		
-		**	Note: "cvlasso" using training data (2001-2015) gives lse-optimal lambda=45467.265, which does penalize "ALL" variables except those we intentionally didn't penalize (time and state FE). It gives RMPSE=2.600
-		**	Thus, we manually tested all the values from 50 to 50000, with increment 100. We found lambda=50 minimuzes MSPE (lopt) and the largest lambda within 1-stdev is lambda=11,800	
-		
-		local	run_cvlasso=1
-		
-		if	`run_cvlasso'==1	{
-			
-			numlist "50000(50)1", descending
-			
-			*	Finding optimal lambda using cross-validation (computationally intensive)
-			cvlasso	`depvar'	`statevars'	`demovars'	`econvars'	`empvars'		`healthvars'	`familyvars'	`eduvars'	`eduvars'	`foodvars'	`childvars'	`regionvars'	`timevars'		if	${study_sample}==1 & year!=10,	///
-				/*lopt lse*/  lambda(`r(numlist)')	seed(20200505)	notpen(`regionvars'	`timevars')	 rolling	/*h(1) fe	prestd 	postres	ols*/	plotcv 
-				
-			est	store	lasso_step1_lse
-			cvlasso, postresult lse
-			
-			*	Display lambda result
-			di "lambda is `e(lambda)'"
-			
-			*	Save plot
-			graph	export	"${PSID_outRaw}/cvlasso_result.png", replace
-			graph	close
-			
-		}
-			
-			
-		*	Run lasso with the optimal lambda value	
-		
-		*local	lambdaval=exp(14.7)	//	14.7 is as of Aug 21
-		*local	lambdaval=2208.348	//	manual lambda value from the cvplot. This is the value slightly higher than lse but give only slightly higher MSPE
-		*local	lambdaval=1546.914	//	the lse value found from cvlasso using SRC sample only as of Nov 5.
-		*local	lambdaval=45467.265 (lse) // LSE value from training set (excluding 2017)
-			
-		local	lambdaval=11800	//	temporary value, will find the exact value via cvlasso it later.	
-						
-		lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`healthvars'	`empvars'		`familyvars'	`eduvars'	`foodvars'	///
-								`changevars'	`regionvars'	`timevars'	`childvars'	if	${study_sample}==1 & year!=10,	///
-					ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
-		est	store	lasso_step1_manual
-		lasso2, postresults
-				
-		*	Manually run post-lasso
-			gen		lasso_step1_sample=1	if	e(sample)==1	& year!=10
-							
-			global selected_step1_lasso `e(selected)'	/*`e(notpen)'*/
-			svy:	reg `depvar' ${selected_step1_lasso}	`e(notpen)'	if	lasso_step1_sample==1
-			est store postlasso_step1_lse
-			
-			
-			replace	lasso_step1_sample=1 if year==10 & l.lasso_step1_sample==1 // This command should run "after" running post-LASSO, since we don't want 2017 to be included in post-LASSO when validating performance
-			count if lasso_step1_sample==1 & year==10	//	Number of 2017 observations used to measure performance
-			scalar step1_N_lasso=r(N)
-			
-			*	Predict conditional means and variance from Post-LASSO
-			predict double mean1_foodexp_lasso	if	lasso_step1_sample==1, xb	
-			predict double e1_foodexp_lasso	if	lasso_step1_sample==1,r	
-			gen e1_foodexp_sq_lasso = (e1_foodexp_lasso)^2
+	use	"${FSD_dtInt}/FSD_long_beforePFS.dta", clear
 
-			egen e1_total_lasso=total(e1_foodexp_sq_lasso) if lasso_step1_sample==1 & year==10
-			gen rmspe_step1_lasso = sqrt(e1_total_lasso/step1_N_lasso)
-			
-			summ	rmspe_step1_lasso // 1.78
-	
-	
-	*	Random forest
-		
-		*	Features to be tested
-		*	To increase predictive power, we include the variables not only those originally included in GLM, but also other variables.
-		
-		local	depvar		food_exp_stamp_pc
-
-		local	statevars	lag_food_exp_stamp_pc_1	//	RF allows non-linearity, thus need not include higher polynomial terms
-		local	healthvars	alcohol_head alcohol_spouse	smoke_head smoke_spouse	phys_disab_head phys_disab_spouse	mental_problem
-		local	demovars	age_head_fam HH_race_white HH_race_color	marital_status_cat	HH_female	age_spouse	age_spouse_sq	housing_status_enum1 housing_status_enum3	veteran_head veteran_spouse
-		local	econvars	ln_income_pc	ln_wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head retire_plan_spouse	annuities_IRA
-		local	empvars		emp_HH_simple	emp_spouse_simple
-		local	familyvars	num_FU_fam ratio_child	child_in_FU_cat	couple_status_enum1-couple_status_enum4
-		local	eduvars		highdegree_NoHS	highdegree_HS		highdegree_somecol	highdegree_col	highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse
-		local	foodvars	food_stamp_used_0yr food_stamp_used_1yr	child_meal_assist WIC_received_last	elderly_meal
-		local	childvars	child_daycare_any child_daycare_FSP child_daycare_snack	
-		local	changevars	no_longer_employed	no_longer_married	no_longer_own_house	became_disabled
-		local	regionvars	state_group? state_group1? state_group2?
-		local	timevars	year_enum2-year_enum9
-
-
-		local	tune_iter	0	//	Tune how large the value of iterations() need to be. Computationally intensive thus run only when needed
-		local	tune_numvars	0	//	Tune the number of variables. Computationally intensive thus run only when needed
-		
-		*	Tune how large the value of iterations() need to be
-		if	`tune_iter'==1	{
-			loc	depvar	food_exp_pc
-			generate out_of_bag_error1 = .
-			generate validation_error = .
-			generate iter1 = .
-			local j = 0
-			forvalues i = 10(5)500 {
-				local j = `j' + 1
-				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	year!=10	&	${study_sample}==1, type(reg)	seed(20200505) iterations(`i') numvars(1)
-				quietly replace iter1 = `i' in `j'
-				quietly replace out_of_bag_error1 = `e(OOB_Error)' in `j'
-				predict p if	out_of_sample==1
-				quietly replace validation_error = `e(RMSE)' in `j'
-				drop p
-			}
-			label variable out_of_bag_error1 "Out-of-bag error"
-			label variable iter1 "Iterations"
-			label variable validation_error "Validation error"
-			scatter out_of_bag_error1 iter1, mcolor(blue) msize(tiny)	title(OOB Error and Validation Error) ||	scatter validation_error iter1, mcolor(red) msize(tiny)
-		
-		*	50 seems to be optimal (as of Sep 12, 2021)
-		}	//	tune_iter
-		
-			
-		*	Tune the number of variables
-		if	`tune_numvars'==1	{
-			loc	depvar	food_exp_pc
-			generate oob_error = .
-			generate nvars = .
-			generate val_error = .
-			local j = 0
-			forvalues i = 1(1)26 {
-				local j = `j'+ 1
-				rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-											`foodvars'	`childvars'	`changevars'	`regionvars'	if	year!=10	&	${study_sample}==1,	///
-											type(reg)	seed(20200505) iterations(50) numvars(`i')
-				quietly replace nvars = `i' in `j'
-				quietly replace oob_error = `e(OOB_Error)' in `j'
-				predict p	if	out_of_sample==1
-				quietly replace val_error = `e(RMSE)' in `j'
-				drop p
-			}
-			label variable oob_error "Out-of-bag error"
-			label variable val_error "Validation error"
-			label variable nvars "Number of variables randomly selected at each split"
-			scatter oob_error nvars, mcolor(blue) msize(tiny)	title(OOB Error and Validation Error)	subtitle(by the number of variables)	///
-			||	scatter val_error nvars, mcolor(red) msize(tiny)
-			
-			frame put val_error nvars, into(mydata)
-			frame mydata {
-				sort val_error, stable
-				local min_val_err = val_error[1]
-				local min_nvars = nvars[1]
-			}
-			frame drop mydata
-			display "Minimum Error: `min_val_err'; Corresponding number of variables `min_nvars''"
-			* (2020-09-05) Minimum Error: 1.780909180641174; Corresponding number of variables 23'
-			* (2021-09-12) (valication without 2017) Minimum Error: 1.808252334594727; Corresponding number of variables 17'
-		}	//	tune_numvars
-		
-		
-		*	Run random forest
-			cap	drop	rf_step1_sample
-			cap	drop	importance_mean
-			cap	drop	importance_mean1
-			
-			loc	depvar	food_exp_pc
-			rforest	`depvar'	`statevars'		`demovars'	`econvars'	`empvars'	`healthvars'	`familyvars'	`eduvars'	///
-									`foodvars'	`childvars'	`changevars'	`regionvars'	`timevars'	if	year!=10 & 	${study_sample}==1,	///
-									type(reg)	iterations(50)	numvars(17)	seed(20200505) 
-			gen		rf_step1_sample=1	if		${study_sample}==1 // For Random Forest, ALL observations are used.
-			count	if	rf_step1_sample==1	&	year==10
-			scalar step1_N_rf=r(N)
-			* Variable importance plot
-			matrix importance_mean = e(importance)
-			svmat importance_mean
-			generate importid_mean=""
-			local mynames: rownames importance_mean
-			local k: word count `mynames'
-			if `k'>_N {
-				set obs `k'
-			}
-			forvalues i = 1(1)`k' {
-				local aword: word `i' of `mynames'
-				local alabel: variable label `aword'
-				if ("`alabel'"!="") qui replace importid_mean= "`alabel'" in `i'
-				else qui replace importid_mean= "`aword'" in `i'
-			}
-			gsort	-importance_mean1
-			graph hbar (mean) importance_mean1	in	1/12, over(importid_mean, sort(1) label(labsize(2))) ytitle(Importance) title(Feature Importance for Conditional Mean)
-			graph	export	"${PSID_outRaw}/rf_feature_importance_step1.png", replace
-			graph	close
-			
-			putexcel	set "${PSID_outRaw}/Feature_importance", sheet(mean) replace	/*modify*/
-			putexcel	A3	=	matrix(importance_mean), names overwritefmt nformat(number_d1)
-			
-			predict	mean1_foodexp_rf
-			*	"rforest" cannot predict residual, so we need to compute it manually
-			gen	double e1_foodexp_rf	=	food_exp_pc	-	mean1_foodexp_rf
-			gen e1_foodexp_sq_rf = (e1_foodexp_rf)^2
-			
-			
-			egen e1_total_rf=total(e1_foodexp_sq_rf) if rf_step1_sample==1 & year==10
-			gen rmspe_step1_rf = sqrt(e1_total_rf/step1_N_rf)
-		
-			summ	rmspe_step1_rf	//	1.83
-		
-	}
-	
 	
 	*	Construct PFS
 	*	Based on the performance result above, we use GLM to construct
@@ -1834,11 +1583,11 @@
 		**	For AER manuscript, we omit asterisk(*) to display significance as AER requires not to use.
 		**	If we want to diplay star, renable "star" option inside "cells" and "star(* 0.10 ** 0.05 *** 0.01)"
 		
-			esttab	glm_step1	glm_step2	using "${PSID_outRaw}/GLM_pooled.csv", ///
+			esttab	glm_step1	glm_step2	using "${FSD_outTab}/GLM_pooled.csv", ///
 					cells(b(star fmt(%8.2f)) se(fmt(3) par)) stats(N_sub /*r2*/) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
 					title(Conditional Mean and Variance of Food Expenditure per capita) 	replace
 					
-			esttab	glm_step1	glm_step2	using "${PSID_outRaw}/GLM_pooled.tex", ///
+			esttab	glm_step1	glm_step2	using "${FSD_outTab}/GLM_pooled.tex", ///
 					cells(b(nostar fmt(%8.3f)) & se(fmt(3) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Conditional Mean and Variance of Food Expenditure per capita)		replace		
 		
@@ -2037,7 +1786,7 @@
 					/*title(Probability Threshold for being Food Secure)*/	ytitle(Probability)	xtitle(Year)	xlabel(2001(2)2017) legend(off)	///
 					name(PFS_Threshold, replace)	graphregion(color(white)) bgcolor(white)
 					
-			graph	export	"${PSID_outRaw}/Fig_A1_PFS_Thresholds.png", replace
+			graph	export	"${FSD_outFig}/Fig_A1_PFS_Thresholds.png", replace
 			graph	close
 			
 			drop	templine
@@ -2054,22 +1803,14 @@
 	local	const_ratio_fooexp_TFP=1
 	if	`const_ratio_fooexp_TFP'==1	{
 	
-	*	Generate a ratio variable E* = food exp/TFP
-
-	*use	"${PSID_dtFin}/fs_const_long.dta", clear
-	cap	drop	ratio_foodexp_TFP
-	gen	ratio_foodexp_TFP	=	food_exp_stamp_pc	/	foodexp_W_thrifty
-	summ ratio_foodexp_TFP,d
-	label variable	ratio_foodexp_TFP	"E; (Food exp/TFP) ratio"
-
-
+	
 	*	Categorization	
 	local	run_categorization=1
 	if	`run_categorization'==1	{
 						
 		
 			*	Summary Statistics of Indicies
-			summ	fs_scale_fam_rescale	ratio_foodexp_TFP		///
+			summ	fs_scale_fam_rescale	NME		///
 					if	inlist(year,2,3,9,10)
 			
 			*	For food security threshold value, we use the ratio from the annual USDA reports.
@@ -2107,11 +1848,11 @@
 			*	Categorize food security status based on the PFS.
 			 quietly	{
 					
-					gen	E_FS	=	0	if	!mi(ratio_foodexp_TFP)	//	Food secure
-					gen	E_FI	=	0	if	!mi(ratio_foodexp_TFP)	//	Food insecure (low food secure and very low food secure)
-					gen	E_LFS	=	0	if	!mi(ratio_foodexp_TFP)	//	Low food secure
-					gen	E_VLFS	=	0	if	!mi(ratio_foodexp_TFP)	//	Very low food secure
-					gen	E_cat	=	0	if	!mi(ratio_foodexp_TFP)	//	Categorical variable: FS, LFS or VLFS
+					gen	E_FS	=	0	if	!mi(NME)	//	Food secure
+					gen	E_FI	=	0	if	!mi(NME)	//	Food insecure (low food secure and very low food secure)
+					gen	E_LFS	=	0	if	!mi(NME)	//	Low food secure
+					gen	E_VLFS	=	0	if	!mi(NME)	//	Very low food secure
+					gen	E_cat	=	0	if	!mi(NME)	//	Categorical variable: FS, LFS or VLFS
 											
 					*	Generate a variable for the threshold E (E*)
 					gen	E_threshold	=	.
@@ -2119,7 +1860,7 @@
 					foreach	year	in	2	3	4	5	6	7	8	9	10	{
 						
 						di	"current loop is in year `year'"
-						xtile pctile_E_`year' = ratio_foodexp_TFP if ${study_sample} & !mi(ratio_foodexp_TFP)	&	year==`year', nq(1000)
+						xtile pctile_E_`year' = NME if ${study_sample} & !mi(NME)	&	year==`year', nq(1000)
 
 						* We use loop to find the threshold value for categorizing households as food (in)secure
 						local	counter 	=	1	//	reset counter
@@ -2200,9 +1941,9 @@
 						assert	E_cat!=0	if	year==`year'
 						
 						*	Save threshold PFS as global macros and a variable, the average of the maximum PFS among the food insecure households and the minimum of the food secure households					
-						qui	summ	ratio_foodexp_TFP	if	year==`year'	&	E_FS==1	//	Minimum PFS of FS households
+						qui	summ	NME	if	year==`year'	&	E_FS==1	//	Minimum PFS of FS households
 						local	min_FS_E	=	r(min)
-						qui	summ	ratio_foodexp_TFP	if	year==`year'	&	E_FI==1	//	Maximum PFS of FI households
+						qui	summ	NME	if	year==`year'	&	E_FI==1	//	Maximum PFS of FI households
 						local	max_FI_E	=	r(max)
 						
 						*	Save the threshold PFS
@@ -2237,7 +1978,7 @@
 					legend(order(1 "P*"	2	"E*"))	///
 					name(E_Threshold, replace)	graphregion(color(white)) bgcolor(white)
 					
-			graph	export	"${PSID_outRaw}/E_Thresholds.png", replace
+			graph	export	"${FSD_outFig}/E_Thresholds.png", replace
 			graph	close
 			
 			drop	templine
@@ -2249,53 +1990,13 @@
 	svy, subpop(if ${study_sample} & !mi(E_FI) & year==10): mean  E_FI E_FS
 	
 		
-	*	Generate an indicator that E*<1
-	cap	drop	E_below_1
-	gen		E_below_1	=	.
-	replace	E_below_1	=	1	if	!mi(ratio_foodexp_TFP)	&	ratio_foodexp_TFP<1
-	replace	E_below_1	=	0	if	!mi(ratio_foodexp_TFP)	&	ratio_foodexp_TFP>=1
-	label	var	E_below_1	"=1 if food exp is less than TFP"
-	
-	*	Prevalence over time
-	preserve
-		collapse	fs_cat_IS	E_FI	E_below_1 if ${study_sample}	 [aweight=weight_multi12], by(year2)
-		graph	twoway	(bar fs_cat_IS year2)	///
-						(connected E_FI	year2)	///
-						(connected E_below_1	year2),	///
-						title(Prevalence of HFSM FI and E<1) ytitle(Percentage)	///
-						legend(order(1 "HFSM FI"	2	"PFS FI" 3	"E=(foodexp/TFP)<1"	) rows(1))	
-		graph	export	"${PSID_outRaw}/Prevalence_FI_E_threshold.png", replace
-		graph	close
-	restore	
-		
-
-	cap	drop	HFSM_PFS_available_years
-	gen		HFSM_PFS_available_years=0
-	replace	HFSM_PFS_available_years=1	if	inlist(year,2,3,9,10)
-	
-	*save	"${PSID_dtFin}/AER_followup_const.dta", replace
 	
 }
 
 
 	tempfile	fs_const_long
 	save		`fs_const_long'
-	
-	/*
-	*	Save, depending on whether food stamp/SNAP value is included in the food expenditure
-	if	`include_stamp'==1	{	//	if included, default
-		
-		save	"${PSID_dtInt}/PFS_cat_ready_fs.dta", replace
-	
-	}
-	else	{	//	if NOT included.
-	    
-		save	"${PSID_dtInt}/PFS_cat_ready.dta", replace
-	}
-	*/
-	
-		
-			
+
 	/****************************************************************
 		SECTION X: Save and Exit
 	****************************************************************/
@@ -2312,8 +2013,8 @@
 		
 
 		* Git branch info
-		stgit9 
-		notes : fs_const_wide / Git branch `r(branch)'; commit `r(sha)'.
+		*stgit9 
+		*notes : fs_const_wide / Git branch `r(branch)'; commit `r(sha)'.
 	
 	
 		* Sort, order and save dataset
@@ -2330,7 +2031,7 @@
 	*/
 	
 		qui		compress
-		save	"${PSID_dtFin}/fs_const_wide.dta", replace
+		save	"${FSD_dtFin}/fs_const_wide.dta", replace
 		
 		*	Long data
 		use	`fs_const_long',clear
@@ -2341,8 +2042,8 @@
 		
 
 		* Git branch info
-		stgit9 
-		notes : fs_const_long / Git branch `r(branch)'; commit `r(sha)'.
+		*stgit9 
+		*notes : fs_const_long / Git branch `r(branch)'; commit `r(sha)'.
 	
 	
 		* Sort, order and save dataset
@@ -2359,7 +2060,7 @@
 	*/
 	
 		qui		compress
-		save	"${PSID_dtFin}/fs_const_long.dta", replace
+		save	"${FSD_dtFin}/fs_const_long.dta", replace
 	
 	/*
 		* Save log

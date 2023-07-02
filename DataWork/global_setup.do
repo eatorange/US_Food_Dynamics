@@ -80,6 +80,9 @@
    * the currency exchange rate needs to be updated, then it only has to
    * be done at one place for the whole project.
    
+   *	Randomization seed
+   global	seed=20200505	
+   
 	*	Model specification macors (used for variable construction and analyses)
      {
 	 
