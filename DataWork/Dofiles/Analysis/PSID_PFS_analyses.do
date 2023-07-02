@@ -58,13 +58,13 @@
 	*log using	"${bl_do_cleaning}/logs/`name_do'", replace
 	
 	/* Git setup */
-	cd	"${PSID_doAnl}"
-	stgit9
-	di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
-	di "Git branch `r(branch)'; commit `r(sha)'."
+	*cd	"${PSID_doAnl}"
+	*stgit9
+	*di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
+	*di "Git branch `r(branch)'; commit `r(sha)'."
 	
 	*	Declare global macro
-	include	"${PSID_doAnl}/Macros_for_analyses.do"
+	*include	"${PSID_doAnl}/Macros_for_analyses.do"
 			
 			
 		
@@ -96,7 +96,7 @@
 		SECTION 1: Summary statistics
 	****************************************************************/	
 
-	use	"${PSID_dtFin}/fs_const_long.dta", clear
+	use	"${FSD_dtFin}/fs_const_long.dta", clear
 	
 	local	run_sumstat	1
 	
@@ -147,12 +147,12 @@
 			
 		
 		*	Table 1 (Summary Statistics)
-		esttab *Total SRC SEO using "${PSID_outRaw}/Tab_1_Sumstats.csv", replace ///
+		esttab *Total SRC SEO using "${FSD_outTab}/Tab_1_Sumstats.csv", replace ///
 		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
 		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
 		title (Summary Statistics)	csv 
 		
-		esttab *Total SRC SEO using "${PSID_outRaw}/Tab_1_Sumstats.tex", replace ///
+		esttab *Total SRC SEO using "${FSD_outTab}/Tab_1_Sumstats.tex", replace ///
 		cells("mean(pattern(1 1 1 1) fmt(2)) sd(pattern(1 1 1 1) fmt(2))") label	///
 		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
 		title (Summary Statistics)	tex 		
@@ -221,7 +221,7 @@
 		est	store	foodexp_recall_reg
 		
 		*	Output
-		esttab	foodexp_recall_reg	using "${PSID_outRaw}/foodexp_recall_reg.csv", ///
+		esttab	foodexp_recall_reg	using "${FSD_outTab}/foodexp_recall_reg.csv", ///
 				cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 				title(Conditional Mean and Variance of Food Expenditure per capita) 	///			
 				replace
@@ -397,7 +397,7 @@
 								/*title (Density Estimates of the USDA scale and the PFS)*/	xtitle(Scale) ytitle(Density)		///
 								name(thrifty, replace) graphregion(color(white)) bgcolor(white)		///
 								legend(lab (1 "FSSS (rescaled)") lab(2 "PFS") rows(1))					
-			graph	export	"${PSID_outRaw}/Fig_A2_Density_HFSM_PFS.png", replace
+			graph	export	"${FSD_outFig}/Fig_A2_Density_HFSM_PFS.png", replace
 			
 			
 			*	Scatterplot and Fitted value of the USDA on PFS
@@ -405,7 +405,7 @@
 				xtitle(PFS)	ytitle(HFSM (rescaled))	///
 				legend(order(1 "95% CI" 2 "Fitted Value"))
 				
-			graph	export	"${PSID_outRaw}/qfitci_HFSM_PFS.png", replace
+			graph	export	"${FSD_outFig}/qfitci_HFSM_PFS.png", replace
 			graph	close
 
 			
@@ -437,13 +437,13 @@
 			
 			esttab	corr_glm_lin_noFE		corr_glm_nonlin_noFE			corr_glm_lin_FE			corr_glm_nonlin_FE	///
 					corr_glm_lin_low20_noFE	corr_glm_nonlin_low20_noFE	corr_glm_lin_low20_FE	corr_glm_nonlin_low20_FE	///
-					using "${PSID_outRaw}/Tab_2_HFSM_PFS_correlation.csv", ///
+					using "${FSD_outTab}/Tab_2_HFSM_PFS_correlation.csv", ///
 			cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 			title(Regression of the USDA scale on PFS(glm)) replace
 			
 			
 			esttab			corr_glm_lin_noFE		corr_glm_nonlin_noFE			corr_glm_lin_FE			corr_glm_nonlin_FE	///
-				using "${PSID_outRaw}/Tab_2_HFSM_PFS_correlation.tex", ///
+				using "${FSD_outTab}/Tab_2_HFSM_PFS_correlation.tex", ///
 			cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc	%8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 			title(Regression of the USDA scale on PFS(glm)) replace
 			
@@ -495,12 +495,12 @@
 		**	We can display them by disabling "nostar" and enabling "star" option
 			
 			*	Food Security Indicators and Their Correlates (Table 4 of 2020/11/16 draft)
-			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${PSID_outRaw}/Tab_3_HFSM_PFS_association.csv", ///
+			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${FSD_outTab}/Tab_3_HFSM_PFS_association.csv", ///
 					cells(b(star fmt(3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Effect of Correlates on Food Security Status) replace
 					
 					
-			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${PSID_outRaw}/Tab_3_HFSM_PFS_association.tex", ///
+			esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${FSD_outTab}/Tab_3_HFSM_PFS_association.tex", ///
 					/*cells(b(star fmt(3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	*/	///
 					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 					title(Effect of Correlates on Food Security Status) replace
@@ -611,7 +611,7 @@
 								/*title(Predicted PFS over age)*/ legendfrom(fv_age_retire_1999)	///
 								graphregion(color(white))	/*xtob1title	*/
 								/*	note(Vertical line is the average retirement age of the year in the sample)	*/
-				graph	export	"${PSID_outRaw}/Fig_A3_Fitted_age_retirement.png", replace
+				graph	export	"${FSD_outFig}/Fig_A3_Fitted_age_retirement.png", replace
 				graph	close
 			
 		
@@ -679,7 +679,7 @@
 	local	run_transition_matrix	0	//	Transition matrix
 	local	run_perm_approach	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 		local	test_stationary	0	//	Test whether PFS is stationary (computationally intensive)
-		local	shapley_decomposition	0	//	Shapley decompsition of TFI/CFI (takes time)
+		local	shapley_decomposition	1	//	Shapley decompsition of TFI/CFI (takes time)
 
 			
 	*	Spell length
@@ -713,11 +713,11 @@
 		mat spell_dist_comb	=	summ_spell_length,	persistence_upon_spell
 		mat	rownames	spell_dist_comb	=	2	4	6	8	10	12	14	16	18
 
-		putexcel	set "${PSID_outRaw}/Tab_5_Transition_Matrices", sheet(spell_dist_comb) modify	/*replace*/
+		putexcel	set "${FSD_outTab}/Tab_5_Transition_Matrices", sheet(spell_dist_comb) modify	/*replace*/
 		putexcel	A5	=	matrix(spell_dist_comb), names overwritefmt nformat(number_d1)
 		
 		*	Table 1
-		esttab matrix(spell_dist_comb, fmt(%9.2f)) using "${PSID_outRaw}/Spell_dist_combined.tex", replace	
+		esttab matrix(spell_dist_comb, fmt(%9.2f)) using "${FSD_outTab}/Spell_dist_combined.tex", replace	
 
 		drop	_seq _spell _end
 
@@ -753,10 +753,10 @@
 			
 		}
 
-		putexcel	set "${PSID_outRaw}/Tab_5_Transition_Matrices", sheet(spell_length) modify	/*replace*/
+		putexcel	set "${FSD_outTab}/Tab_5_Transition_Matrices", sheet(spell_length) modify	/*replace*/
 		putexcel	A5	=	matrix(dist_spell_length_byyear), names overwritefmt nformat(number_d1)
 		
-		esttab matrix(dist_spell_length_byyear, fmt(%9.2f)) using "${PSID_outRaw}/Tab_4_Dist_spell_length.tex", replace	
+		esttab matrix(dist_spell_length_byyear, fmt(%9.2f)) using "${FSD_outTab}/Tab_4_Dist_spell_length.tex", replace	
 		
 		
 		*	Figure 1
@@ -793,7 +793,7 @@
 					xtitle(Years)	ytitle(Fraction)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2009"	9	"2011"	11	"2013"	13	"2015") rows(2))	///
 					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
 			
-			graph	export	"${PSID_outRaw}/Fig_2_FI_spell_length.png", replace
+			graph	export	"${FSD_outFig}/Fig_2_FI_spell_length.png", replace
 			graph	close
 			
 			*	Figure 2a (with selected years only. For presentation)
@@ -809,7 +809,7 @@
 					xtitle(Years)	ytitle(Fraction)	legend(order(1 "2003"	3	"2005"	5	"2007"	7	"2013") rows(1))	///
 					xlabel(0(2)16)	ylabel(0(0.1)0.7)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
 			
-			graph	export	"${PSID_outRaw}/Fig_2a_FI_spell_length_ppt.png", replace
+			graph	export	"${FSD_outFig}/Fig_2a_FI_spell_length_ppt.png", replace
 			graph	close
 			
 			
@@ -819,7 +819,7 @@
 					(connected	yr_2001	spell_length	in	9, mcolor(blue)),	///
 					xtitle(Years)	ytitle(Percentage)	legend(off)	xlabel(0(2)18)	ylabel(0(0.05)0.4)	graphregion(color(white)) bgcolor(white)	ysize(2)	xsize(4)
 			
-			graph	export	"${PSID_outRaw}/Fig_A4_FI_spell_length_2001.png", replace
+			graph	export	"${FSD_outFig}/Fig_A4_FI_spell_length_2001.png", replace
 			graph	close
 			
 		restore
@@ -1111,12 +1111,12 @@
 		
 		mat	list	trans_2by2_combined
 			
-		putexcel	set "${PSID_outRaw}/Tab_5_Transition_Matrices", sheet(2by2) replace	/*modify*/
+		putexcel	set "${FSD_outTab}/Tab_5_Transition_Matrices", sheet(2by2) replace	/*modify*/
 		putexcel	A3	=	matrix(trans_2by2_combined), names overwritefmt nformat(number_d1)
 		
-		esttab matrix(trans_2by2_combined, fmt(%9.2f)) using "${PSID_outRaw}/Tab_5_Trans_2by2_combined.tex", replace	
+		esttab matrix(trans_2by2_combined, fmt(%9.2f)) using "${FSD_outTab}/Tab_5_Trans_2by2_combined.tex", replace	
 		
-		putexcel	set "${PSID_outRaw}/Tab_5_Transition_Matrices", sheet(change) /*replace*/	modify
+		putexcel	set "${FSD_outTab}/Tab_5_Transition_Matrices", sheet(change) /*replace*/	modify
 		putexcel	A3	=	matrix(trans_change_year), names overwritefmt nformat(number_d1)
 		putexcel	A13	=	matrix(FI_still_year_all), names overwritefmt nformat(number_d1)
 		putexcel	A23	=	matrix(FI_newly_year_all), names overwritefmt nformat(number_d1)
@@ -1155,7 +1155,7 @@
 				graph bar still_FI newly_FI	status_unknown, over(year) stack legend(lab (1 "Still FI") lab(2 "Newly FI") lab(3 "Previous status unknown") rows(1))	///
 							graphregion(color(white)) bgcolor(white) asyvars bar(1, fcolor(gs11)) bar(2, fcolor(gs6)) bar(3, fcolor(gs1))	///
 							ytitle(Fraction of Population)	ylabel(0(.025)0.153)
-				graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
+				graph	export	"${FSD_outFig}/Fig_3_FI_change_status_byyear.png", replace
 				graph	close
 				
 				/*
@@ -1185,7 +1185,7 @@
 						
 						
 			grc1leg Newly_FI Still_FI, rows(1) legendfrom(Newly_FI)	graphregion(color(white)) /*(white)*/
-			graph	export	"${PSID_outRaw}/Fig_4_FI_change_status_bygroup.png", replace
+			graph	export	"${FSD_outFig}/Fig_4_FI_change_status_bygroup.png", replace
 			graph	close
 			
 			
@@ -1211,7 +1211,7 @@
 			*	Figure 4c (legend on the right side. For presentation)
 			grc1leg Newly_FI_aa Still_FI_bb, rows(1) cols(2) legendfrom(Newly_FI_aa)	graphregion(color(white)) position(3)	graphregion(color(white))	name(Fig4c, replace) ysize(4) xsize(9.0)
 			graph display Fig4c, ysize(4) xsize(9.0)
-			graph	export	"${PSID_outRaw}/Fig_4c_FI_change_status_bygroup_ppt.png", as(png) replace
+			graph	export	"${FSD_outFig}/Fig_4c_FI_change_status_bygroup_ppt.png", as(png) replace
 			graph	close
 			
 			
@@ -1489,10 +1489,10 @@
 												perm_stat_2000_child	\	blankrow	\	perm_stat_2000_edu	//	To be combined with category later.
 				mat	perm_stat_2000_combined_`measure'	=	perm_stat_2000_allcat_`measure'	\	blankrow	\	blankrow	\	perm_stat_2000_decomp_`measure'
 
-				putexcel	set "${PSID_outRaw}/perm_stat", sheet(perm_stat_`measure') `exceloption'
+				putexcel	set "${FSD_outTab}/perm_stat", sheet(perm_stat_`measure') `exceloption'
 				putexcel	A3	=	matrix(perm_stat_2000_combined_`measure'), names overwritefmt nformat(number_d1)
 				
-				esttab matrix(perm_stat_2000_combined_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_perm_stat_`measure'.tex", replace	
+				esttab matrix(perm_stat_2000_combined_`measure', fmt(%9.3f)) using "${FSD_outTab}/Tab_6_perm_stat_`measure'.tex", replace	
 				
 				local	exceloption	modify
 			}	//	measure
@@ -1534,7 +1534,7 @@
 				*	Figure 5
 				graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
 									legend(lab (1 "Total Food Insecurity (TFI)") lab(2 "Chronic Food Insecurity (CFI)") size(vsmall) rows(1))	bar(1, fcolor(gs3*0.5)) bar(2, fcolor(gs12*0.6))	graphregion(color(white)) bgcolor(white)
-				graph	export	"${PSID_outRaw}/Fig_5_TFI_CFI_bygroup.png", replace
+				graph	export	"${FSD_outTab}/Fig_5_TFI_CFI_bygroup.png", replace
 				graph	close
 				
 					
@@ -1660,18 +1660,18 @@
 				mat	list	PFS_perm_FI_combined_`measure'
 				
 				di "excel option is `exceloption'"
-				putexcel	set "${PSID_outRaw}/perm_stat", sheet(FI_perm_`measure') `exceloption'
+				putexcel	set "${FSD_outTab}/perm_stat", sheet(FI_perm_`measure') `exceloption'
 				putexcel	A3	=	matrix(PFS_perm_FI_combined_`measure'), names overwritefmt nformat(number_d1)
 			
-				esttab matrix(PFS_perm_FI_combined_`measure', fmt(%9.3f)) using "${PSID_outRaw}/PFS_perm_FI_`measure'.tex", replace	
+				esttab matrix(PFS_perm_FI_combined_`measure', fmt(%9.3f)) using "${FSD_outTab}/PFS_perm_FI_`measure'.tex", replace	
 				
 				*	Table 5 & 6 (combined) of Dec 20 draft
 				mat	define Table_5_`measure'	=	perm_stat_2000_allcat_`measure',	PFS_perm_FI_combined_`measure'[.,2...]
 				
-				putexcel	set "${PSID_outRaw}/perm_stat", sheet(Table5_`measure') `exceloption'
+				putexcel	set "${FSD_outTab}/perm_stat", sheet(Table5_`measure') `exceloption'
 				putexcel	A3	=	matrix(Table_5_`measure'), names overwritefmt nformat(number_d1)
 			
-				esttab matrix(Table_5_`measure', fmt(%9.3f)) using "${PSID_outRaw}/Tab_6_`measure'.tex", replace
+				esttab matrix(Table_5_`measure', fmt(%9.3f)) using "${FSD_outTab}/Tab_6_`measure'.tex", replace
 				
 				local	exceloption	modify
 				
@@ -1697,13 +1697,13 @@
 			}
 			
 			*	Output
-			esttab	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols	Transient_FI_`measure'_nocontrols Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	using "${PSID_outRaw}/TFI_CFI_regression.csv", ///
+			esttab	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols	Transient_FI_`measure'_nocontrols Total_FI_`measure'	Chronic_FI_`measure'	Transient_FI_`measure'	using "${FSD_outTab}/TFI_CFI_regression.csv", ///
 					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace
 					
-			esttab	Total_FI_`measure'	Chronic_FI_`measure'		using "${PSID_outRaw}/TFI_CFI_regression.tex", ///
+			esttab	Total_FI_`measure'	Chronic_FI_`measure'		using "${FSD_outTab}/TFI_CFI_regression.tex", ///
 					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
@@ -1711,7 +1711,6 @@
 			
 			
 			*	Shapley Decomposition
-			local	shapley_decomposition=0
 			if	`shapley_decomposition'==1	{
 				
 				ds	state_group?	state_group1?	state_group2?
@@ -1750,10 +1749,10 @@
 			
 			mat	TFI_CFI_`measure'_shapley	=	Total_FI_`measure'_shapley,	Chronic_FI_`measure'_shapley
 			
-			putexcel	set "${PSID_outRaw}/perm_stat", sheet(shapley) /*replace*/	modify
+			putexcel	set "${FSD_outTab}/perm_stat", sheet(shapley) /*replace*/	modify
 			putexcel	A3	=	matrix(TFI_CFI_`measure'_shapley), names overwritefmt nformat(number_d1)
 			
-			esttab matrix(TFI_CFI_`measure'_shapley, fmt(%9.3f)) using "${PSID_outRaw}/Tab_7_TFI_CFI_`measure'_shapley.tex", replace	
+			esttab matrix(TFI_CFI_`measure'_shapley, fmt(%9.3f)) using "${FSD_outTab}/Tab_7_TFI_CFI_`measure'_shapley.tex", replace	
 		
 
 				
@@ -1761,7 +1760,7 @@
 				
 				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group1	state_group2	state_group3	state_group4	state_group5)	xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(Northeast and Mid-Atlantic)	name(TFI_CFI_FE_NE_MA, replace) /*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_NE.png", replace
+				graph	export	"${FSD_outFig}/TFI_CFI_groupstateFE_NE.png", replace
 				graph	close
 
 			/*
@@ -1775,19 +1774,19 @@
 			*	South
 				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group6 state_group7 state_group8 state_group9 state_group10 state_group11)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(South)	name(TFI_CFI_FE_South, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_South.png", replace
+				graph	export	"${FSD_outFig}/TFI_CFI_groupstateFE_South.png", replace
 				graph	close
 				
 			*	Mid-West
 				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group12 state_group13 state_group14 state_group15 state_group16 state_group17)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(Mid-West)	name(TFI_CFI_FE_MW, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_MW.png", replace
+				graph	export	"${FSD_outFig}/TFI_CFI_groupstateFE_MW.png", replace
 				graph	close
 			
 			*	West
 				coefplot	/*Total_FI_nocontrols	Chronic_FI_nocontrols*/	Total_FI_`measure'	Chronic_FI_`measure', keep(state_group18 state_group19 state_group20 state_group21)		xline(0)	graphregion(color(white)) bgcolor(white)	///
 										title(West)		name(TFI_CFI_FE_West, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_groupstateFE_West.png", replace
+				graph	export	"${FSD_outFig}/TFI_CFI_groupstateFE_West.png", replace
 				graph	close
 	
 		/*
@@ -1811,14 +1810,14 @@
 		coefplot	Total_FI_`measure'_nocontrols	Chronic_FI_`measure'_nocontrols, 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	/*title(Regional Fixed Effects)*/	legend(lab (2 "TFI") lab(4 "CFI") /*size(vsmall)*/ rows(1))	name(TFI_CFI_FE_All, replace)	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/TFI_CFI_`measure'_groupstateFE_All_nocontrol.png", replace
+				graph	export	"${FSD_outFig}/TFI_CFI_`measure'_groupstateFE_All_nocontrol.png", replace
 				graph	close
 				
 
 		coefplot	(Total_FI_`measure', mcolor(gs2) msymbol(diamond))	(Chronic_FI_`measure', mcolor(gs9)	msymbol(circle)), 	///
 					keep(state_group1 state_group2	state_group3	state_group4	state_group5	state_group6	state_group7	state_group8	state_group9 state_group1? state_group2?)	///
 					xline(0)	graphregion(color(white)) bgcolor(white)	legend(lab (2 "TFI") lab(4 "CFI") rows(1))	name(TFI_CFI_FE_All, replace)	ylabel(,labsize(small))	/*xscale(range(-0.05(0.05) 0.10))*/
-				graph	export	"${PSID_outRaw}/Fig_6_TFI_CFI_`measure'_groupstateFE_All.png", replace
+				graph	export	"${FSD_outFig}/Fig_6_TFI_CFI_`measure'_groupstateFE_All.png", replace
 				graph	close
 			
 		*	Quick check the sequence of FS under HFSM
@@ -2032,7 +2031,7 @@
 			cap	mat	drop	FGT_year_combined
 			mat	FGT_year_combined	=	blankrow_1by9	\	HCR_year_combined	\	blankrow_1by9	\	blankrow_1by9	\	FIG_year_combined	\	blankrow_1by9	\	blankrow_1by9	\	SFIG_year_combined
 			
-			putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(year) replace	/*modify*/
+			putexcel	set "${FSD_outTab}/FGT_bygroup", sheet(year) replace	/*modify*/
 			putexcel	A3	=	matrix(FGT_year_combined), names overwritefmt nformat(number_d1)
 			
 			*esttab matrix(perm_stat_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/perm_stat_combined.tex", replace
@@ -2136,7 +2135,7 @@
 				mat	FGT_cat_combined_sup	=	Pop_ratio_all_sup,	HCR_cat_sup,	FIG_cat_sup,	SFIG_cat_sup
 				
 			   
-				putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(categorical) /*replace*/	modify
+				putexcel	set "${FSD_outTab}/FGT_bygroup", sheet(categorical) /*replace*/	modify
 				putexcel	A3	=	matrix(FGT_cat_combined), names overwritefmt nformat(number_d1)			//	HCR, FIG and SFIG by different groups (across all years)
 				putexcel	A14	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)		//	HCR by different groups by each year. Input for Fig 8a
 				putexcel	A24	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)		//	FIG by different groups by each year.	Input for Fig A5
@@ -2171,7 +2170,7 @@
 				*	Figure 7	(Food Insecurity Prevalence and Severity by Group)
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
 							bar(1, fcolor(gs03*0.5)) bar(2, fcolor(gs10*0.6))	graphregion(color(white)) bgcolor(white)
-				graph	export	"${PSID_outRaw}/Fig_7_FGT_group_decomposition.png", replace
+				graph	export	"${FSD_outFig}/Fig_7_FGT_group_decomposition.png", replace
 				graph	close
 				
 				*	Figure 7a	(Figure 7 with selected groups. For presentation)
@@ -2181,7 +2180,7 @@
 				
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) descending	label(labsize(medium)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6))	graphregion(color(white)) bgcolor(white) blabel(bar, format(%4.3f) size(vsmall))
-				graph	export	"${PSID_outRaw}/Fig_7a_FGT_group_decomposition_ppt.png", replace
+				graph	export	"${FSD_outFig}/Fig_7a_FGT_group_decomposition_ppt.png", replace
 				graph	close
 				
 				/*
@@ -2231,7 +2230,7 @@
 							
 				*	Figure 8 (Food Security Status By Group and Year)
 				grc1leg Fig8_HCR Fig8_SFIG, rows(2) legendfrom(Fig8_HCR)	graphregion(color(white)) /*(white)*/
-				graph	export	"${PSID_outRaw}/Fig_8_FGT_group_change.png", as(png) replace
+				graph	export	"${FSD_outFig}/Fig_8_FGT_group_change.png", as(png) replace
 				graph	close
 				
 				*	Figure 8aa (Figure 8a with different legend position. For presentation)
@@ -2252,7 +2251,7 @@
 				*	Figure 8c	(Figure 8 with different legend for presentation)
 				grc1leg Fig8aa_HCR Fig8bb_SFIG, rows(1) cols(2) legendfrom(Fig8aa_HCR)	graphregion(color(white)) position(3)	graphregion(color(white))	name(Fig8c, replace) 
 				graph display Fig8c, ysize(4) xsize(9.0)
-				graph	export	"${PSID_outRaw}/Fig_8c_FGT_group_chang_ppt.png", as(png) replace
+				graph	export	"${FSD_outFig}/Fig_8c_FGT_group_chang_ppt.png", as(png) replace
 				graph	close
 				
 				
@@ -2262,7 +2261,7 @@
 							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
 							asyvars bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	/*title((b) By Group and Year)*/	name(FigA5_b, replace) scale(0.8) 
-				graph	export	"${PSID_outRaw}/Fig_A5_FGT_group_change_FIG.png", replace
+				graph	export	"${FSD_outFig}/Fig_A5_FGT_group_change_FIG.png", replace
 				graph	close
 							
 			restore
@@ -2313,11 +2312,11 @@
 		mat	HCR_group_PFS_all	=	HCR_group_PFS_3,	HCR_group_PFS_7,	HCR_group_PFS_10
 		//mat	HCR_group_HFSM_all	=	HCR_group_HFSM_3,	HCR_group_HFSM_10
 		
-		putexcel	set "${PSID_outRaw}/FGT_bygroup", sheet(HCR_desc) /*replace*/	modify
+		putexcel	set "${FSD_outTab}/FGT_bygroup", sheet(HCR_desc) /*replace*/	modify
 		putexcel	A3	=	matrix(HCR_group_PFS_all), names overwritefmt nformat(number_d1)
 		//putexcel	F3	=	matrix(HCR_group_HFSM_all), names overwritefmt nformat(number_d1)
 			
-		esttab matrix(HCR_group_PFS_all, fmt(%9.2f)) using "${PSID_outRaw}/Tab_8_HCR_prepost.tex", replace
+		esttab matrix(HCR_group_PFS_all, fmt(%9.2f)) using "${FSD_outTab}/Tab_8_HCR_prepost.tex", replace
 		
 	}
 	
