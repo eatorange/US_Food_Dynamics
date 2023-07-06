@@ -892,12 +892,6 @@
 		duplicates drop	
 		isid x11102_1999	
 		
-		
-		*	Save it as wide format
-		tempfile	fs_const_wide
-		save		`fs_const_wide'
-		
-		
 	/****************************************************************
 		SECTION 2: Construct a long format data
 	****************************************************************/
@@ -1060,7 +1054,9 @@
 			      
 		*	Drop variable no longer used.
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
-				house_exp_total	property_tax	transport_exp	/*cloth_exp_total*/
+				house_exp_total	property_tax	transport_exp	food_stamp_freq_1yr xsqnr_ interview_month interview_day food_stamp_used_1month food_stamp_value_1month food_stamp_freq_1yr	///
+				cloth_exp_total	foodexp_recall_deliv_stamp foodexp_recall_deliv_nostamp foodexp_recall_away_stamp foodexp_recall_away_nostamp foodexp_recall_home_stamp foodexp_recall_home_nostamp _home_nostamp	///
+				presch_child_ind presch_child_fam sch_child_ind sch_child_fam	
 		
 		
 	*	Recode N/A & nonrespones reponses of "some" variables
@@ -1473,72 +1469,6 @@
 
 	
 	*	Construct PFS
-	*	Based on the performance result above, we use GLM to construct
-	
-	local	depvar		food_exp_stamp_pc
-
-		local	model_selection=0	//	Code that determines how many polynomial orders we should include.
-		
-		*	Model selection (highest order)
-		if	`model_selection'==1	{
-			
-			cap	drop	glm_order2	glm_order3	glm_order4	glm_order5
-			
-			local	statevars	lag_food_exp_stamp_pc_1
-			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars', family(gamma)	link(log)
-			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
-			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
-			est	sto	glm_step1_order1
-			
-			local	statevars	lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2
-			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
-			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
-			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct bic
-			est	sto	glm_step1_order2
-			predict glm_order2	if	e(sample)==1 & `=e(subpop)'
-			
-			local	statevars	lag_food_exp_stamp_pc_1 lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3 // lag_food_exp_stamp_pc_th_1-lag_food_exp_stamp_pc_th_3
-			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
-			estadd scalar 	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
-			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
-			est	sto	glm_step1_order3
-			predict glm_order3	if	e(sample)==1 & `=e(subpop)'
-			
-			local	statevars	lag_food_exp_stamp_pc_1 lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4
-			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
-			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
-			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
-			est	sto	glm_step1_order4
-			predict glm_order4	if	e(sample)==1 & `=e(subpop)'
-			
-			local	statevars	lag_food_exp_stamp_pc_1 lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5
-			svy, subpop(${study_sample}): glm 	`depvar'	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}	`statevars'	, family(gamma)	link(log)
-			estadd scalar	aic2	=	e(aic)	//	Somehow e(aic) is not properly displayed when we use "aic" directly in esttab command. So we use "aic2" to display correct aic
-			estadd scalar	bic2	=	e(bic)	//	Somehow e(bic) is not properly displayed when we use "bic" directly in esttab command. So we use "bic2" to display correct aic
-			est	sto	glm_step1_order5
-			predict glm_order5	if	e(sample)==1 & `=e(subpop)'
-			
-			*	Output
-			**	AER requires NOT to use asterisk(*) to display significance level, so we don't display it here
-			**	We can display them by modifying some options
-			
-			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${PSID_outRaw}/GLM_model_selection.csv", replace ///
-					cells(b(nostar fmt(%8.3f)) se(fmt(3) par)) stats(N aic2 bic2, fmt(%8.0fc %8.3fc %8.3fc)) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
-					keep(lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5)	///
-					title(Average Marginal Effects on Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
-					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	
-					
-			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${PSID_outRaw}/GLM_model_selection.tex", ///
-					cells(b(nostar fmt(%8.3f)) se(fmt(3) par)) stats(N aic2 bic2, fmt(%8.0fc %8.3fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	///
-					keep(lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5)	///
-					title(Average Marginal Effects on Food Expenditure per capita) 	///
-					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.	///
-					23 observations with negative income are dropped which account for less than 0.5% of the sample size)	///
-					replace
-			
-		}
-		
 		
 		*	Step 1
 		*	Note: we use svy: GLM model which generates robust, design-adjusted standard errors based on primary sampling units only (households can be thought of as secondary sampling units in the panel study.)
@@ -1548,10 +1478,9 @@
 			
 		*	If we need to use mixed model to account for correlation wihtin households, then we can use the following command instead. The following model is Mixed-effect Generalized Linear Model (MEGLM)
 		*	The following command is written based upon (1) Stata manual (2) 2nd edition of the reference above (Heeringa sent me an excerpt as a word file. Check 2021/6/22 email for the record)
-			/*	meglm	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars} [pweight=weight_multi2] if `depvar'>0 || fam_ID_1999: ,	///
-				pweight(weight_multi1)	family(gamma)	link(log)	vce(cluster fam_ID_1999)	*/
+
 		
-				
+		local	depvar		food_exp_stamp_pc		
 		svy, subpop(${study_sample}): glm 	`depvar'	${statevars_rescaled}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
 		est	sto	glm_step1
 
@@ -1583,11 +1512,11 @@
 		**	For AER manuscript, we omit asterisk(*) to display significance as AER requires not to use.
 		**	If we want to diplay star, renable "star" option inside "cells" and "star(* 0.10 ** 0.05 *** 0.01)"
 		
-			esttab	glm_step1	glm_step2	using "${FSD_outTab}/GLM_pooled.csv", ///
-					cells(b(star fmt(%8.2f)) se(fmt(3) par)) stats(N_sub /*r2*/) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
+			esttab	glm_step1	glm_step2	using "${FSD_outTab}/Tab_D5.csv", ///
+					cells(b(star fmt(%8.3f)) se(fmt(3) par)) stats(N_sub /*r2*/) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
 					title(Conditional Mean and Variance of Food Expenditure per capita) 	replace
 					
-			esttab	glm_step1	glm_step2	using "${FSD_outTab}/GLM_pooled.tex", ///
+			esttab	glm_step1	glm_step2	using "${FSD_outTab}/Tab_D5.tex", ///
 					cells(b(nostar fmt(%8.3f)) & se(fmt(3) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
 					title(Conditional Mean and Variance of Food Expenditure per capita)		replace		
 		
@@ -1610,10 +1539,10 @@
 		SECTION 4: Categorize food security status based on PFS	 									
 	****************************************************************/		
 	*	Categorization	//	Generate FS category variables from the PFS
-	local	run_categorization	1	
+	local	run_PFS_cat	1	
 
 	*	Categorization	
-	if	`run_categorization'==1	{
+	if	`run_PFS_cat'==1	{
 						
 		
 			*	Summary Statistics of Indicies
@@ -1778,35 +1707,17 @@
 			 }	//	qui
 			
 			
-			*	Graph the PFS threshold for each year
-			cap drop templine
-			gen templine=0.6
-			twoway	(connected PFS_threshold_glm year2 if fam_ID_1999==1, lpattern(dot)	mlabel(PFS_threshold_glm) mlabposition(12) mlabformat(%9.3f))	///
-					(line templine year2 if fam_ID_1999==1, lpattern(dash)),	///
-					/*title(Probability Threshold for being Food Secure)*/	ytitle(Probability)	xtitle(Year)	xlabel(2001(2)2017) legend(off)	///
-					name(PFS_Threshold, replace)	graphregion(color(white)) bgcolor(white)
-					
-			graph	export	"${FSD_outFig}/Fig_A1_PFS_Thresholds.png", replace
-			graph	close
-			
-			drop	templine
+	
 	
 		
-	}	//	Categorization		
+	}	//	run_PFS_cat		
+	
+
+	*	We do the same practice for the NME (Normalized Monetary Expenditure)
 	
 	
-	
-	
-	*	Construct NME (Normalized Monetary Expenditure)
-	*	It is a response to the AER comment.
-	
-	local	const_ratio_fooexp_TFP=1
-	if	`const_ratio_fooexp_TFP'==1	{
-	
-	
-	*	Categorization	
-	local	run_categorization=1
-	if	`run_categorization'==1	{
+	local	run_NME_cat=1
+	if	`run_NME_cat'==1	{
 						
 		
 			*	Summary Statistics of Indicies
@@ -1848,19 +1759,19 @@
 			*	Categorize food security status based on the PFS.
 			 quietly	{
 					
-					gen	E_FS	=	0	if	!mi(NME)	//	Food secure
-					gen	E_FI	=	0	if	!mi(NME)	//	Food insecure (low food secure and very low food secure)
-					gen	E_LFS	=	0	if	!mi(NME)	//	Low food secure
-					gen	E_VLFS	=	0	if	!mi(NME)	//	Very low food secure
-					gen	E_cat	=	0	if	!mi(NME)	//	Categorical variable: FS, LFS or VLFS
+					gen	NME_FS	=	0	if	!mi(NME)	//	Food secure
+					gen	NME_FI	=	0	if	!mi(NME)	//	Food insecure (low food secure and very low food secure)
+					gen	NME_LFS	=	0	if	!mi(NME)	//	Low food secure
+					gen	NME_VLFS	=	0	if	!mi(NME)	//	Very low food secure
+					gen	NME_cat	=	0	if	!mi(NME)	//	Categorical variable: FS, LFS or VLFS
 											
 					*	Generate a variable for the threshold E (E*)
-					gen	E_threshold	=	.
+					gen	NME_threshold	=	.
 					
 					foreach	year	in	2	3	4	5	6	7	8	9	10	{
 						
 						di	"current loop is in year `year'"
-						xtile pctile_E_`year' = NME if ${study_sample} & !mi(NME)	&	year==`year', nq(1000)
+						xtile pctile_NME_`year' = NME if ${study_sample} & !mi(NME)	&	year==`year', nq(1000)
 
 						* We use loop to find the threshold value for categorizing households as food (in)secure
 						local	counter 	=	1	//	reset counter
@@ -1876,9 +1787,9 @@
 							while (`counter' < 1000 & `ratio_`indicator''<`prop_`indicator'_`year'') {	//	Loop until population ratio > USDA ratio
 								
 								qui di	"current indicator is `indicator', counter is `counter'"
-								qui	replace	E_`indicator'=1	if	year==`year'	&	inrange(pctile_E_`year',1,`counter')	//	categorize certain number of households at bottom as FI
-								qui	svy, subpop(if ${study_sample} & year_enum`year'): mean 	E_`indicator'	//	Generate population ratio
-								local ratio_`indicator' = _b[E_`indicator']
+								qui	replace	NME_`indicator'=1	if	year==`year'	&	inrange(pctile_NME_`year',1,`counter')	//	categorize certain number of households at bottom as FI
+								qui	svy, subpop(if ${study_sample} & year_enum`year'): mean 	NME_`indicator'	//	Generate population ratio
+								local ratio_`indicator' = _b[NME_`indicator']
 								
 								local counter = `counter' + 10	//	Increase counter by 10
 							}
@@ -1890,9 +1801,9 @@
 							while (`counter' > 1 & `ratio_`indicator''>`prop_`indicator'_`year'') {	//	Loop until population ratio < USDA ratio
 								
 								qui di "counter is `counter'"
-								qui	replace	E_`indicator'=0	if	year==`year'	&	inrange(pctile_E_`year',`counter',1000)
-								qui	svy, subpop(if ${study_sample} & year_enum`year'): mean 	E_`indicator'
-								local ratio_`indicator' = _b[E_`indicator']
+								qui	replace	NME_`indicator'=0	if	year==`year'	&	inrange(pctile_NME_`year',`counter',1000)
+								qui	svy, subpop(if ${study_sample} & year_enum`year'): mean 	NME_`indicator'
+								local ratio_`indicator' = _b[NME_`indicator']
 								
 								local counter = `counter' - 1
 							}
@@ -1904,64 +1815,64 @@
 								local	diff_case1	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
 
 								*	Counter + 1
-								qui	replace	E_`indicator'=1	if	year==`year'	&	inrange(pctile_E_`year',1,`counter'+1)
-								qui	svy, subpop(if ${study_sample} & year_enum`year'): mean 	E_`indicator'
-								local	ratio_`indicator' = _b[E_`indicator']
+								qui	replace	NME_`indicator'=1	if	year==`year'	&	inrange(pctile_NME_`year',1,`counter'+1)
+								qui	svy, subpop(if ${study_sample} & year_enum`year'): mean 	NME_`indicator'
+								local	ratio_`indicator' = _b[NME_`indicator']
 								local	diff_case2	=	abs(`prop_`indicator'_`year''-`ratio_`indicator'')
 								qui	di "diff_case2 is `diff_case2'"
 
 								*	Compare two threshold values and choose the one closer to the USDA value
 								if	(`diff_case1'<`diff_case2')	{
-									global	threshold_`indicator'_E_`year'	=	`counter'
+									global	threshold_`indicator'_NME_`year'	=	`counter'
 								}
 								else	{	
-									global	threshold_`indicator'_E_`year'	=	`counter'+1
+									global	threshold_`indicator'_NME_`year'	=	`counter'+1
 								}
 							
 							*	Categorize households based on the finalized threshold value.
 							qui	{
-								replace	E_`indicator'=1	if	year==`year'	&	inrange(pctile_E_`year',1,${threshold_`indicator'_E_`year'})
-								replace	E_`indicator'=0	if	year==`year'	&	inrange(pctile_E_`year',${threshold_`indicator'_E_`year'}+1,1000)		
+								replace	NME_`indicator'=1	if	year==`year'	&	inrange(pctile_NME_`year',1,${threshold_`indicator'_NME_`year'})
+								replace	NME_`indicator'=0	if	year==`year'	&	inrange(pctile_NME_`year',${threshold_`indicator'_NME_`year'}+1,1000)		
 							}	
-							di "thresval of `indicator' in year `year' is ${threshold_`indicator'_E_`year'}"
+							di "thresval of `indicator' in year `year' is ${threshold_`indicator'_NME_`year'}"
 						}	//	indicator
 						
 						*	Food secure households
-						replace	E_FS=0	if	year==`year'	&	inrange(pctile_E_`year',1,${threshold_FI_E_`year'})
-						replace	E_FS=1	if	year==`year'	&	inrange(pctile_E_`year',${threshold_FI_E_`year'}+1,1000)
+						replace	NME_FS=0	if	year==`year'	&	inrange(pctile_NME_`year',1,${threshold_FI_NME_`year'})
+						replace	NME_FS=1	if	year==`year'	&	inrange(pctile_NME_`year',${threshold_FI_NME_`year'}+1,1000)
 						
 						*	Low food secure households
-						replace	E_LFS=1	if	year==`year'	&	E_FI==1	&	E_VLFS==0	//	food insecure but NOT very low food secure households			
+						replace	NME_LFS=1	if	year==`year'	&	NME_FI==1	&	NME_VLFS==0	//	food insecure but NOT very low food secure households			
 						
 						*	Categorize households into one of the three values: FS, LFS and VLFS						
-						replace	E_cat=1	if	year==`year'	&	E_VLFS==1
-						replace	E_cat=2	if	year==`year'	&	E_LFS==1
-						replace	E_cat=3	if	year==`year'	&	E_FS==1
-						replace	E_cat=.	if	year==`year'	&	!${study_sample}
-						assert	E_cat!=0	if	year==`year'
+						replace	NME_cat=1	if	year==`year'	&	NME_VLFS==1
+						replace	NME_cat=2	if	year==`year'	&	NME_LFS==1
+						replace	NME_cat=3	if	year==`year'	&	NME_FS==1
+						replace	NME_cat=.	if	year==`year'	&	!${study_sample}
+						assert	NME_cat!=0	if	year==`year'
 						
 						*	Save threshold PFS as global macros and a variable, the average of the maximum PFS among the food insecure households and the minimum of the food secure households					
-						qui	summ	NME	if	year==`year'	&	E_FS==1	//	Minimum PFS of FS households
+						qui	summ	NME	if	year==`year'	&	NME_FS==1	//	Minimum PFS of FS households
 						local	min_FS_E	=	r(min)
-						qui	summ	NME	if	year==`year'	&	E_FI==1	//	Maximum PFS of FI households
+						qui	summ	NME	if	year==`year'	&	NME_FI==1	//	Maximum PFS of FI households
 						local	max_FI_E	=	r(max)
 						
 						*	Save the threshold PFS
-						replace	E_threshold	=	(`min_FS_E'	+	`max_FI_E')/2		if	year==`year'					
+						replace	NME_threshold	=	(`min_FS_E'	+	`max_FI_E')/2		if	year==`year'					
 						
 					}	//	year
 					
-					label	var	E_FI	"Food Insecurity (E)"
-					label	var	E_FS	"Food security (E)"
-					label	var	E_LFS	"Low food security (E) "
-					label	var	E_VLFS	"Very low food security (E)"
-					label	var	E_cat	"E category: FS, LFS or VLFS"
+					label	var	NME_FI	"Food Insecurity (E)"
+					label	var	NME_FS	"Food security (E)"
+					label	var	NME_LFS	"Low food security (E) "
+					label	var	NME_VLFS	"Very low food security (E)"
+					label	var	NME_cat	"E category: FS, LFS or VLFS"
 					
 
 
 				
-				lab	define	E_cat	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food securit (FS)"
-				lab	value	E_cat	E_cat
+				lab	define	NME_cat	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food securit (FS)"
+				lab	value	NME_cat	NME_cat
 				
 			 }	//	qui
 			
@@ -1971,14 +1882,14 @@
 			gen templine=0.6
 			gen	templine2=1
 			twoway	(connected PFS_threshold_glm	year2 if fam_ID_1999==1, lpattern(dot)		mlabel(PFS_threshold_glm) mlabposition(12) mlabformat(%9.3f))	///
-					(connected E_threshold 			year2 if fam_ID_1999==1, lpattern(dash_dot)	mlabel(E_threshold) mlabposition(12) mlabformat(%9.3f))	///
+					(connected NME_threshold 			year2 if fam_ID_1999==1, lpattern(dash_dot)	mlabel(NME_threshold) mlabposition(12) mlabformat(%9.3f))	///
 					(line templine year2 if fam_ID_1999==1, lpattern(dash))	///
 					(line templine2 year2 if fam_ID_1999==1, lpattern(dash)),	///
 					/*title(Probability Threshold for being Food Secure)*/	ytitle(Probability/Ratio)	xtitle(Year)	xlabel(2001(2)2017) ///
 					legend(order(1 "P*"	2	"E*"))	///
-					name(E_Threshold, replace)	graphregion(color(white)) bgcolor(white)
+					name(NME_Threshold, replace)	graphregion(color(white)) bgcolor(white)
 					
-			graph	export	"${FSD_outFig}/E_Thresholds.png", replace
+			graph	export	"${FSD_outFig}/NME_Thresholds.png", replace
 			graph	close
 			
 			drop	templine
@@ -1986,14 +1897,9 @@
 		
 	}	//	Categorization			
 
-	svy, subpop(if ${study_sample} & !mi(PFS_glm) & year==10): mean  PFS_FI_glm PFS_FS_glm
-	svy, subpop(if ${study_sample} & !mi(E_FI) & year==10): mean  E_FI E_FS
+	*svy, subpop(if ${study_sample} & !mi(PFS_glm) & year==10): mean  PFS_FI_glm PFS_FS_glm
+	*svy, subpop(if ${study_sample} & !mi(NME_FI) & year==10): mean  NME_FI NME_FS
 	
-		
-	
-}
-
-
 	tempfile	fs_const_long
 	save		`fs_const_long'
 
@@ -2001,39 +1907,7 @@
 		SECTION X: Save and Exit
 	****************************************************************/
 	
-	
-	* Make dta
-		
-		*	Wide data
-		use	`fs_const_wide',clear
-		notes	drop _dta
-		notes:	fs_const_wide / created by `name_do' - `c(username)' - `c(current_date)' ///
-				PSID household-level constructed data (wide format) 1999 to 2017,
-		*notes:	Only individuals appear in all waves are included.
-		
-
-		* Git branch info
-		*stgit9 
-		*notes : fs_const_wide / Git branch `r(branch)'; commit `r(sha)'.
-	
-	
-		* Sort, order and save dataset
-		/*
-		loc	IDvars		HHID_survey HHID_old_Feb22
-		loc	Geovars		District Village CDCID Masjid
-		loc	HHvars		hhhead_gender hhhead_name father_spouse_name relationship_hhhead
-		loc	PRAvars		SNo-PRA_remarks PRA_multiple_results
-		loc	eligvars	TUP_eligible_initial TUP_eligible_Feb22 TUP_eligible_Mar10
-		loc	surveyvars	survey_done_Mar10 survey_sample
-		
-		sort	`IDvars'	`Geovars'	`HHvars'	`PRAvars'	`eligvars'	`surveyvars'
-		order	`IDvars'	`Geovars'	`HHvars'	`PRAvars'	`eligvars'	`surveyvars'
-	*/
-	
-		qui		compress
-		save	"${FSD_dtFin}/fs_const_wide.dta", replace
-		
-		*	Long data
+		*	Make data
 		use	`fs_const_long',clear
 		notes	drop _dta
 		notes:	fs_const_long / created by `name_do' - `c(username)' - `c(current_date)' ///
