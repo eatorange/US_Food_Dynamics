@@ -8,7 +8,7 @@
 	local	complexity=0	//	Complexity of the PFS
 	local	foodexp_nostamp=0	//	PFS with food expenditure excluding food stamp.
 	
-	use	"${PSID_dtFin}/fs_const_long.dta", clear
+	use	"${PSID_dtFin}/FSD_const_long.dta", clear
 	
 	
 	if	`recall_period==1'	{
@@ -155,7 +155,7 @@
 	*	Note that the code below is mainly copied from the original code. 
 	*	Once we decide to make this code replicable later (ex. include in the Appendix), we can incorporate it into the main analyses do-file.
 	
-	use	"${PSID_dtFin}/fs_const_long.dta", clear
+	use	"${PSID_dtFin}/FSD_const_long.dta", clear
 		
 		*	Spell length (Table 1)
 		
@@ -946,7 +946,7 @@
 	
 	if	`sample_rep'==1	{
 	    
-		use	"${PSID_dtFin}/fs_const_long.dta", clear
+		use	"${PSID_dtFin}/FSD_const_long.dta", clear
 		include	"${PSID_doAnl}/Macros_for_analyses.do"
 		
 		*	We found a sampling issue; the ratio of food insecure households under the HFSM in the balanced study sample is different from that in the USDA report.
@@ -1030,7 +1030,7 @@
 		*/
 	
 			*	PSID (Balanced sample)
-			use	"${PSID_dtFin}/fs_const_long.dta", clear
+			use	"${PSID_dtFin}/FSD_const_long.dta", clear
 			include	"${PSID_doAnl}/Macros_for_analyses.do"
 			isid	fam_ID_1999	year
 			
@@ -1260,10 +1260,10 @@
 		svy, subpop(if ${study_sample} & PFS_FI_glm==1	&	PFS_FI_glm_newratio==0):	mean	fs_cat_fam_simp		//	HFSM
 		
 		*	Save
-		save	"${PSID_dtFin}/fs_const_long_PFS_newratio.dta", replace
+		save	"${PSID_dtFin}/FSD_const_long_PFS_newratio.dta", replace
 						
 		
-		use	"${PSID_dtFin}/fs_const_long_PFS_newratio.dta", clear
+		use	"${PSID_dtFin}/FSD_const_long_PFS_newratio.dta", clear
 		
 		*	Check demographic distributions of FI households under different measures
 		
@@ -1417,7 +1417,7 @@
 	*	To compare similarity in dynamics, we replicate spells approach using both HFSM and the PFS, using only the households that both outcomes are non-missing.	
 	
 	*	Note: I use "PFS_glm_newratio" variable, which is created from "sample_rep" code above. Make sure to load the dataset which has this variable.
-	use	"${PSID_dtFin}/fs_const_long_PFS_newratio.dta", clear
+	use	"${PSID_dtFin}/FSD_const_long_PFS_newratio.dta", clear
 	include	"${PSID_doAnl}/Macros_for_analyses.do"
 	
 	clonevar	PFS_FS_glm_nr	=	PFS_FS_glm_newratio
@@ -1850,7 +1850,7 @@
 		*	All households (balanced and unbalanced)
 		
 		*	Balanced households (study sample)
-		use	"${PSID_dtFin}/fs_const_long.dta", clear
+		use	"${PSID_dtFin}/FSD_const_long.dta", clear
 		include	"${PSID_doAnl}/Macros_for_analyses.do"
 		isid	fam_ID_1999	year
 		
@@ -1927,7 +1927,7 @@
 		
 		
 		*	Generate PFS with different distributions to see robustness
-		use	"${PSID_dtFin}/fs_const_long.dta", clear
+		use	"${PSID_dtFin}/FSD_const_long.dta", clear
 		include	"${PSID_doAnl}/Macros_for_analyses.do"
 		
 			*	Gamma with log-lin function (default)
@@ -2155,7 +2155,7 @@
 	
 	if	`complexity'==1	{	//	NME
 		
-	use	"${PSID_dtFin}/fs_const_long.dta", clear
+	use	"${PSID_dtFin}/FSD_const_long.dta", clear
 	include	"${PSID_doAnl}/Macros_for_analyses.do"		
 		
 		*	Correlation
@@ -2220,7 +2220,7 @@
 	if	`foodexp_nostamp'==1	{
 		
 		*	Balanced households (study sample)
-		use	"${PSID_dtFin}/fs_const_long.dta", clear
+		use	"${PSID_dtFin}/FSD_const_long.dta", clear
 		include	"${PSID_doAnl}/Macros_for_analyses.do"
 		
 		*	Share of households reporting zero non-SNAP expenditure, among SNAP households.
@@ -2456,12 +2456,12 @@
 				
 			}	//	Categorization		
 		
-		save	"${PSID_dtFin}/fs_const_long_PFSnostamp.dta", replace
+		save	"${PSID_dtFin}/FSD_const_long_PFSnostamp.dta", replace
 		
 		
 		*	Analyses
 		*	Here I replicate transition matrix for spells approach, and TFI/CFI for permanent approach
-		use	"${PSID_dtFin}/fs_const_long_PFSnostamp.dta", clear
+		use	"${PSID_dtFin}/FSD_const_long_PFSnostamp.dta", clear
 		
 		*	Distribution of PFS with and w/o SNAP benefits
 			twoway	(kdensity PFS_glm, 		 lc(green) lp(solid) lwidth(medium) graphregion(fcolor(white)) legend(label(1 "PFS with SNAP")))	///

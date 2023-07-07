@@ -922,7 +922,7 @@
 		
 						
 		*	Label variables after reshape
-		label	var	year				"Year"
+		label	var	year				"Year (survey wave)"
 		label	var	x11102_				"Interview No."	
 		label	var	weight_long_fam		"Longitudinal Family Weight"
 		label	var	age_head_fam		"Age"
@@ -990,6 +990,7 @@
 		label	var	health_exp_total	"Annual health expenditure"
 		label	var	house_exp_total		"Annual housing expenditure"
 		label	var	tax_item_deduct		"Itemized tax deduction"
+		label	var	food_stamp_freq_0yr		"Food stamp recall frequency"
 
 		label	var	property_tax		"Property tax ($)"
 		label	var	transport_exp		"Annual transport expenditure"
@@ -1055,9 +1056,9 @@
 		*	Drop variable no longer used.
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
 				house_exp_total	property_tax	transport_exp	food_stamp_freq_1yr xsqnr_ interview_month interview_day food_stamp_used_1month food_stamp_value_1month food_stamp_freq_1yr	///
-				cloth_exp_total	foodexp_recall_deliv_stamp foodexp_recall_deliv_nostamp foodexp_recall_away_stamp foodexp_recall_away_nostamp foodexp_recall_home_stamp foodexp_recall_home_nostamp _home_nostamp	///
-				presch_child_ind presch_child_fam sch_child_ind sch_child_fam	
-		
+				cloth_exp_total	foodexp_recall_deliv_stamp foodexp_recall_deliv_nostamp foodexp_recall_away_stamp foodexp_recall_away_nostamp foodexp_recall_home_stamp foodexp_recall_home_nostamp ///
+				presch_child_ind presch_child_fam sch_child_ind sch_child_fam	food_stamp_value_0yr_pc	food_exp_stamp food_exp_stamp cloth_exp_pc	urbanicity	 wealth_total	college_degree_type
+				
 		
 	*	Recode N/A & nonrespones reponses of "some" variables
 	***	Recoding nonresponses & N/As should be done carefully, as there could be statistical difference between responses and non-responses. Judgements must be done by variable-level
@@ -1075,7 +1076,7 @@
 	*	Recode time variables, to start from 1 and increase by 1 in every wave
 	replace	year	=	(year-1997)/2
 	
-	*	Generate in-sample and out-of-sample for performance check
+	*	Generate in-sample and out-of-sample for performance check (random forest)
 	*	We use the data up to 2015 as "in-sample", and the data in 2017 as "out-of-sample"
 	gen		in_sample	=	0
 	replace	in_sample	=	1	if	inrange(year,1,9)
@@ -1091,6 +1092,8 @@
 	
 	cap	drop	year2
 	gen year2 = (year*2)+1997	//	actual year
+	order	year2, after(year)
+	lab	var	year2	"Year (actual year)"
 	
 	*	Recode nonresponses (dk, refuse, inappropriate) as "negative"
 	label	define	yes1no0	0	"No"	1	"Yes"
@@ -1171,14 +1174,14 @@
 		label	var	age_head_fam_sq	"Age$^2$/1000"
 		gen	age_spouse_sq		=	(age_spouse)^2
 		label	var	age_spouse_sq	"Age$^2$ (spouse)"
-		gen	income_pc_orig	=	income_pc*1000	//	Non-scaled, unit is dollars
-		gen	invhyp_age	=	asinh(age_head_fam)	//	Inverse hyperbolic transformation of age
-		gen	asinh_income	=	asinh(income_pc*1000)	//	Inverse hyperbolic transformation of income
+		*gen	income_pc_orig	=	income_pc*1000	//	Non-scaled, unit is dollars
+		*gen	invhyp_age	=	asinh(age_head_fam)	//	Inverse hyperbolic transformation of age
+		*gen	asinh_income	=	asinh(income_pc*1000)	//	Inverse hyperbolic transformation of income
 		gen	ln_income_pc	=	ln(income_pc*1000)	//	Log of income
 		lab	var	ln_income_pc	"ln(income per capita)"
 		gen	ln_wealth_pc	=	ln(wealth_pc*1000)	//	Log of income
 		lab	var	ln_wealth_pc	"ln(wealth per capita)"
-		gen	income_cubic	=	(income_pc)^3	//	Cubic of income
+		*gen	income_cubic	=	(income_pc)^3	//	Cubic of income
 		label	var	income_pc_sq	"(Income per capita)$^3$"
 		
 		*	Decompose unordered categorical variables
@@ -1216,6 +1219,7 @@
 			cap	drop	highdegree_HSorbelow	//	binary for HS or below, or beyond HS.
 			gen		highdegree_HSorbelow=0	if	inlist(1,highdegree_somecol,highdegree_col)
 			replace	highdegree_HSorbelow=1	if	inlist(1,highdegree_NoHS, highdegree_HS)
+			lab	var	highdegree_HSorbelow	"=1 if HS or less"
 		
 		rename	(grade_comp_cat_spouse_enum1	grade_comp_cat_spouse_enum2	grade_comp_cat_spouse_enum3	grade_comp_cat_spouse_enum4)	///
 				(highdegree_NoHS_spouse			highdegree_HS_spouse		highdegree_somecol_spouse	highdegree_col_spouse)
@@ -1328,7 +1332,7 @@
 			
 		
 		*	Interaction variables
-			
+		/*	
 			*	Male education
 			foreach	var	in	hs_completed_head	college_completed	other_degree_head	{
 				gen	`var'_interact	=	`var'*grade_comp_head_fam
@@ -1338,7 +1342,8 @@
 			foreach	var	in	hs_completed_spouse	college_comp_spouse	other_degree_spouse	{
 				gen	`var'_interact	=	`var'*grade_comp_spouse
 			}	
-	
+		*/
+		
 	sort	fam_ID_1999 year,	stable
 	
 	*	Re-label variables so they correspond to the variable description table (Also need to copy and paste regression result)
@@ -1366,22 +1371,7 @@
 	label	var	no_longer_married	"No longer married"
 	label 	var	no_longer_own_house	"No longer owns house"
 	label	var	became_disabled		"Became disabled"
-	
-	*	Codebook (To share with John, Chris and Liz)
-	local	codebook	0
-	if	`codebook'==1	{
-		codebook	alcohol_head	alcohol_spouse	smoke_head	smoke_spouse	phys_disab_head	phys_disab_spouse			///
-					age_head_fam	age_spouse	race_head_cat	marital_status_fam		gender_head_fam		state_resid_fam	housing_status	veteran_head	veteran_spouse	///
-					/*foodexp_pc*/	income_pc	wealth_pc	sup_outside_FU	tax_item_deduct	retire_plan_head	retire_plan_spouse	annuities_IRA	///
-					emp_HH_simple	emp_spouse_simple	///
-					num_FU_fam	num_child_fam	family_comp_change	couple_status	head_status	spouse_new	///
-					grade_comp_head_fam	grade_comp_spouse	attend_college_head	attend_college_spouse	college_yrs_head	college_yrs_spouse	///
-					hs_completed_head	hs_completed_spouse	college_completed	college_comp_spouse	other_degree_head	other_degree_spouse					///
-					food_stamp_used_1yr	child_meal_assist	WIC_received_last	meal_together	elderly_meal	child_daycare_any	child_daycare_FSP	child_daycare_snack	///
-					if	in_sample==1, compact
-		
-	}
-	
+
 	*	Keep only observations where the outcome variable is non-missing
 	*	This is necessary for "rforest" command, but it should be safe anyway since we will use only in_sample and out_of_sample.
 	keep	if	inlist(1,in_sample,out_of_sample)	
@@ -1412,6 +1402,7 @@
 		
 		*	Create a unique PSU identifier to be used as a new PSU
 		gen		newsecu	=	(ER31996*100)	+	ER31997	
+		lab	var	newsecu	"PSU identifier"
 		
 		*	Create two new variables "weight_multi1" and "weight_multi2" from the two newly constructed weight variables above.
 		*	This step is required if we want to use "gllamm" command, Generalized Linear Latent and Mixed Model
@@ -1420,30 +1411,33 @@
 		
 		*	For an alternative approach, multiply two weights to be used as a new survey weight
 		gen	weight_multi12	=	weight_multi1*weight_multi2
+		lab	var	weight_multi12	"Adjusted survey weight"
 		
 		*	To use an alternative approach, change the new surveydata setting as following
 		svyset	newsecu	[pweight=weight_multi12] /*,	singleunit(scaled)*/
 	
-	
+		*	Drop intermediate weight variables no longer needed
+		drop	weight_l1_sq sum_weight_l1_sq sum_weight_l1 weight_l1_r weight_multi1 weight_multi2
 	
 	*	Construct NME (Normalized Monetary Expenditure)
 	
 		cap	drop	NME
 		gen	NME	=	food_exp_stamp_pc	/	foodexp_W_thrifty
 		summ NME,d
-		label variable	NME	"E; (Food exp/TFP) ratio"
+		label variable	NME	"NME (Normalized Monetary Expenditure)"
 
 		*	Generate an indicator that NME*<1
 		cap	drop	NME_below_1
 		gen		NME_below_1	=	.
 		replace	NME_below_1	=	1	if	!mi(NME)	&	NME<1
 		replace	NME_below_1	=	0	if	!mi(NME)	&	NME>=1
-		label	var	NME_below_1	"=1 if food exp is less than TFP"
+		label	var	NME_below_1	"=1 if NME < 1"
 		
 
 		cap	drop	FSSS_PFS_available_years
 		gen		FSSS_PFS_available_years=0
 		replace	FSSS_PFS_available_years=1	if	inlist(year,2,3,9,10)
+		lab	var	FSSS_PFS_available_years	"Years with both FSSS and PFS available (2001-2003 2015-2017)"
 
 
 	
@@ -1491,12 +1485,16 @@
 		predict double e1_foodexp_glm	if	glm_step1_sample==1,r
 		gen e1_foodexp_sq_glm = (e1_foodexp_glm)^2
 		
+		lab	var	mean1_foodexp_glm	"Predicted food exp (conditional mean)"
+		lab	var	e1_foodexp_glm		"Residual from conditional mean"
+		lab	var	e1_foodexp_sq_glm	"Squared residual from conditional mean"
+		
 			*	Checking prediction error
 			cap	drop	rmse_foodexp_step1_glm
 			gen			rmse_foodexp_step1_glm	=	sqrt(e1_foodexp_sq_glm)
 			summ	food_exp_stamp_pc	rmse_foodexp_step1_glm	if	${study_sample}	&	glm_step1_sample==1
 			br	food_exp_stamp_pc	mean1_foodexp_glm	e1_foodexp_glm	rmse_foodexp_step1_glm	if	${study_sample}	&	glm_step1_sample==1
-	
+			lab	var	rmse_foodexp_step1_glm	"Root Mean Square Error (RMSE) - cond mean"
 		
 		*	Step 2
 		local	depvar	e1_foodexp_sq_glm
@@ -1507,6 +1505,7 @@
 		gen	glm_step2_sample=1	if	e(sample)==1 & `=e(subpop)'
 		*svy:	reg `e(depvar)' `e(selected)'
 		predict	double	var1_foodexp_glm	if	glm_step2_sample==1	
+		lab	var	var1_foodexp_glm	"Predicted squared residual (conditional variance)"
 					
 		*	Output
 		**	For AER manuscript, we omit asterisk(*) to display significance as AER requires not to use.
@@ -1526,6 +1525,9 @@
 		*	Assume the outcome variable follows the Gamma distribution
 		gen alpha1_foodexp_pc_glm	= (mean1_foodexp_glm)^2 / var1_foodexp_glm	//	shape parameter of Gamma (alpha)
 		gen beta1_foodexp_pc_glm	= var1_foodexp_glm / mean1_foodexp_glm	//	scale parameter of Gamma (beta)
+		
+		lab	var	alpha1_foodexp_pc_glm	"Shape parameter of Gamma distribution"
+		lab	var	beta1_foodexp_pc_glm	"Scale parameter of Gamma distribution"
 		
 		*	Generate PFS by constructing CDF
 		gen PFS_glm 		= gammaptail(alpha1_foodexp_pc_glm, foodexp_W_thrifty/beta1_foodexp_pc_glm)	//	gammaptail(a,(x-g)/b)=(1-gammap(a,(x-g)/b)) where g is location parameter (g=0 in this case)
@@ -1698,11 +1700,15 @@
 						label	var	PFS_VLFS_`type'	"Very low food security (PFS) (`type')"
 						label	var	PFS_cat_`type'	"PFS category: FS, LFS or VLFS"
 						
+						
 
 				}	//	type
 				
 				lab	define	PFS_category	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food security(FS)"
 				lab	value	PFS_cat_*	PFS_category
+				
+				lab	var	PFS_threshold_glm			"Threshold value (PFS)"
+				lab	var	PFS_threshold_glm_RPPadj	"Threshold value (PFS-RPP adj)"
 				
 			 }	//	qui
 			
@@ -1874,9 +1880,12 @@
 				lab	define	NME_cat	1	"Very low food security (VLFS)"	2	"Low food security (LFS)"	3	"Food securit (FS)"
 				lab	value	NME_cat	NME_cat
 				
+				lab	var	NME_threshold	"Threshold value (NME)"
+				
 			 }	//	qui
 			
 			
+			/*
 			*	Graph the PFS threshold for each year
 			cap drop templine templine2
 			gen templine=0.6
@@ -1892,49 +1901,30 @@
 			graph	export	"${FSD_outFig}/NME_Thresholds.png", replace
 			graph	close
 			
-			drop	templine
-	
+			drop	templine	templine2
+			*/
 		
 	}	//	Categorization			
 
 	*svy, subpop(if ${study_sample} & !mi(PFS_glm) & year==10): mean  PFS_FI_glm PFS_FS_glm
 	*svy, subpop(if ${study_sample} & !mi(NME_FI) & year==10): mean  NME_FI NME_FS
 	
-	tempfile	fs_const_long
-	save		`fs_const_long'
+			*	Drop variables no longer used
+		drop	glm_step1_sample glm_step2_sample pctile_glm_2-pctile_glm_10 pctile_glm_RPPadj_6-pctile_glm_RPPadj_10 pctile_NME_2-pctile_NME_10
+	
 
 	/****************************************************************
 		SECTION X: Save and Exit
 	****************************************************************/
 	
 		*	Make data
-		use	`fs_const_long',clear
 		notes	drop _dta
-		notes:	fs_const_long / created by `name_do' - `c(username)' - `c(current_date)' ///
+		notes:	FSD_const_long / created by `name_do' - `c(username)' - `c(current_date)' ///
 				PSID constructed data (long format) 1999 to 2017,
-		*notes:	Only individuals appear in all waves are included.
-		
-
-		* Git branch info
-		*stgit9 
-		*notes : fs_const_long / Git branch `r(branch)'; commit `r(sha)'.
 	
-	
-		* Sort, order and save dataset
-		/*
-		loc	IDvars		HHID_survey HHID_old_Feb22
-		loc	Geovars		District Village CDCID Masjid
-		loc	HHvars		hhhead_gender hhhead_name father_spouse_name relationship_hhhead
-		loc	PRAvars		SNo-PRA_remarks PRA_multiple_results
-		loc	eligvars	TUP_eligible_initial TUP_eligible_Feb22 TUP_eligible_Mar10
-		loc	surveyvars	survey_done_Mar10 survey_sample
-		
-		sort	`IDvars'	`Geovars'	`HHvars'	`PRAvars'	`eligvars'	`surveyvars'
-		order	`IDvars'	`Geovars'	`HHvars'	`PRAvars'	`eligvars'	`surveyvars'
-	*/
 	
 		qui		compress
-		save	"${FSD_dtFin}/fs_const_long.dta", replace
+		save	"${FSD_dtFin}/FSD_const_long.dta", replace
 	
 	/*
 		* Save log

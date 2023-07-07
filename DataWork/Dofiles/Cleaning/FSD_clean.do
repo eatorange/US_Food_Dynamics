@@ -1077,7 +1077,7 @@ psid use || college_yrs_spouse	 [99]ER15859 [01]ER19920 [03]ER23357 [05]ER27320 
 			sort	state_str	year2	resid_metro	resid_nonmetro
 			by		state_str	year2:	replace	RPP=RPP[_n+1]	if	RPP==0
 			
-					
+			lab	var	RPP	"Regional Price Parity"		
 			drop	if	inlist(year2,2008,2010,2012,2014,2016,2018,2019,2020)
 			
 			compress
