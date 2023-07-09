@@ -1116,7 +1116,7 @@ psid use || college_yrs_spouse	 [99]ER15859 [01]ER19920 [03]ER23357 [05]ER27320 
 	
 	if	`clean_PSID'==1	{	
 		
-		use	"${dtInt}/PSID_raw.dta", clear
+		use	"${FSD_dtInt}/PSID_raw.dta", clear
 		
 		*	Clean
 		

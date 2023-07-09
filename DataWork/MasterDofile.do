@@ -61,17 +61,12 @@
 	global	FSD_dtRaw		      	"$FSD_dt/Raw"
 	global	FSD_dtInt				"$FSD_dt/Intermediate"
 	global	FSD_dtFin				"$FSD_dt/Final"
-   
+
+   *Dofile sub-folder globals	
 	global	FSD_dofiles				"$dataWorkFolder/Dofiles"
 	global	FSD_doCln				"$FSD_dofiles/Cleaning"
 	global	FSD_doCon				"$FSD_dofiles/Construct" 
 	global	FSD_doAnl				"$FSD_dofiles/Analysis" 
-
-   *Dofile sub-folder globals
-	global PSID_do                "$PSID/Dofiles" 
-	global PSID_doCln             "$PSID_do/Cleaning" 
-	global PSID_doCon             "$PSID_do/Construct" 
-	global PSID_doAnl             "$PSID_do/Analysis" 
 
    *Output sub-folder globals
 	global FSD_out               "$dataWorkFolder/Output" 
@@ -117,27 +112,37 @@
 
    **Set the locals corresponding to the tasks you want
    * run to 1. To not run a task, set the local to 0.
-   local importDo       0
-   local cleaningDo     0
-   local constructDo    0
-   local analysisDo     0
-
-   if (`importDo' == 1) { // Change the local above to run or not to run this file
-       do "$PSID_doImp/PSID_import_MasterDofile.do" 
-   }
+	local cleaningDo     1	//	Import and clean data
+	local constructDo    1	//	Construct outcomes and other indicators
+	local analysisDo     1	//	Analyze
+	local appendixDo     1	//	Replicate appendix
+	local othersDo		 0	//	Other do-files replicating numbers in the main text. disabled by default.
 
    if (`cleaningDo' == 1) { // Change the local above to run or not to run this file
-       do "$PSID_do/PSID_cleaning_MasterDofile.do" 
+       do "$FSD_doCln/FSD_clean.do" 
    }
 
    if (`constructDo' == 1) { // Change the local above to run or not to run this file
-       do "$PSID_do/PSID_construct_MasterDofile.do" 
+       do "$FSD_doCon/FSD_const.do" 
    }
 
    if (`analysisDo' == 1) { // Change the local above to run or not to run this file
-       do "$PSID_do/PSID_analysis_MasterDofile.do" 
+       do "$FSD_doAnl/FSD_analyses.do" 
    }
 
+   if (`appendixDo' == 1) { // Change the local above to run or not to run this file
+       do "$FSD_doAnl/Appendix A.do" 
+	   do "$FSD_doAnl/Appendix B.do" 
+	   do "$FSD_doAnl/Appendix C.do" 
+	   do "$FSD_doAnl/Appendix D.do" 
+   }
+
+   if (`othersDo' == 1) { // Change the local above to run or not to run this file
+       do "$FSD_doAnl/GLM_ML_comparison.do" // ***** CAUTION: IT TAKES A LONG TIME TO BE EXECUTED ***********
+	   do "$FSD_doAnl/Recall_period.do" 
+   }
+
+   
 *iefolder*3*End_RunDofiles******************************************************
 *iefolder will not work properly if the line above is edited
 

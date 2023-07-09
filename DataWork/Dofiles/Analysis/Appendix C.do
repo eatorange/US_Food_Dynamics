@@ -1,17 +1,11 @@
-use	"${PSID_dtFin}/FSD_const_long.dta", clear
-	
-	
+*	Appendix C: Checking Robustness to Interstate Variation in Prices
 
 
-		
-	*	Replicate Table using both PFS and RPP-adjusted PFS
-	*	Make sure to use only the sample which has both PFS and RPP-adj PFS, as the latter is available only in certain years
-	*	Note that the code below is mainly copied from the original code. 
-	*	Once we decide to make this code replicable later (ex. include in the Appendix), we can incorporate it into the main analyses do-file.
+use	"${FSD_dtFin}/FSD_const_long.dta", clear
 	
-	use	"${PSID_dtFin}/FSD_const_long.dta", clear
-		
-		*	Spell length (Table 1)
+/****************************************************************
+	Section 1: Spell length
+****************************************************************/
 		
 			{
 			
@@ -84,7 +78,10 @@ use	"${PSID_dtFin}/FSD_const_long.dta", clear
 			
 			}
 		
-		*	Transition matrix (Table C2)
+/****************************************************************
+	Section 2: Transition matrix
+****************************************************************/
+		
 		
 			{
 			
@@ -219,8 +216,10 @@ use	"${PSID_dtFin}/FSD_const_long.dta", clear
 				
 			}
 		
-		
-		*	Table C3 (Permanent approach) - Total and Region only
+/****************************************************************
+	Section 3: Permanent approach - total and region only
+****************************************************************/
+
 			{
 		
 	
