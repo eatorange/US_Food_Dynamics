@@ -74,10 +74,8 @@
 		SECTION 1: Spells Approach
 	****************************************************************/	
 		
-	local	run_spells_approach	1	//	Spell length and transition matrix
-		
 	*	Spell length
-	if	`run_spells_approach'==1	{
+	{
 		
 		*	Tag balanced sample (Households without any missing PFS throughout the study period)
 		*	Unbalanced households will be dropped from spell length analyses not to underestimate spell lengths
@@ -503,7 +501,7 @@
 					mat	trans_2by2_shock	=	nullmat(trans_2by2_shock)	\	trans_2by2_`type'
 				}
 
-			*	Combine transition matrices (Table 6 of 2020/11/16 draft)
+			*	Combine transition matrices 
 			
 			mat	define	blankrow	=	J(1,7,.)
 			mat	trans_2by2_combined	=	trans_2by2_year	\	blankrow	\	trans_2by2_gender	\	blankrow	\	///
@@ -523,7 +521,7 @@
 			*putexcel	A13	=	matrix(FI_still_year_all), names overwritefmt nformat(number_d1)
 			*putexcel	A23	=	matrix(FI_newly_year_all), names overwritefmt nformat(number_d1)
 			
-			*	Figure 3 & 4
+			*	Figure 2 & 3
 			*	Need to plot from matrix, thus create a temporary dataset to do this
 			preserve
 			
@@ -626,12 +624,9 @@
 	/****************************************************************
 		SECTION 2: Permanent approach
 	****************************************************************/		
-
-	
-	local	run_perm_approach	1	//	Chronic and transient FS (Jalan and Ravallion (2000) Table)
 	
 	*	Permanent approach	
-	if	`run_perm_approach'==1	{
+		{
 		
 		
 		*	Before we conduct permanent approach, we need to test whether PFS is stationary.
@@ -1228,12 +1223,12 @@
 
 	
 	/****************************************************************
-		SECTION 6: Groupwise Decomposition
+		SECTION 3: Groupwise Decomposition
 	****************************************************************/	
-	local	groupwise_decomp	0
+	
 	
 	* Generate the squared food insecurty gap (SFIG)	
-	if	`groupwise_decomp'==1	{
+	{
 		
 		
 		*	Limit the sample to non-missing observations in ALL categories (gender, race, education, region)
@@ -1644,7 +1639,7 @@
 			restore
 				
 				
-		*	Food Security Prevalence over different groups	(Table 8)
+		*	Table 5 - Food Security Prevalence over different groups
 		cap	mat	drop	HCR_group_PFS_3 HCR_group_PFS_7 HCR_group_PFS_10 HCR_group_PFS_all
 
 		

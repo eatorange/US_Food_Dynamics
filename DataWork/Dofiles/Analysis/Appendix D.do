@@ -1,3 +1,4 @@
+*	Appendix D: Additional Tables and Figures
 	
 	*	The following do-file replicates the following tables/figures in Appendix D
 	
@@ -18,9 +19,10 @@
 	
 	use	"${FSD_dtFin}/fs_const_long.dta", clear
 
-
-	*	Table D3
-	
+/****************************************************************
+	Section 1: Table D3 & D4
+****************************************************************/
+	{
 		eststo drop	Total SRC	SEO	Imm
 		
 		local	estimation_year		inrange(year,2,10)
@@ -136,7 +138,12 @@
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor.)	///
 					replace
 			
-		
+	}
+	
+/****************************************************************
+	Section 2: Figure D1, D2 and D3
+****************************************************************/
+	
 		
 	*	Figure D1
 	

@@ -1,8 +1,12 @@
-*	Appendix B
+*	Appendix B: Comparing the PFS measure with Normalized Monetary Expenditure
+
+
 
 	use	"${FSD_dtFin}/FSD_const_long.dta", clear
-		
-		*	Correlation (in-text numbers)
+
+/****************************************************************
+	Section 1: Correlation (in-text numbers)
+****************************************************************/	
 		
 		{	
 			
@@ -137,8 +141,10 @@
 				
 			}	
 					
-		
-		*	Spell length
+/****************************************************************
+	Section 2: Spell length
+****************************************************************/	
+
 		{
 			*	Tag balanced sample (Households without any missing PFS throughout the study period)
 			*	Unbalanced households will be dropped from spell length analyses not to underestimate spell lengths
@@ -255,8 +261,9 @@
 		
 		}	//	spell length
 		
-	
-		*	Transition matrix
+/****************************************************************
+	Section 3: Transition matrix
+****************************************************************/		
 		
 		{
 		
@@ -511,7 +518,7 @@
 					mat	trans_2by2_shock	=	nullmat(trans_2by2_shock)	\	trans_2by2_`type'
 				}
 
-			*	Combine transition matrices (Table 6 of 2020/11/16 draft)
+			*	Table B2
 			
 			mat	define	blankrow	=	J(1,7,.)
 			mat	trans_2by2_combined	=	trans_2by2_year	\	blankrow	\	trans_2by2_gender	\	blankrow	\	///
@@ -591,9 +598,11 @@
 			restore
 				
 		}
-		
-				
-		*	Permanent approach	
+
+/****************************************************************
+	Section 4: Permanent approach
+****************************************************************/	
+
 		{
 			
 		
@@ -822,7 +831,7 @@
 				   }	//	race
 
 					
-					*	Combine results (Table 6)
+					*	Combine results 
 					mat	define	blankrow	=	J(1,5,.)
 					mat	perm_stat_2000_allcat_`measure'	=	perm_stat_2000_all	\	blankrow	\	perm_stat_2000_gender	\	blankrow	\	perm_stat_2000_race	\	///
 													blankrow	\	perm_stat_2000_region	\	blankrow	\	perm_stat_2000_metro	\	blankrow \	///
@@ -871,10 +880,10 @@
 					svmat	perm_stat_2000_decomp_HCR
 					rename	perm_stat_2000_decomp_HCR?	(pop_ratio	TFI	CFI	TFF_minus_CFI	ratio_CFI_TFI)
 					
-					*	Figure 5
+					*	Figure B4
 					graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
 										legend(lab (1 "Total Food Insecurity (TFI)") lab(2 "Chronic Food Insecurity (CFI)") size(vsmall) rows(1))	bar(1, fcolor(gs3*0.5)) bar(2, fcolor(gs12*0.6))	graphregion(color(white)) bgcolor(white)
-					graph	export	"${FSD_outFig}/Fig_B4_TFI_CFI_bygroup_E.png", replace
+					graph	export	"${FSD_outFig}/Fig_B4.png", replace
 					graph	close
 					
 						
@@ -1157,8 +1166,11 @@
 			
 			
 		}
-	
-		*	Groupwise Decomposition
+
+/****************************************************************
+	Section 5: Groupwise Decomposition
+****************************************************************/			
+
 		
 		{
 		
@@ -1514,7 +1526,7 @@
 			restore
 				
 				
-		*	Food Security Prevalence over different groups	(Table 8)
+		*	Table B6 - Food Security Prevalence over different groups
 		cap	mat	drop	HCR_group_PFS_3 HCR_group_PFS_7 HCR_group_PFS_10 HCR_group_PFS_all
 
 		
@@ -1568,4 +1580,5 @@
 	}
 				
 
-	
+	*	Exit
+	exit
