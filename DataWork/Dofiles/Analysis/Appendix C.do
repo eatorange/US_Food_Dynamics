@@ -758,7 +758,7 @@ use	"${FSD_dtFin}/FSD_const_long.dta", clear
 		
 		
 		graph	combine	TFI_FE_All	CFI_FE_All, plotregion(fcolor(white)) graphregion(fcolor(white))
-		graph	export	"${FSD_outFig}/Fig_C2_TFI_CFI_`measure'_groupstateFE_All_RPP.png", replace
+		graph	export	"${FSD_outFig}/Fig_C2.png", replace
 		graph	close
 		
 		/*

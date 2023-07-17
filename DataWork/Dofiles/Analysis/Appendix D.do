@@ -17,7 +17,7 @@
 		*	Figure D5: FSD_analyses.do, under section "Permanent Approach"
 		
 	
-	use	"${FSD_dtFin}/fs_const_long.dta", clear
+	use	"${FSD_dtFin}/FSD_const_long.dta", clear
 
 /****************************************************************
 	Section 1: Table D3 & D4

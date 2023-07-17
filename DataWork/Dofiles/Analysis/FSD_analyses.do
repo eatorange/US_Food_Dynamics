@@ -224,10 +224,6 @@
 			
 		restore
 		
-		
-		
-		
-		
 		*	Transition matrix
 			
 			*	Preamble
@@ -269,7 +265,7 @@
 					mat	trans_2by2_year	=	nullmat(trans_2by2_year)	\	trans_2by2_`year'
 					
 					
-					*	Change in Status (For Figure 3 of 2020/11/16 draft)
+					*	Change in Status
 					**	Note: here we do NOT limit our sample to non-missing values, as we need the ratio of those with missing values.
 					svy, subpop(if ${study_sample}  & !mi(PFS_FI_glm)	&	year==`year'): tab 	l1_PFS_FI_glm PFS_FI_glm, missing
 					local	sample_popsize_total=e(N_subpop)
@@ -531,7 +527,7 @@
 				gen	year	=	_n
 				replace	year	=	2001	+	(2*year)
 				
-				*	Matrix for Figure 3
+				*	Matrix for Figure 2
 				svmat trans_change_year
 				rename	(trans_change_year?)	(still_FI	newly_FI	status_unknown)
 				label var	still_FI		"Still food insecure"
@@ -541,8 +537,8 @@
 				egen	FI_prevalence	=	rowtotal(still_FI	newly_FI	status_unknown)
 				label	var	FI_prevalence	"Annual FI prevalence"
 				
-				*	Matrix for Figure 4a
-				**	Figure 4 matrices (FI_still_year_all, FI_newly_year_all) have years in column and category as row, so they need to be transposed)
+				*	Matrix for Figure 3
+				**	(FI_still_year_all, FI_newly_year_all) have years in column and category as row, so they need to be transposed)
 				foreach	fs_category	in	FI_still_year_all	FI_newly_year_all	{
 					
 					mat		`fs_category'_tr=`fs_category''
@@ -566,20 +562,39 @@
 					graph	export	"${PSID_outRaw}/Fig_3_FI_change_status_byyear.png", replace
 					graph	close
 					*/
+				
+				*	Figure 3
+				*	Since the editor required to use B&W with patterns which Stata does NOT support, I export data to "Fig_3.xlsx" which generates graphs there.
+				*	Note that Excel does generate 3a and 3b only. I (Seungmin) manually combined Figure 3 by combining 3a and 3b
+					mat	colnames	FI_newly_year_all	=	2003 2005 2007 2009 2011 2013 2015 2017
+					mat	rownames	FI_newly_year_all	=	"HS/Non-White/Female (3.8%)"	"HS/Non-White/Male (3.0%)"	"HS/White/Female (5.6%)" 	"HS/White/Male (24.4%)"	///
+															"Col/Non-White/Female (2.5%)"	"Col/Non-White/Male (5.0%)"	"Col/White/Female (10.2%)"	"Col/White/Male (45.6%)"
+					mat	colnames	FI_still_year_all	=	2003 2005 2007 2009 2011 2013 2015 2017
+					mat	rownames	FI_still_year_all	=	"HS/Non-White/Female (3.8%)"	"HS/Non-White/Male (3.0%)"	"HS/White/Female (5.6%)" 	"HS/White/Male (24.4%)"	///
+															"Col/Non-White/Female (2.5%)"	"Col/Non-White/Male (5.0%)"	"Col/White/Female (10.2%)"	"Col/White/Male (45.6%)"
+					mat	rownames	Pop_ratio			=	"HS/Non-White/Female (3.8%)"	"HS/Non-White/Male (3.0%)"	"HS/White/Female (5.6%)" 	"HS/White/Male (24.4%)"	///
+															"Col/Non-White/Female (2.5%)"	"Col/Non-White/Male (5.0%)"	"Col/White/Female (10.2%)"	"Col/White/Male (45.6%)"
+															
+					putexcel	set "${FSD_outFig}/Fig_3", sheet(Fig_3) modify /*replace*/
+					putexcel	A5	=	matrix(FI_newly_year_all), names overwritefmt nformat(number_d1)	//	3a
+					putexcel	A25	=	matrix(FI_still_year_all), names overwritefmt nformat(number_d1)	//	3b
+					putexcel	A46	=	matrix(Pop_ratio), names overwritefmt nformat(number_d1)			//	population ratio (which appear in the main text)
+		
+				/*	Graph directly exported by Stata (no longer used)
 					
 				*	Figure 3 (Change in Food Security Status by Group)
 				*	Figure 3a
 				graph bar FI_newly_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Fraction of Population)	ylabel(0(.025)0.1)	///
-							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
-							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+							legend(lab (1 "HS/Non-White/Female (3.8%)") lab(2 "HS/Non-White/Male (3.0%)") lab(3 "HS/White/Female (5.6%)")	lab(4 "HS/White/Male (24.4%)") 	///
+							lab (5 "Col/Non-White/Female (2.5%)") lab(6 "Col/Non-White/Male (5.0%)") lab(7 "Col/White/Female (10.2%)")	lab(8 "Col/White/Male (45.6%)") size(vsmall) rows(3))	///
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Newly Food Insecure)	name(Newly_FI, replace) scale(0.8)     
 				
 				
-				*	Figure 3a
+				*	Figure 3b
 				graph bar FI_still_year_all_tr?, over(year, label(labsize(tiny))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))*/	ylabel(0(.025)0.1)	///
-							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
-							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(3))	///
+							legend(lab (1 "HS/Non-White/Female (3.8%)") lab(2 "HS/Non-White/Male (3.0%)") lab(3 "HS/White/Female (5.6%)")	lab(4 "HS/White/Male (24.4%)") 	///
+							lab (5 "Col/Non-White/Female (2.5%)") lab(6 "Col/Non-White/Male (5.0%)") lab(7 "Col/White/Female (10.2%)")	lab(8 "Col/White/Male (45.6%)") size(vsmall) rows(3))	///
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI, replace)	scale(0.8)  
 							
@@ -593,16 +608,16 @@
 				
 				*	Figure 3a-alt
 				graph bar FI_newly_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	ytitle(Fraction of Population)	ylabel(0(.025)0.1)	///
-							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
-							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))		///
+							legend(lab (1 "HS/Non-White/Female (3.8%)") lab(2 "HS/Non-White/Male (3.0%)") lab(3 "HS/White/Female (5.6%)")	lab(4 "HS/White/Male (24.4%)") 	///
+							lab (5 "Col/Non-White/Female (2.5%)") lab(6 "Col/Non-White/Male (5.0%)") lab(7 "Col/White/Female (10.2%)")	lab(8 "Col/White/Male (45.6%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))		///
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((a) Newly Food Insecure)	name(Newly_FI_aa, replace) scale(0.8)     
 				
 				
 				*	Figure 3b-alt
 				graph bar FI_still_year_all_tr?, over(year, label(labsize(small))) stack	graphregion(color(white)) bgcolor(white)	/*ytitle(Population prevalence(%))*/	ylabel(0(.025)0.1)	///
-							legend(lab (1 "HS/Non-White/Female (4.1%)") lab(2 "HS/Non-White/Male (3.3%)") lab(3 "HS/White/Female (6.1%)")	lab(4 "HS/White/Male (25%)") 	///
-							lab (5 "Col/Non-White/Female (2.3%)") lab(6 "Col/Non-White/Male (4.8%)") lab(7 "Col/White/Female (9.5%)")	lab(8 "Col/White/Male (45%)") size(vsmall) rows(8) cols(1) position(3) rowgap(2pt))	///
+							legend(lab (1 "HS/Non-White/Female (3.8%)") lab(2 "HS/Non-White/Male (3.0%)") lab(3 "HS/White/Female (5.6%)")	lab(4 "HS/White/Male (24.4%)") 	///
+							lab (5 "Col/Non-White/Female (2.5%)") lab(6 "Col/Non-White/Male (5.0%)") lab(7 "Col/White/Female (10.2%)")	lab(8 "Col/White/Male (45.6%)") rows(8) cols(1) position(3) rowgap(2pt))	///
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI_bb, replace)	scale(0.8)  
 				
@@ -613,7 +628,7 @@
 				graph display Fig4c, ysize(4) xsize(9.0)
 				graph	export	"${FSD_outFig}/Fig_3_alt.png", as(png) replace
 				graph	close
-				
+				*/
 				
 			restore
 			
@@ -1566,6 +1581,32 @@
 			restore
 			
 			*	Figure 7, D5
+			
+			
+				*	Figure 7
+				*	Since the editor required to use B&W with patterns which Stata does NOT support, I export data to "Fig_3.xlsx" which generates graphs there.
+				*	Note that Excel does generate 3a and 3b only. I (Seungmin) manually combined Figure 3 by combining 3a and 3b
+					mat	colnames	HCR_weight_cat_all	=	2001 2003 2005 2007 2009 2011 2013 2015 2017
+					mat	rownames	HCR_weight_cat_all	=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
+					
+					mat	colnames	FIG_weight_cat_all	=	2001 2003 2005 2007 2009 2011 2013 2015 2017
+					mat	rownames	FIG_weight_cat_all	=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
+					
+					mat	colnames	SFIG_weight_cat_all	=	2001 2003 2005 2007 2009 2011 2013 2015 2017
+					mat	rownames	SFIG_weight_cat_all	=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
+					
+					mat	rownames	Pop_ratio_all		=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
+															
+					putexcel	set "${FSD_outFig}/Fig_7", sheet(Fig_7_temp) modify /*replace*/
+					putexcel	A5	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)	//	3a
+					putexcel	A25	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	3b
+					putexcel	A46	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)			//	population ratio (which appear in the main text)
+		
+			
 			
 			preserve
 			
