@@ -116,7 +116,7 @@
 	local constructDo    1	//	Construct outcomes and other indicators
 	local analysisDo     1	//	Analyze
 	local appendixDo     1	//	Replicate appendix
-	local othersDo		 0	//	Other do-files replicating numbers in the main text. disabled by default.
+	local othersDo		 1	//	Other do-files replicating numbers in the main text. disabled by default.
 
    if (`cleaningDo' == 1) { // Change the local above to run or not to run this file
        do "$FSD_doCln/FSD_clean.do" 
@@ -138,7 +138,7 @@
    }
 
    if (`othersDo' == 1) { // Change the local above to run or not to run this file
-       do "$FSD_doAnl/GLM_ML_comparison.do" // ***** CAUTION: IT TAKES A LONG TIME TO BE EXECUTED ***********
+       *do "$FSD_doAnl/GLM_ML_comparison.do" // Disabled by default ***** CAUTION: IT TAKES A LONG TIME TO RUN ***********
 	   do "$FSD_doAnl/Recall_period.do" 
    }
 

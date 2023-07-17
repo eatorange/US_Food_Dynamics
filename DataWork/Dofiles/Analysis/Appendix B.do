@@ -518,7 +518,7 @@
 					mat	trans_2by2_shock	=	nullmat(trans_2by2_shock)	\	trans_2by2_`type'
 				}
 
-			*	Table B2
+			*	Table B3
 			
 			mat	define	blankrow	=	J(1,7,.)
 			mat	trans_2by2_combined	=	trans_2by2_year	\	blankrow	\	trans_2by2_gender	\	blankrow	\	///
@@ -548,7 +548,7 @@
 				gen	year	=	_n
 				replace	year	=	2001	+	(2*year)
 				
-				*	Matrix for Figure 3
+				*	Matrix for Figure B2
 				svmat trans_change_year
 				rename	(trans_change_year?)	(still_FI	newly_FI	status_unknown)
 				label var	still_FI		"Still food insecure"
@@ -558,8 +558,8 @@
 				egen	FI_prevalence	=	rowtotal(still_FI	newly_FI	status_unknown)
 				label	var	FI_prevalence	"Annual FI prevalence"
 				
-				*	Matrix for Figure 4a
-				**	Figure 4 matrices (FI_still_year_all, FI_newly_year_all) have years in column and category as row, so they need to be transposed)
+				*	Matrix for Figure B2
+				**	Figure B2 matrices (FI_still_year_all, FI_newly_year_all) have years in column and category as row, so they need to be transposed)
 				foreach	fs_category	in	FI_still_year_all	FI_newly_year_all	{
 					
 					mat		`fs_category'_tr=`fs_category''
