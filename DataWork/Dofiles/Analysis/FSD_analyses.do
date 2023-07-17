@@ -1581,32 +1581,38 @@
 			restore
 			
 			*	Figure 7, D5
-			
+			*	The AJAE editor required them to be B&W with patterns, which can't be done directly with Stata
+			*	Thus we export the data to Excel and generate the graph with Excel.
 			
 				*	Figure 7
 				*	Since the editor required to use B&W with patterns which Stata does NOT support, I export data to "Fig_3.xlsx" which generates graphs there.
 				*	Note that Excel does generate 3a and 3b only. I (Seungmin) manually combined Figure 3 by combining 3a and 3b
 					mat	colnames	HCR_weight_cat_all	=	2001 2003 2005 2007 2009 2011 2013 2015 2017
-					mat	rownames	HCR_weight_cat_all	=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+					mat	rownames	HCR_weight_cat_all	=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
 															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 					
 					mat	colnames	FIG_weight_cat_all	=	2001 2003 2005 2007 2009 2011 2013 2015 2017
-					mat	rownames	FIG_weight_cat_all	=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+					mat	rownames	FIG_weight_cat_all	=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
 															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 					
 					mat	colnames	SFIG_weight_cat_all	=	2001 2003 2005 2007 2009 2011 2013 2015 2017
-					mat	rownames	SFIG_weight_cat_all	=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+					mat	rownames	SFIG_weight_cat_all	=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
 															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 					
-					mat	rownames	Pop_ratio_all		=	"HS/Non-White/Female (4.1)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+					mat	rownames	Pop_ratio_all		=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
 															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 															
-					putexcel	set "${FSD_outFig}/Fig_7", sheet(Fig_7_temp) modify /*replace*/
-					putexcel	A5	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)	//	3a
-					putexcel	A25	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	3b
-					putexcel	A46	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)			//	population ratio (which appear in the main text)
+					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_7) modify /*replace*/
+					putexcel	A5	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7a
+					putexcel	A23	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
+					putexcel	A50	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)		//	population ratio
+					
+					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_D5) modify /*replace*/
+					putexcel	A5	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7a
 		
-			
+			*	When graph is directly generated from Stata with colors. (disabled by default).
+			/*
+			*	Figure 7
 			
 			preserve
 			
@@ -1678,7 +1684,7 @@
 				graph	close
 							
 			restore
-				
+		*/	
 				
 		*	Table 5 - Food Security Prevalence over different groups
 		cap	mat	drop	HCR_group_PFS_3 HCR_group_PFS_7 HCR_group_PFS_10 HCR_group_PFS_all
