@@ -1555,13 +1555,26 @@
 				label	values	fig7_cat	fig7_cat
 				
 				
-				*	Generate category variable for Fig 8 and A5
-				
-				
+				*	Generate category variable for Fig 8 and A5				
 				svmat	FGT_cat_combined_sup
 				rename	FGT_cat_combined_sup?	(pop_ratio	HCR	FIG	SFIG)
 				
-				*	Figure 7	(Food Insecurity Prevalence and Severity by Group)
+				*	Generate the difference in HCR and SFIG between the most insecure and the most secure group (in-text number)
+				local	HCR_most_insecure=HCR in 1
+				di "`HCR_most_insecure'"
+				local	HCR_most_secure=HCR in 16
+				di "`HCR_most_secure'"
+				local ratio_HCR_insecure_to_secure=`HCR_most_insecure'/`HCR_most_secure'
+				di "`ratio_HCR_insecure_to_secure'"	//	15.49
+				
+				local	SFIG_most_insecure=SFIG in 1
+				di "`SFIG_most_insecure'"
+				local	SFIG_most_secure=SFIG in 16
+				di "`SFIG_most_secure'"
+				local ratio_SFIG_insecure_to_secure=`SFIG_most_insecure'/`SFIG_most_secure'
+				di "`ratio_SFIG_insecure_to_secure'"	//	33.25
+				
+				*	Figure 6	(Food Insecurity Prevalence and Severity by Group)
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
 							bar(1, fcolor(gs03*0.5)) bar(2, fcolor(gs10*0.6))	graphregion(color(white)) bgcolor(white)
 				graph	export	"${FSD_outFig}/Fig_6.png", replace
@@ -1602,13 +1615,10 @@
 					mat	rownames	Pop_ratio_all		=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
 															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 															
-					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_7) modify /*replace*/
+					putexcel	set "${FSD_outFig}/Fig_B7", sheet(Fig_B7) modify /*replace*/
 					putexcel	A5	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7a
 					putexcel	A23	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
-					putexcel	A50	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)		//	population ratio
-					
-					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_D5) modify /*replace*/
-					putexcel	A5	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7a
+					putexcel	A39	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)		//	population ratio
 		
 			*	When graph is directly generated from Stata with colors. (disabled by default).
 			/*
