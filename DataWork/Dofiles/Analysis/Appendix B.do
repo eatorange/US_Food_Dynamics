@@ -34,7 +34,8 @@
 				
 				
 				mat	corr_FSSS_PFS	=	corr_spearman_all_FSSS_PFS	\	corr_spearman_FI_FSSS_PFS	\	corr_kendall_all_FSSS_PFS	\	corr_kendall_FI_FSSS_PFS
-			
+				mat	list	corr_FSSS_PFS
+				
 			*	Between FSSS and NME
 				
 				*	Spearman (all sample)

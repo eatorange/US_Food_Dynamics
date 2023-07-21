@@ -1056,10 +1056,13 @@
 		label	var	income_to_poverty_cat		"Income to Poverty Ratio (category)"
 		label	var	food_stamp_value_1yr	"Annual food stamp value of the previous year"
 		label	var	food_stamp_value_0yr	"Annual food stamp value of the current year"
+		label	var	interview_month	"Interview month"
+		label	var	interview_day	"Interview day"
+		
 			      
 		*	Drop variable no longer used.
 		drop	height_feet		height_inch	  weight_lbs	child_bf_assist	child_lunch_assist	food_exp_total	child_exp_total	edu_exp_total	health_exp_total	///
-				house_exp_total	property_tax	transport_exp	food_stamp_freq_1yr xsqnr_ interview_month interview_day food_stamp_used_1month food_stamp_value_1month food_stamp_freq_1yr	///
+				house_exp_total	property_tax	transport_exp	food_stamp_freq_1yr xsqnr_ /*interview_month interview_day*/ food_stamp_used_1month food_stamp_value_1month food_stamp_freq_1yr	///
 				cloth_exp_total	foodexp_recall_deliv_stamp foodexp_recall_deliv_nostamp foodexp_recall_away_stamp foodexp_recall_away_nostamp foodexp_recall_home_stamp foodexp_recall_home_nostamp ///
 				presch_child_ind presch_child_fam sch_child_ind sch_child_fam	food_stamp_value_0yr_pc	food_exp_stamp food_exp_stamp cloth_exp_pc	urbanicity	 wealth_total	college_degree_type
 				

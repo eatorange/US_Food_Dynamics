@@ -139,7 +139,7 @@
 
    if (`othersDo' == 1) { // Change the local above to run or not to run this file
        *do "$FSD_doAnl/GLM_ML_comparison.do" // Disabled by default ***** CAUTION: IT TAKES A LONG TIME TO RUN ***********
-	   do "$FSD_doAnl/Recall_period.do" 
+	   do "$FSD_doAnl/Recall_seam_period.do" 
    }
 
    
