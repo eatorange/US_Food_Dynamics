@@ -1,36 +1,30 @@
 
 	/*****************************************************************
-	PROJECT: 		US Food Security Dynamics
+	PROJECT: 		Food Security Dynamics in the United States, 2001-2017
 					
-	TITLE:			PSID_analyses
+	TITLE:			FSD_analyses.do
 				
 	AUTHOR: 		Seungmin Lee (sl3235@cornell.edu)
 
-	LAST EDITED:	Apr 12, 2020, by Seungmin Lee (sl3235@cornell.edu)
+	LAST EDITED:	2023/7/21, by Seungmin Lee (sl3235@cornell.edu)
 	
-	IDS VAR:    	fam_ID_1999       // Uniquely identifies family (update for your project)
+	IDS VAR:    	fam_ID_1999 // Household identifier
 
-	DESCRIPTION: 	Construct Cisse and Barrett (CB) measurement
+	DESCRIPTION: 	Construct variables and data to be analyzed
 		
 	ORGANIZATION:	0 -	Preamble
-						0.1 - Environment setup
-					1 - 
-						1.1	-	
-						1.2 -	
-						1.3 -	
-						1.4	-	
-					2 - Generate & adjust indicators
-					X - Save and Exit
+					1 -	Spells Approach
+					2 - Permanent approach
+					3 - Groupwise Decomposition
 					
-	INPUTS: 		* PSID 1999-2017 Panel Constructed (ind & family)
-					${PSID_dtFin}/PSID_const_1999_2017_ind.dta
+	INPUTS: 		*	Long-format data, final data to be analized (final)
+					${FSD_dtFin}/FSD_const_long.dta
 					
-			
-	OUTPUTS: 		* Graphs & Tables
+	OUTPUTS: 		*	Tables: 1-5, D6, D7
+					*	Figures: 1-7, D4, D5
 
 	NOTE:			*
 	******************************************************************/
-
 	/****************************************************************
 		SECTION 0: Preamble			 									
 	****************************************************************/		 
@@ -63,19 +57,16 @@
 	*di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
 	*di "Git branch `r(branch)'; commit `r(sha)'."
 	
-	*	Declare global macro
-	*include	"${PSID_doAnl}/Macros_for_analyses.do"
-			
-
-
 	use	"${FSD_dtFin}/FSD_const_long.dta", clear
 
 	/****************************************************************
 		SECTION 1: Spells Approach
 	****************************************************************/	
 		
-	*	Spell length
+	
 	{
+		
+		*	Spell length
 		
 		*	Tag balanced sample (Households without any missing PFS throughout the study period)
 		*	Unbalanced households will be dropped from spell length analyses not to underestimate spell lengths
@@ -116,10 +107,7 @@
 
 		drop	_seq _spell _end
 
-		
-		
-		
-		
+	
 		
 		*	Spell length given household newly become food insecure, by each year
 		cap drop FI_duration
@@ -172,7 +160,7 @@
 			drop	in	1
 			
 			gen	spell_length	=	(2*_n)
-			
+			br	in	1	//	Share of 2-year spell lengths per each year (in-text number)
 			
 			*	Figure 1 (Spell Length of Food Insecurity (2003-2015))
 			local	marker_2003	mcolor(gs0)	msymbol(circle)
@@ -248,6 +236,10 @@
 				
 				*	Year
 				cap	mat	drop	trans_2by2_year	trans_change_year
+				cap	mat	drop	FI_still_year_all
+				cap	mat	drop	FI_newly_year_all
+				cap	mat	drop	FI_persist_rate*
+				cap	mat	drop	FI_entry_rate*
 				forvalues	year=3/10	{			
 
 					*	Joint distribution	(two-way tabulate)
@@ -273,7 +265,8 @@
 					mat	trans_change_year	=	nullmat(trans_change_year)	\	trans_change_`year'
 					
 					cap	mat	drop	Pop_ratio
-					cap	mat	drop	FI_still_`year'	FI_newly_`year'	
+					cap	mat	drop	FI_still_`year'	FI_newly_`year'	FI_persist_rate_`year'	FI_entry_rate_`year'
+					
 					
 					foreach	edu	in	1	0	{	//	HS or below, beyond HS	   
 						foreach	race	in	0	1	{	//	People of colors, white
@@ -283,24 +276,47 @@
 								qui	svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'	&	year==`year'):	tab l1_PFS_FI_glm PFS_FI_glm, missing
 													
 								local	Pop_ratio	=	e(N_subpop)/`sample_popsize_total'
-								local	FI_still_`year'		=	e(b)[1,5]*`Pop_ratio'
-								local	FI_newly_`year'		=	e(b)[1,2]*`Pop_ratio'
+								local	FI_still_`year'		=	e(b)[1,5]*`Pop_ratio'	//	% of still FI HH in specific group x share of that population in total sample = fraction of HH in that group still FI in among total sample
+								local	FI_newly_`year'		=	e(b)[1,2]*`Pop_ratio'	//	% of newly FI HH in specific group x share of that population in total sample = fraction of HH in that group newly FI in among total sample
+								local	FI_persist_rate_`year'		=	e(b)[1,5]
+								local	FI_entry_rate_`year'		=	e(b)[1,2]
 								
-								mat	Pop_ratio	=	nullmat(Pop_ratio)	\	`Pop_ratio'
+								*mat	Pop_ratio	=	nullmat(Pop_ratio)	\	`Pop_ratio'	//	(2023-07-21) Disable it, as we don't need to stack population ratio over years.
 								mat	FI_still_`year'	=	nullmat(FI_still_`year')	\	`FI_still_`year''
 								mat	FI_newly_`year'	=	nullmat(FI_newly_`year')	\	`FI_newly_`year''
+								mat	FI_persist_rate_`year'	=	nullmat(FI_persist_rate_`year')	\	`FI_persist_rate_`year''
+								mat	FI_entry_rate_`year'	=	nullmat(FI_entry_rate_`year')	\	`FI_entry_rate_`year''
 								
 							}	//	gender
 						}	//	race
 					}	//	education
 					
-					mat	FI_still_year_all	=	nullmat(FI_still_year_all),	FI_still_`year'
-					mat	FI_newly_year_all	=	nullmat(FI_newly_year_all),	FI_newly_`year'
+					mat	FI_still_year_all			=	nullmat(FI_still_year_all),	FI_still_`year'
+					mat	FI_newly_year_all			=	nullmat(FI_newly_year_all),	FI_newly_`year'
+					mat	FI_persist_rate_year_all	=	nullmat(FI_persist_rate_year_all),	FI_persist_rate_`year'
+					mat	FI_entry_rate_year_all		=	nullmat(FI_entry_rate_year_all),	FI_entry_rate_`year'
 								
 				}	//	year
-
 				
-						
+				* In-text numbers
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)):	proportion	 HH_female	//	share of female-HH (22%)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& 	l1_PFS_FI_glm==0	&	PFS_FI_glm==1):	proportion	 HH_female // share of female-HH among newly FI (40%)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& 	l1_PFS_FI_glm==1	&	PFS_FI_glm==1):	proportion	 HH_female // share of female-HH among persistently FI (51%)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& year2==2009	&	l1_PFS_FI_glm==0	&	PFS_FI_glm==1):	proportion	 HH_female	// share of female-HH among newly FI b/w 2007-2009 (38%)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& year2==2011	&	l1_PFS_FI_glm==1	&	PFS_FI_glm==1):	proportion	 HH_female	// share of female-HH among persistently FI b/w 2009-2011 (48%)
+				
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)): proportion	pop_group // Share of HS/White/Female (6.1%, 3rd row)
+				mat	Pop_ratio	=	e(b)'
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm) & year2==2009	&	l1_PFS_FS_glm==1	&	PFS_FI_glm==1): proportion	pop_group	//	Newly FI during GR (2007-2009) (HS/White/Female  |   .1800251)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm) & year2==2011	&	l1_PFS_FI_glm==1	&	PFS_FI_glm==1): proportion	pop_group	//	Still FI immediately after GR (2009-2011) (HS/White/Female  |   .1594805)
+				
+				scalar  newly_FI_rate_HSWF_09=FI_entry_rate_year_all[3,4]
+				scalar  newly_FI_rate_HSWF_11=FI_entry_rate_year_all[3,5]
+				scalar	list	newly_FI_rate_HSWF_09	//	20%
+				scalar	list	newly_FI_rate_HSWF_11	//	9%
+				*mat list	FI_entry_rate_year_all	//	Entry rate (newly FI) across different groups. HS/White/Female (3rd row) shows the greatest reduction b/w 2009-2011 (3rd to 4th column) (20% -> 9%)
+				mat	list	FI_persist_rate_year_all	//	Persistent rate (still FI) across different group. HS/Non-White/Female (first row) has the highest persistent rate across years.
+				
 				*	Gender
 				
 					*	Male, Joint
@@ -389,7 +405,6 @@
 					
 				}
 				mat	trans_2by2_degree	=	trans_2by2_NoHS	\	trans_2by2_HS	\	trans_2by2_somecol	\	trans_2by2_col
-				
 				
 				*	Disability
 				capture	drop	phys_nodisab_head
@@ -497,12 +512,12 @@
 					mat	trans_2by2_shock	=	nullmat(trans_2by2_shock)	\	trans_2by2_`type'
 				}
 
-			*	Combine transition matrices 
-			
+			*	Table 2
+			*	Combine transition matrices 		
 			mat	define	blankrow	=	J(1,7,.)
 			mat	trans_2by2_combined	=	trans_2by2_year	\	blankrow	\	trans_2by2_gender	\	blankrow	\	///
 										trans_2by2_race	\	blankrow	\	trans_2by2_region	\	blankrow	\	trans_2by2_degree	\	blankrow	\	///
-										trans_2by2_disability	\	blankrow	\	trans_2by2_child	\	blankrow \	trans_2by2_foodstamp	\	blankrow	\	///
+										trans_2by2_disability	\	blankrow	\	trans_2by2_foodstamp	\	blankrow	\	///
 										trans_2by2_shock
 			
 			mat	list	trans_2by2_combined
@@ -621,8 +636,7 @@
 							bar(1, fcolor(blue*0.5)) bar(2, fcolor(green*0.6)) bar(3, fcolor(emerald))	bar(4, fcolor(navy*0.5)) bar(5, fcolor(orange)) bar(6, fcolor(black))	///
 							bar(7, fcolor(gs14)) bar(8, fcolor(yellow))	title((b) Still Food Insecure)	name(Still_FI_bb, replace)	scale(0.8)  
 				
-				
-				
+							
 				*	Concatenate 3a-alt and 3b-alt
 				grc1leg Newly_FI_aa Still_FI_bb, rows(1) cols(2) legendfrom(Newly_FI_aa)	graphregion(color(white)) position(3)	graphregion(color(white))	name(Fig4c, replace) ysize(4) xsize(9.0)
 				graph display Fig4c, ysize(4) xsize(9.0)
@@ -733,17 +747,13 @@
 			lab	var		Chronic_FI_HCR	"CFI (HCR)"
 			lab	var		Chronic_FI_SFIG	"CFI (SFIG)"
 			
-			**** In several households, CFI is greater than TFI. I assume it is because the threshold probability varies, but need to thoroughly check why.
-			**** For now, in that case we treat CFI as equal to the TFI
-			**** (2021/1/24) Chris said it is OK to have TFI<CFI. Below is his comments from the e-mail sent on Jan 24, 2021
-			**** "That said, it’s fine to have CFI>TFI. That’s the very definition of a household that is chronically food insecure but occasionally food secure (i.e., chronically but not persistently food insecure). The poverty dynamics literature includes this as well, as it reflects the headcount basis for the average period-specific (total) food insecurity (TFI) versus the period-average food insecurity (CFI). "
+			**** Note that CFI can be greater than TFI. That’s the very definition of a household that is chronically food insecure but occasionally food secure (i.e., chronically but not persistently food insecure). The poverty dynamics literature includes this as well, as it reflects the headcount basis for the average period-specific (total) food insecurity (TFI) versus the period-average food insecurity (CFI).
 			*replace	Chronic_FI_HCR	=	Total_FI	if	Chronic_FI>Total_FI
 			
 			*	Transient FI (TFI - CFI)
 			gen	Transient_FI_HCR	=	Total_FI_HCR	-	Chronic_FI_HCR
 			gen	Transient_FI_SFIG	=	Total_FI_SFIG	-	Chronic_FI_SFIG
 					
-
 
 		*	Restrict sample to non_missing TFI and CFI
 		global	nonmissing_TFI_CFI	!mi(Total_FI_HCR)	&	!mi(Chronic_FI_HCR)
@@ -1145,13 +1155,13 @@
 			
 			*	Output
 			esttab	Total_FI_`measure'	Chronic_FI_`measure'		using "${FSD_outTab}/Tab_D6.csv", ///
-					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(star fmt(a3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	drop(state_group* year_enum* _cons)	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace
 					
 			esttab	Total_FI_`measure'	Chronic_FI_`measure'		using "${FSD_outTab}/Tab_D6.tex", ///
-					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
+					cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	drop(state_group* year_enum* _cons)	///
 					title(Regression of TFI/CFI on Characteristics) 	///
 					addnotes(Sample includes household responses from 2001 to 2017. Base household is as follows; Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. Households with negative income.)	///
 					replace		
@@ -1222,7 +1232,6 @@
 										
 		*	% of always food secure households under HFSM (this statistics is included after Table 3 (Chronic Food Security Status from Permanent Approach))
 			*	"This persistence ratio is smaller than the analog measure that uses the FSSS (86%)"
-		*	(2023-07-07) Not sure what
 		svy, subpop(if ${study_sample}==1 & HFSM_FS_nonmissing==5): mean HFSM_FS_always
 		
 		*	Distribution of food secure wavess
@@ -1240,9 +1249,7 @@
 	/****************************************************************
 		SECTION 3: Groupwise Decomposition
 	****************************************************************/	
-	
-	
-	* Generate the squared food insecurty gap (SFIG)	
+
 	{
 		
 		
@@ -1431,8 +1438,7 @@
 			*esttab matrix(perm_stat_2000_combined, fmt(%9.4f)) using "${PSID_outRaw}/perm_stat_combined.tex", replace
 			
 		   *	Categorical decomposition
-		   *	Input for Figure 3 in Dec 2020 draft (Food Insecurity Prevalence and Severity by Group).
-			*	Data and Graph can be found in "FGT_group" sheet in "Min_report" Excel file.
+		   *	Input for Figure 6  (Food Insecurity Prevalence and Severity by Group).
 		  
 		   *	Generate group-level aggregates.
 		   *	We need to do it twice - one for main graph and one for supplement graph. The latter use more detailed educational category.
@@ -1547,7 +1553,8 @@
 				*	Generate category variable 
 				gen	fig7_cat	=	_n
 				
-					//	Currently we use the value for the proportion of each category from the pre-calculated value. It would be better if we can automatically update it as analyses are updated.
+				*	Define the label based on the population ratio matrix computed above.
+				mat	list	FGT_cat_combined_sup	//	First column is the population ratio computed.
 				label	define	fig7_cat	1	"NoHS/NonWhite/Female (1.6%)"		2	"NoHS/NonWhite/Male (0.8%)"		3	"NoHS/White/Female (1.2%)"		4	"NoHS/White/Male (4%)"	///
 											5	"HS/NonWhite/Female (2.4%)"			6	"HS/NonWhite/Male (2.5%)"		7	"HS/White/Female (5%)"			8	"HS/White/Male (21%)"	///
 											9	"SomeCol/NonWhite/Female (1.4%)"	10	"SomeCol/NonWhite/Male (2.6%)"	11	"SomeCol/White/Female (5%)"		12	"SomeCol/White/Male (15.8%)"		///
@@ -1574,11 +1581,27 @@
 				local ratio_SFIG_insecure_to_secure=`SFIG_most_insecure'/`SFIG_most_secure'
 				di "`ratio_SFIG_insecure_to_secure'"	//	33.25
 				
+				
 				*	Figure 6	(Food Insecurity Prevalence and Severity by Group)
 				graph hbar HCR SFIG, over(fig7_cat, sort(HCR) /*descending*/	label(labsize(vsmall)))	legend(lab (1 "HCR") lab(2 "SFIG") size(small) rows(1))	///
 							bar(1, fcolor(gs03*0.5)) bar(2, fcolor(gs10*0.6))	graphregion(color(white)) bgcolor(white)
 				graph	export	"${FSD_outFig}/Fig_6.png", replace
 				graph	close
+				
+				*	In-text numbers
+				summ	HCR if 	fig7_cat==1			//	HCR of NoHS/non-White/female (61.0%)
+				summ	HCR if 	fig7_cat==16		//	HCR of Col/White/male (3.9%)
+				summ	HCR if 	fig7_cat==13		//	HCR of Col/non-White/female (27.7%)
+				summ	HCR	if	fig7_cat==4			//	HCR of NoHS/White/Male (21.5%)
+				
+				loc	var		HCR_gender_gap
+				cap	drop	`var'
+				gen	`var'	=	(HCR/HCR[_n+1]) - 1
+				replace	`var'=.	if	mod(_n,2)==0
+				summ	`var',d
+				di	r(min)	//	35%
+				di	r(max)	//	226%
+				
 				
 				*	Figure 6 with selected groups. For presentation
 				drop	in	2/6
@@ -1615,10 +1638,34 @@
 					mat	rownames	Pop_ratio_all		=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
 															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 															
-					putexcel	set "${FSD_outFig}/Fig_B7", sheet(Fig_B7) modify /*replace*/
+					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_7) modify
 					putexcel	A5	=	matrix(HCR_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7a
 					putexcel	A23	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
-					putexcel	A39	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)		//	population ratio
+					putexcel	A50	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)		//	population ratio
+					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_D5) modify /*replace*/
+					putexcel	A5	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
+		
+				*	In-text numbers
+				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2007):	mean PFS_FI_glm
+				local	HCR_2007	=	e(b)[1,1]
+				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2009):	mean PFS_FI_glm
+				local	HCR_2009	=	e(b)[1,1]
+				scalar	HCR_diff_09_07	=	`HCR_2009' - `HCR_2007'
+				scalar list HCR_diff_09_07
+				
+				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2007 & HH_race_white==1):	mean PFS_FI_glm
+				local	HCR_2007_w	=	e(b)[1,1]
+				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2009 & HH_race_white==1):	mean PFS_FI_glm
+				local	HCR_2009_w	=	e(b)[1,1]
+				scalar	HCR_diff_09_07_w	=	`HCR_2009_w' - `HCR_2007_w'
+				scalar list HCR_diff_09_07_w
+				
+				scalar	share_w_diff_09_07	=	HCR_diff_09_07_w	/	HCR_diff_09_07
+				scalar	list	share_w_diff_09_07
+				
+				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_female==`gender' & HH_race_white==`race' & grade_comp_cat==`edu'):	///
+								mean PFS_FI_glm FIG_indiv	SFIG_indiv
+		
 		
 			*	When graph is directly generated from Stata with colors. (disabled by default).
 			/*

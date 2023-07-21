@@ -13,13 +13,13 @@
 	DESCRIPTION: 	Clean individual-level data from 1999 to 2017
 		
 	ORGANIZATION:	0 -	Preamble
-						0.1 - Environment setup
 					1 - Import PSID raw data
 					2 - Import external (BEA, USDA) data
-					3 - Clean variable labels and values
+					3 -	Clean PSID variable labels and values
 					
-	INPUTS: 		*	PSID Individual & family raw data
+	INPUTS: 		*	PSID Individual & family & wealth raw data
 					${FSD_dtRaw}/PSID/fam????er.dta
+					${FSD_dtRaw}/PSID/wlth????.dta
 					${FSD_dtRaw}/PSID/ind2017er.dta
 					
 					*	Regional Price Parities data from the BEA
@@ -74,7 +74,6 @@
 	*stgit9
 	*di "Made using `name_do'.do on `c(current_date)' by `c(username)'."
 	*di "Git branch `r(branch)'; commit `r(sha)'."
-	
 	
 	local	import_PSID		1
 	local	import_external	1

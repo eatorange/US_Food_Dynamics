@@ -1,22 +1,22 @@
 
 	/*****************************************************************
-	PROJECT: 		US Food Security Dynamics
+	PROJECT: 		Food Security Dynamics in the United States, 2001-2017
 					
 	TITLE:			PSID_const_ind
 				
 	AUTHOR: 		Seungmin Lee (sl3235@cornell.edu)
 
-	LAST EDITED:	2021/4/24, by Seungmin Lee (sl3235@cornell.edu)
+	LAST EDITED:	2023/7/21, by Seungmin Lee (sl3235@cornell.edu)
 	
-	IDS VAR:    	fam_ID_1999 // Personal Identification Number
+	IDS VAR:    	fam_ID_1999 // Household identifier
 
 	DESCRIPTION: 	Construct variables and data to be analyzed
 		
 	ORGANIZATION:	0 -	Preamble
-						0.1 - Environment setup
-					1 - Data construction
-						1.1	-	Construct descriptive variables
-					2 - Additional cleaning for long data format
+					1 -	Construct additional indicators
+					2 - Construct a long format data
+					3 - Construct PFS
+					4 - Categorize food security status based on PFS	 
 					X - Save and Exit
 					
 	INPUTS: 		*	PSID - Individual-level data with basic cleaning.
@@ -28,11 +28,13 @@
 					*	Thrifty Food Plan cost data, from 1999 to 2017
 					${FSD_dtInt}/foodcost_????.dta (1999 to 2017)
 					
-	OUTPUTS: 		* 
-					
-					
-					* 
+	OUTPUTS: 		*	Long-format data without PFS variable (intermediate)
+					${FSD_dtInt}/FSD_long_beforePFS.dta
 						
+					*	Long-format data, final data to be analized (final)
+					${FSD_dtFin}/FSD_const_long.dta
+					
+					*	Table D5
 
 	NOTE:			*
 	******************************************************************/
@@ -73,6 +75,7 @@
 		SECTION 1: Construct additional indicators
 	****************************************************************/
 	
+	{
 	use	"${FSD_dtInt}/PSID_cleaned_ind.dta", clear
 	
 	
@@ -318,7 +321,6 @@
 		**	(2022-3-9)	Previously, I constructed this variable based on "the number of children in HH.", a HH-level variable. However, this variable is not always correct
 			*	One example is HH with survey ID==3332 in 2001. This household has two children (11-year old and 15-year old), but it has value 0 in the variable above.
 		**	Therefore, I construct this variable from child-age variables I constructed above from individual-level data.
-		**	This update should have no change in analyses, as previosu analyses didn't use this variable.	
 		
 		forval	year=1999(2)2017	{
 			
@@ -892,11 +894,13 @@
 		duplicates drop	
 		isid x11102_1999	
 		
+	}
+		
 	/****************************************************************
 		SECTION 2: Construct a long format data
 	****************************************************************/
 		
-	
+	{
 	*	Re-shape dataset
 
 		*	Retrieve the list of time-series variables
@@ -1250,6 +1254,27 @@
 		label	variable	resid_metro		"Residence: Metropolitan Area"
 		label	variable	resid_nonmetro	"Residence: Non-Metropolitan Area"
 		
+		*	Generate a categorical variable of different groups.
+		loc	var	pop_group
+		gen	`var'=.
+		loc	counter=1
+
+		foreach	edu	in	1	0	{	//	HS or below, beyond HS	   
+			foreach	race	in	0	1	{	//	People of colors, white
+				foreach	gender	in	1	0	{	//	Female, male	
+						
+					replace	`var'=`counter'	if	HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'
+					loc	counter=`counter'+1
+					
+				}	//	gender
+			}	//	race
+		}	//	education
+
+		lab	define	`var'	1	"HS/Non-White/Female"	2	"HS/Non-White/Male"		3	"HS/White/Female" 	4	"HS/White/Male"	///
+								5	"Col/Non-White/Female"	6	"Col/Non-White/Male"	7	"Col/White/Female"	8	"Col/White/Male", replace
+		lab	val	`var'	`var'
+		lab	var	`var'	"Population Group"
+		
 		*	Create a group of state variables, based on John's suggestion (2020/12)
 			
 			*	Reference state group (New York state)
@@ -1454,11 +1479,13 @@
 	*	Save it as long format
 	save	"${FSD_dtInt}/FSD_long_beforePFS.dta", replace
 	
+	}
+	
 		
 	/****************************************************************
 		SECTION 3: Construct PFS	 									
 	****************************************************************/		
-	
+	{
 	use	"${FSD_dtInt}/FSD_long_beforePFS.dta", clear
 
 	
@@ -1471,7 +1498,7 @@
 		*	The book runs both svy: GLM and GLLAMM, and they found both yields very similar inferences. We will use this fininding as an argument for using svy: GLM over GLLAMM
 			
 		*	If we need to use mixed model to account for correlation wihtin households, then we can use the following command instead. The following model is Mixed-effect Generalized Linear Model (MEGLM)
-		*	The following command is written based upon (1) Stata manual (2) 2nd edition of the reference above (Heeringa sent me an excerpt as a word file. Check 2021/6/22 email for the record)
+		*	The following command is written based upon (1) Stata manual (2) 2nd edition of the reference above 
 
 		
 		local	depvar		food_exp_stamp_pc		
@@ -1508,7 +1535,7 @@
 		lab	var	var1_foodexp_glm	"Predicted squared residual (conditional variance)"
 					
 		*	Output
-		**	For AER manuscript, we omit asterisk(*) to display significance as AER requires not to use.
+		**	For some journal manuscripts, we omit asterisk(*) to display significance as they require not to use.
 		**	If we want to diplay star, renable "star" option inside "cells" and "star(* 0.10 ** 0.05 *** 0.01)"
 		
 			esttab	glm_step1	glm_step2	using "${FSD_outTab}/Tab_D5.csv", ///
@@ -1536,16 +1563,15 @@
 		label	var	PFS_glm "PFS"
 		label	var	PFS_glm_RPPadj	"PFS (RPP-adjusted)"
 		
+	}
 		
 	/****************************************************************
 		SECTION 4: Categorize food security status based on PFS	 									
 	****************************************************************/		
-	*	Categorization	//	Generate FS category variables from the PFS
-	local	run_PFS_cat	1	
-
-	*	Categorization	
-	if	`run_PFS_cat'==1	{
+	
+	{	
 						
+		{	//	 PFS
 		
 			*	Summary Statistics of Indicies
 			summ	fs_scale_fam_rescale	PFS_glm		///
@@ -1556,10 +1582,7 @@
 			
 			*** One thing we need to be careful is that, we need to match the USDA ratio to the "population ratio(weighted)", NOT the "sample ratio(unweighted)"
 			*	To get population ratio, we should use "svy: mean"	or "svy: proportion"
-			*	The best way to do is let STATA find them automatically, but for now (2020/10/6) I will find them manually.
-				*	One idea I have to do it automatically is to use loop(while) until we get the threshold value matching the USDA ratio.
-			*	Due to time constraint, I only found it for 2015 (year=9) for OLS, which is needed to generate validation table.
-			
+			*	STATA matches them automatically via loop(while) until we get the threshold value matching the USDA ratio.
 			
 			local	prop_FI_1	=	0.101	// 1999: 10.1% are food insecure (7.1% are low food secure, 3.0% are very low food secure)
 			local	prop_FI_2	=	0.107	// 2001: 10.7% are food insecure (7.4% are low food secure, 3.3% are very low food secure)
@@ -1716,14 +1739,12 @@
 	
 	
 		
-	}	//	run_PFS_cat		
+	}		
 	
 
 	*	We do the same practice for the NME (Normalized Monetary Expenditure)
 	
-	
-	local	run_NME_cat=1
-	if	`run_NME_cat'==1	{
+	{	//	NME
 						
 		
 			*	Summary Statistics of Indicies
@@ -1733,13 +1754,7 @@
 			*	For food security threshold value, we use the ratio from the annual USDA reports.
 			*	(https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-us/readings/#reports)
 			
-			*** One thing we need to be careful is that, we need to match the USDA ratio to the "population ratio(weighted)", NOT the "sample ratio(unweighted)"
-			*	To get population ratio, we should use "svy: mean"	or "svy: proportion"
-			*	The best way to do is let STATA find them automatically, but for now (2020/10/6) I will find them manually.
-				*	One idea I have to do it automatically is to use loop(while) until we get the threshold value matching the USDA ratio.
-			*	Due to time constraint, I only found it for 2015 (year=9) for OLS, which is needed to generate validation table.
-			
-			
+		
 			local	prop_FI_1	=	0.101	// 1999: 10.1% are food insecure (7.1% are low food secure, 3.0% are very low food secure)
 			local	prop_FI_2	=	0.107	// 2001: 10.7% are food insecure (7.4% are low food secure, 3.3% are very low food secure)
 			local	prop_FI_3	=	0.112	// 2003: 11.2% are food insecure (7.7% are low food secure, 3.5% are very low food secure)
@@ -1885,34 +1900,14 @@
 			 }	//	qui
 			
 			
-			/*
-			*	Graph the PFS threshold for each year
-			cap drop templine templine2
-			gen templine=0.6
-			gen	templine2=1
-			twoway	(connected PFS_threshold_glm	year2 if fam_ID_1999==1, lpattern(dot)		mlabel(PFS_threshold_glm) mlabposition(12) mlabformat(%9.3f))	///
-					(connected NME_threshold 			year2 if fam_ID_1999==1, lpattern(dash_dot)	mlabel(NME_threshold) mlabposition(12) mlabformat(%9.3f))	///
-					(line templine year2 if fam_ID_1999==1, lpattern(dash))	///
-					(line templine2 year2 if fam_ID_1999==1, lpattern(dash)),	///
-					/*title(Probability Threshold for being Food Secure)*/	ytitle(Probability/Ratio)	xtitle(Year)	xlabel(2001(2)2017) ///
-					legend(order(1 "P*"	2	"E*"))	///
-					name(NME_Threshold, replace)	graphregion(color(white)) bgcolor(white)
-					
-			graph	export	"${FSD_outFig}/NME_Thresholds.png", replace
-			graph	close
-			
-			drop	templine	templine2
-			*/
 		
 	}	//	Categorization			
 
-	*svy, subpop(if ${study_sample} & !mi(PFS_glm) & year==10): mean  PFS_FI_glm PFS_FS_glm
-	*svy, subpop(if ${study_sample} & !mi(NME_FI) & year==10): mean  NME_FI NME_FS
+	*	Drop variables no longer used
+	drop	glm_step1_sample glm_step2_sample pctile_glm_2-pctile_glm_10 pctile_glm_RPPadj_6-pctile_glm_RPPadj_10 pctile_NME_2-pctile_NME_10
 	
-			*	Drop variables no longer used
-		drop	glm_step1_sample glm_step2_sample pctile_glm_2-pctile_glm_10 pctile_glm_RPPadj_6-pctile_glm_RPPadj_10 pctile_NME_2-pctile_NME_10
+	}
 	
-
 	/****************************************************************
 		SECTION X: Save and Exit
 	****************************************************************/
