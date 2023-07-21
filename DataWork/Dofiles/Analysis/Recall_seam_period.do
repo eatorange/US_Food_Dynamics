@@ -1,6 +1,7 @@
 *	Recall period
-*	This do-file replicates the statistics of recall period in the main text section "Empirical Framework/Data"
-
+*	This section replicates the statistics of recall period in the main text section "Empirical Framework/Data"
+	
+	{
 	use	"${FSD_dtFin}/FSD_const_long.dta", clear
 		
 		*	Count the number of non-missing PFS obs within household over time. We will restrict our analysis on households with non-missing PFS 
@@ -137,5 +138,138 @@
 		
 		*	Simple regression of PFS on interview dummy.
 		svy, subpop(if ${study_sample}==1): reg PFS_glm	ib47.week_of_year
+	}
+	
+*	Seam period
+*	This section replicates the numbers in footnote 11 (interval between survey periods)
+{
+	use	"${FSD_dtFin}/FSD_const_long.dta", clear
+	
+	sort	fam_ID_1999	year
+		
+		*	Food security transition status
+		loc	var		FS_trans_status
+		cap	drop	`var'
+		gen		`var'=0	if	l1.PFS_FI_glm==0	&	PFS_FI_glm==0	//	FS in both periods
+		replace	`var'=1	if	l1.PFS_FI_glm==1	&	PFS_FI_glm==0	//	(FI,FS)
+		replace	`var'=2	if	l1.PFS_FI_glm==0	&	PFS_FI_glm==1	//	(FI,FS)
+		replace	`var'=3	if	l1.PFS_FI_glm==1	&	PFS_FI_glm==1	//	(FI,FI)
+		lab	define	`var'	0	"FS/FS"	1	"FI/FS"	2	"FS/FI"	3	"FI/FI"
+		lab	val	`var'	`var'
+		lab	var	`var'	"Food Security Transition"
+		
+		*	Replicate spells variable from the original analyses file
+		{
+			*	Tag balanced sample (Households without any missing PFS throughout the study period)
+			*	Unbalanced households will be dropped from spell length analyses not to underestimate spell lengths
+			capture	drop	num_nonmissing_PFS
+			cap	drop	balanced_PFS
+			bys fam_ID_1999: egen num_nonmissing_PFS=count(PFS_FI_glm)
+			gen	balanced_PFS=1	if	num_nonmissing_PFS==9
 
+			*	Summary stats of spell lengths among FI incidence
+			*mat	summ_spell_length	=	J(9,2,.)	
+			cap drop	_seq	_spell	_end
+			tsspell, cond(year>=2 & PFS_FI_glm==1)
+		
+		}
+		
+		
+		*	Seam period (# of months between survey)
+		local	var	seam_period
+		cap	drop	`var'
+		gen	`var'	=	(interview_month - l1.interview_month)+24
+		lab	var	`var'	"# of months between interview"
+		
+		*	Dummy for seam period b/w 24+=-3 months
+		cap	drop	seam_21_27
+		gen		seam_21_27=.
+		replace	seam_21_27=0	if	!mi(`var')	&	!inrange(`var',21,27)
+		replace	seam_21_27=1	if	!mi(`var')	&	inrange(`var',21,27)
+		lab	var	seam_21_27	"=1 if surveyed between 21~27 months"
+		
+		*	Dummy for seam period<=24 months
+		cap	drop	seam_24_less
+		gen		seam_24_less=.
+		replace	seam_24_less=0	if	!mi(`var')	&	!inrange(`var',1,24)
+		replace	seam_24_less=1	if	!mi(`var')	&	inrange(`var',1,24)
+		lab	var	seam_24_less	"=1 if surveyed within 24 months"
+		
+		*	Category for different seam periods
+		loc	var		seam_period_cat
+		cap	drop	`var'
+		gen	`var'=.	if	mi(seam_period)
+		replace	`var'=1	if	inrange(seam_period,1,20)
+		replace	`var'=2	if	inrange(seam_period,21,24)
+		replace	`var'=3	if	inrange(seam_period,25,27)
+		replace	`var'=4	if	inrange(seam_period,27,36)
+		lab	define	`var'	1	"<21 months"	2	"21-24 months"	3	"25-27 months"	4	">27 months"
+		lab	val	`var'	`var'
+		lab	var	`var'	"Seam period (categorical)"
+		
+		*svy, subpop(${study_sample}): tab `var'
+		
+		
+		tempfile	temp
+		save	`temp'
+		
+		br	fam_ID_1999	year	PFS_FI_glm	FS_trans_status	_seq	_spell	_end	seam*
+		
+		
+		*	Analysis
+		
+			*	Uncontional distribution of seam period (unweighted)
+			tab		seam_period	if ${study_sample}	//	All sample HH
+			tab		seam_period	if ${study_sample}	&	_seq==1	&	f1._seq==0	//	Transiently FI households (single-period FI experience)
+			summ	seam_21_27	if ${study_sample}	//	92% of households fall in survey period b/w 21 and 27 months
+			
+			tab		seam_period_cat	PFS_FI_glm	//	joint distribution of seam period and FI status
+			
+			sort	fam_ID_1999	year
+			summ	PFS_FI_glm	if	 ${study_sample}	&	_seq==1	&	f1._seq==0	&	seam_period_cat==1
+			
+			*	Conditional distribution of seam period
+			tab	seam_period if ${study_sample}	&	_seq==1	//	_seq==1 condition restricts the sample to those who just entered FI
+			tab	seam_period if ${study_sample}	&	_seq==1	&	f1._seq==0	//	"_seq==1	&	f1._seq==0"  restricts the sample to those who experienced 1 period of FI
+			
+			hist	seam_period if ${study_sample},	fraction	title(# of months between surveys)
+			hist	seam_period if ${study_sample}	&	_seq==1	&	f1._seq==0,	fraction //	"_seq==1	&	f1._seq==0"  restricts the sample to those who experienced 1 period of FI
+				
+			twoway	(hist	seam_period if ${study_sample}, fraction color(red))	///
+					(hist	seam_period if ${study_sample}	&	_seq==1	&	f1._seq==0, fraction color(blue)),	///
+					legend(order(1	"All HH"	2	"Transient FI"))	title(# of months between survey rounds)
+			graph	export	"E:\Box\2nd year paper\Draft\20220108_AJAE\R&R\dist_svy_months.png", as(png) replace
+					
+				
+		
+			*	Conditional distribution of FI, upon different seam periods
+				*	Q. Among differents seam periods, what is the likelihood that we observe sepcific food security stransition status
+				*	Why we need to see this? because we might observe different share of food security transition contional upon different seam periods.
+				
+				tab	PFS_FI_glm	if	 ${study_sample}	&	l1.PFS_FI_glm==1	&	seam_period_cat==1
+				tab	PFS_FI_glm	if	 ${study_sample}	&	l1.PFS_FI_glm==1	&	seam_period_cat==2
+				tab	PFS_FI_glm	if	 ${study_sample}	&	l1.PFS_FI_glm==1	&	seam_period_cat==3
+				tab	PFS_FI_glm	if	 ${study_sample}	&	l1.PFS_FI_glm==1	&	seam_period_cat==4
+				
+				*	Regression FS status on seam period (for previously FI households)
+				reg	PFS_FS_glm	seam_period	if	 ${study_sample}	&	l1.PFS_FI_glm==1
+				svy, subpop(if	 ${study_sample}	&	l1.PFS_FI_glm==1):	reg	PFS_FS_glm	seam_period
+				
+				
+			
+				
+				
+			tab FS_trans_status	if	 ${study_sample}	&	seam_period_cat==1
+			tab FS_trans_status	if	 ${study_sample}	&	seam_period_cat==2
+			tab FS_trans_status	if	 ${study_sample}	&	seam_period_cat==3
+			tab FS_trans_status	if	 ${study_sample}	&	seam_period_cat==4
+
+					
+			svy, subpop(if ${study_sample}	&	seam_24_less==0):	mean	PFS_FI_glm
+			svy, subpop(if ${study_sample}	&	seam_24_less==1):	mean	PFS_FI_glm
+
+		
+		tab	PFS_FI_glm	if	${study_sample}	&	seam_24_less==0
+		tab	PFS_FI_glm	if	${study_sample}	&	seam_24_less==1
+	}
 	

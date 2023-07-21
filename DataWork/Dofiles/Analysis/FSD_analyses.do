@@ -1644,28 +1644,8 @@
 					putexcel	A50	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)		//	population ratio
 					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_D5) modify /*replace*/
 					putexcel	A5	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
-		
-				*	In-text numbers
-				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2007):	mean PFS_FI_glm
-				local	HCR_2007	=	e(b)[1,1]
-				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2009):	mean PFS_FI_glm
-				local	HCR_2009	=	e(b)[1,1]
-				scalar	HCR_diff_09_07	=	`HCR_2009' - `HCR_2007'
-				scalar list HCR_diff_09_07
-				
-				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2007 & HH_race_white==1):	mean PFS_FI_glm
-				local	HCR_2007_w	=	e(b)[1,1]
-				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& year2==2009 & HH_race_white==1):	mean PFS_FI_glm
-				local	HCR_2009_w	=	e(b)[1,1]
-				scalar	HCR_diff_09_07_w	=	`HCR_2009_w' - `HCR_2007_w'
-				scalar list HCR_diff_09_07_w
-				
-				scalar	share_w_diff_09_07	=	HCR_diff_09_07_w	/	HCR_diff_09_07
-				scalar	list	share_w_diff_09_07
-				
-				svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_female==`gender' & HH_race_white==`race' & grade_comp_cat==`edu'):	///
-								mean PFS_FI_glm FIG_indiv	SFIG_indiv
-		
+					
+			
 		
 			*	When graph is directly generated from Stata with colors. (disabled by default).
 			/*

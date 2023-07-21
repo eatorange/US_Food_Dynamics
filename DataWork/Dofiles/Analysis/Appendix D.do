@@ -124,7 +124,7 @@
 			predict glm_order5	if	e(sample)==1 & `=e(subpop)'
 			
 			*	Output
-			**	AER requires NOT to use asterisk(*) to display significance level, so we don't display it here
+			**	Some journals require NOT to use asterisk(*) to display significance level, so we don't display it here
 			**	We can display them by modifying some options
 			
 			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${FSD_outTab}/Tab_D4.csv", replace ///

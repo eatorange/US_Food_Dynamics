@@ -1,8 +1,10 @@
 *	Appendix C: Checking Robustness to Interstate Variation in Prices
 
 
+
 use	"${FSD_dtFin}/FSD_const_long.dta", clear
-	
+
+
 /****************************************************************
 	Section 1: Spell length
 ****************************************************************/
@@ -27,9 +29,7 @@ use	"${FSD_dtFin}/FSD_const_long.dta", clear
 			gen	balanced_PFSs_0917=1	if	balanced_PFSs_all==1	&	inrange(year2,2009,2017)		//	HH with balanced PFS and RPP-adj PFS, only from 2009 to 2017 
 			
 			
-			*	Summary stats of spell lengths among FI incidence, using only balanced subsample defind above
-			*mat	summ_spell_length	=	J(9,2,.)	
-			
+			summ	RPP, d // Max and min RPP
 			sort fam_ID_1999 year	//	Need for conditional persistence
 		
 				*	PFS (default)
@@ -188,11 +188,11 @@ use	"${FSD_dtFin}/FSD_const_long.dta", clear
 					merge	1:m	year2	state_str	resid_metro	resid_nonmetro using	`temp', keep(1 3) keepusing(state_group_*)
 					
 					*	Avg RPP by regional group. We see RPP is higher in NE(106.7) and MidAt(104.0) and lower in South (93.1) and Midwest (93.0)
-					summ	RPP	if	inrange(year2,2009,2017)	&	state_group_NE==1	
-					summ	RPP	if	inrange(year2,2009,2017)	&	state_group_MidAt==1	
-					summ	RPP	if	inrange(year2,2009,2017)	&	state_group_South==1	
-					summ	RPP	if	inrange(year2,2009,2017)	&	state_group_MidWest==1	
-					summ	RPP	if	inrange(year2,2009,2017)	&	state_group_West==1	
+					summ	RPP	if	inrange(year2,2011,2017)	&	state_group_NE==1		//	107
+					summ	RPP	if	inrange(year2,2011,2017)	&	state_group_MidAt==1	//	104
+					summ	RPP	if	inrange(year2,2011,2017)	&	state_group_South==1	//	93
+					summ	RPP	if	inrange(year2,2011,2017)	&	state_group_MidWest==1	//	93
+					summ	RPP	if	inrange(year2,2011,2017)	&	state_group_West==1		//	103
 					
 				use	`temp', clear
 				
