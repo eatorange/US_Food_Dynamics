@@ -23,10 +23,15 @@
 	Section 1: Table D3 & D4
 ****************************************************************/
 	{
-		eststo drop	Total SRC	SEO	Imm
 		
-		local	estimation_year		inrange(year,2,10)
+		*	Sample information
+		svy: mean  sample_source_SRC_SEO	//	Share of SRC + SEO households in entire PSID sample (93%)
+		count if ${study_sample} & !mi(PFS_glm)	//	# of obs in the sample
+		unique	fam_ID_1999	if	${study_sample} & !mi(PFS_glm)	//	# of households in the sample
 				
+		
+		eststo drop	Total SRC	SEO	Imm
+			
 		*	Declare variables
 		local	demovars	age_head_fam	HH_race_white	HH_race_color	marital_status_cat	HH_female	
 		local	econvars	income_pc	food_exp_stamp_pc
@@ -76,9 +81,6 @@
 		nonumbers mtitles("Total" "SRC" "SEO" "Immigrants") ///
 		title (Summary Statistics)	tex 		
 		
-		
-		
-	
 	
 	*	Table D4: Estimates of Annual per capita Food Expenditure
 	
