@@ -235,11 +235,12 @@
 			hist	seam_period if ${study_sample},	fraction	title(# of months between surveys)
 			hist	seam_period if ${study_sample}	&	_seq==1	&	f1._seq==0,	fraction //	"_seq==1	&	f1._seq==0"  restricts the sample to those who experienced 1 period of FI
 				
+			/*	Not used in the final manuscript
 			twoway	(hist	seam_period if ${study_sample}, fraction color(red))	///
 					(hist	seam_period if ${study_sample}	&	_seq==1	&	f1._seq==0, fraction color(blue)),	///
 					legend(order(1	"All HH"	2	"Transient FI"))	title(# of months between survey rounds)
-			graph	export	"E:\Box\2nd year paper\Draft\20220108_AJAE\R&R\dist_svy_months.png", as(png) replace
-					
+			graph	export	"${FSD_outFig}/dist_svy_months.png", as(png) replace
+			*/	
 				
 		
 			*	Conditional distribution of FI, upon different seam periods
