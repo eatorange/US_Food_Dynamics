@@ -1297,7 +1297,7 @@ psid use || college_yrs_spouse	 [99]ER15859 [01]ER19920 [03]ER23357 [05]ER27320 
 												9	"NA; refused"
 				label values	marital_status*	marital_status	
 			
-			*	Food Security (HFMS)
+			*	Food Security (FSSS)
 			label	define	fs_cat	1	"High Food Security"	///
 									2	"Marginal Food Security"	///
 									3	"Low Food Security"	///

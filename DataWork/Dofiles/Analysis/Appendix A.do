@@ -108,11 +108,11 @@
 		
 			*	Regression
 			
-				*	HFSM, without region FE
+				*	FSSS, without region FE
 				local	depvar	fs_scale_fam_rescale	
 				svy, subpop(if ${study_sample} & FSSS_PFS_available_years==1	&	!mi(PFS_glm)	&	!mi(fs_scale_fam_rescale)):	///
 					reg	`depvar'	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	
-				est	store	HFSM_noregionFE	
+				est	store	FSSS_noregionFE	
 				
 				*	PFS, without region FE
 				local	depvar	PFS_glm
@@ -120,11 +120,11 @@
 					reg	`depvar'	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	
 				est	store	PFS_noregionFE	
 				
-				*	HFSM, with region FE
+				*	FSSS, with region FE
 				local	depvar	fs_scale_fam_rescale
 				svy, subpop(if ${study_sample} & FSSS_PFS_available_years==1	&	!mi(PFS_glm)	&	!mi(fs_scale_fam_rescale)):	///
 					reg	`depvar'	${demovars}	${econvars}		${healthvars}	${empvars}		${familyvars}	${eduvars}	${foodvars}	${changevars}	${timevars}	${regionvars}
-				est	store	HFSM_regionFE	
+				est	store	FSSS_regionFE	
 				
 				*	PFS, with region FE
 				local	depvar	PFS_FS_glm
@@ -136,12 +136,12 @@
 			*	Output
 				
 				*	Food Security Indicators and Their Correlates 
-				esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${FSD_outTab}/Tab_A2.csv", ///
+				esttab	FSSS_noregionFE	PFS_noregionFE	FSSS_regionFE	PFS_regionFE	using "${FSD_outTab}/Tab_A2.csv", ///
 						cells(b(star fmt(3)) se(fmt(2) par)) stats(N_sub r2) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	drop(*year_enum* state_group* _cons)	///
 						title(Effect of Correlates on Food Security Status) replace
 						
 						
-				esttab	HFSM_noregionFE	PFS_noregionFE	HFSM_regionFE	PFS_regionFE	using "${FSD_outTab}/Tab_A2.tex", ///
+				esttab	FSSS_noregionFE	PFS_noregionFE	FSSS_regionFE	PFS_regionFE	using "${FSD_outTab}/Tab_A2.tex", ///
 						/*cells(b(star fmt(3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	*/	///
 						cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)drop(*year_enum* state_group* _cons)	///
 						title(Effect of Correlates on Food Security Status) replace

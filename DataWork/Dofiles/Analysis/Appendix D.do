@@ -149,7 +149,7 @@
 		
 	*	Figure D1
 	
-				*	Graph the PFS threshold for each year
+			*	Graph the PFS threshold for each year
 			cap drop templine
 			gen templine=0.6
 			twoway	(connected PFS_threshold_glm year2 if fam_ID_1999==1, lpattern(dot)	mlabel(PFS_threshold_glm) mlabposition(12) mlabformat(%9.3f))	///
@@ -257,14 +257,14 @@
 						graphregion(color(white)) bgcolor(white)	///
 						title(1999)	name(fv_age_retire_1999, replace)
 				
-				*	2007
+				*	2005
 				summ	retire_age	if	retire_year_head==2005	&	e(sample)
 				graph	twoway	(lpolyci fv age_head_fam	if	year==4),	///
 						xline(`r(mean)')	xscale(range(20 100))	yscale(range(0.4(0.2)1))	xtitle(Age) legend(lab (2 "PFS"))	///
 						graphregion(color(white)) bgcolor(white)	///
 						title(2005)	name(fv_age_retire_2005, replace)
 				
-				*	2013
+				*	2011
 				summ	retire_age	if	retire_year_head==2011	&	e(sample)
 				graph	twoway	(lpolyci fv age_head_fam	if	year==7),	///
 						xline(`r(mean)')	xscale(range(20 100))	yscale(range(0.4(0.2)1))	xtitle(Age) legend(lab (2 "PFS"))	///
