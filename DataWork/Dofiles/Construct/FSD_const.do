@@ -1926,7 +1926,7 @@
 		save	"${FSD_dtFin}/FSD_const_long.dta", replace
 		
 		*	Generate codebook (disabled by default)
-		loc	export_codebook=1
+		loc	export_codebook=0
 		if	`export_codebook'==1	{
 			
 			quietly log using "${dataWorkFolder}/codebook.txt", text replace

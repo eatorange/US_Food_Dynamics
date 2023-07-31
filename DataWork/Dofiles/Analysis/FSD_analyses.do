@@ -916,11 +916,11 @@
 			   }	//	race
 
 				
-				*	Combine results (Table 6)
+				*	Combine results 
 				mat	define	blankrow	=	J(1,5,.)
 				mat	perm_stat_2000_allcat_`measure'	=	perm_stat_2000_all	\	blankrow	\	perm_stat_2000_gender	\	blankrow	\	perm_stat_2000_race	\	///
 												blankrow	\	perm_stat_2000_region	\	blankrow	\	perm_stat_2000_metro	\	blankrow \	///
-												perm_stat_2000_child	\	blankrow	\	perm_stat_2000_edu	//	To be combined with category later.
+												/*perm_stat_2000_child	\	blankrow	\*/	perm_stat_2000_edu	//	To be combined with category later.
 				
 				/*
 				mat	perm_stat_2000_combined_`measure'	=	perm_stat_2000_allcat_`measure'	\	blankrow	\	blankrow	\	perm_stat_2000_decomp_`measure'
@@ -1025,8 +1025,8 @@
 				
 				mat	PFS_perm_FI_metro	=	PFS_perm_FI_metro_metro	\	PFS_perm_FI_metro_nonmetro
 				
-				*	Child
-				foreach	type	in	nothad	had	{
+				*	(NOT used) Child  
+				/* foreach	type	in	nothad	had	{
 					
 					svy, subpop(if ${study_sample} &	!mi(PFS_glm)	&	 ${nonmissing_TFI_CFI} 	& dyn_sample==1	&	child_`type'==1):	///
 						proportion PFS_perm_FI_`measure'
@@ -1035,7 +1035,7 @@
 				}
 				
 				mat	PFS_perm_FI_child	=	PFS_perm_FI_child_nothad	\	PFS_perm_FI_child_had
-				
+				*/
 				
 				*	Education
 				foreach	degree	in	NoHS	HS	somecol	col	{
@@ -1051,7 +1051,7 @@
 				*	Combine results 
 				mat	define	blankrow	=	J(1,5,.)
 				mat	PFS_perm_FI_combined_`measure'	=	PFS_perm_FI_all	\	blankrow	\	PFS_perm_FI_gender	\	blankrow	\	PFS_perm_FI_race	\	blankrow	\	///
-														PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro	\	blankrow	\	PFS_perm_FI_child	\	blankrow	\	PFS_perm_FI_edu
+														PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro	\	blankrow	/*\	PFS_perm_FI_child	\	blankrow*/	\	PFS_perm_FI_edu
 				
 				mat	list	PFS_perm_FI_combined_`measure'
 				
