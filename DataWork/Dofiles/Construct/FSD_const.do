@@ -1915,6 +1915,7 @@
 		SECTION X: Save and Exit
 	****************************************************************/
 	
+		
 		*	Make data
 		notes	drop _dta
 		notes:	FSD_const_long / created by `name_do' - `c(username)' - `c(current_date)' ///
@@ -1923,6 +1924,16 @@
 	
 		qui		compress
 		save	"${FSD_dtFin}/FSD_const_long.dta", replace
+		
+		*	Generate codebook (disabled by default)
+		loc	export_codebook=1
+		if	`export_codebook'==1	{
+			
+			quietly log using "${dataWorkFolder}/codebook.txt", text replace
+			codebook, compact
+			quietly log close	
+			
+		}
 	
 	/*
 		* Save log
