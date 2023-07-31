@@ -84,7 +84,7 @@
 		*mat	summ_spell_length	=	e(N),	e(b)
 		mat	summ_spell_length	=	e(b)[1..1,2..10]'
 
-		*	Persistence rate conditional upon spell length (Table 7 of 2020/11/16 draft)
+		*	Persistence rate conditional upon spell length
 		tsset // need to run befor the code below
 		mat	persistence_upon_spell	=	J(9,2,.)	
 		forvalues	i=1/8	{
@@ -92,7 +92,7 @@
 			mat	persistence_upon_spell[`i',1]	=	/*e(N),*/ e(b)[1,1], r(table)[2,1]
 		}
 
-		*	Distribution of spell length and conditional persistent (Table 7 of 2020/11/16 draft)
+		*	Distribution of spell length and conditional persistent
 		mat spell_dist_comb	=	summ_spell_length,	persistence_upon_spell
 		mat	rownames	spell_dist_comb	=	2	4	6	8	10	12	14	16	18
 
@@ -131,7 +131,7 @@
 		}
 		replace FI_duration=.	if	balanced_PFS!=1 //
 
-		*	Figure 4 of 2020/11/16 draft
+		*	Prepare matrix for figure 1
 		mat	dist_spell_length_byyear	=	J(8,10,.)
 		forval	wave=2/9	{
 			
@@ -579,16 +579,16 @@
 					*/
 				
 				*	Figure 3
-				*	Since the editor required to use B&W with patterns which Stata does NOT support, I export data to "Fig_3.xlsx" which generates graphs there.
+				*	Since the AJAE editor required to use B&W with patterns which Stata does NOT support, I export data to "Fig_3.xlsx" which generates graphs there.
 				*	Note that Excel does generate 3a and 3b only. I (Seungmin) manually combined Figure 3 by combining 3a and 3b
 					mat	colnames	FI_newly_year_all	=	2003 2005 2007 2009 2011 2013 2015 2017
-					mat	rownames	FI_newly_year_all	=	"HS/Non-White/Female (3.8%)"	"HS/Non-White/Male (3.0%)"	"HS/White/Female (5.6%)" 	"HS/White/Male (24.4%)"	///
-															"Col/Non-White/Female (2.5%)"	"Col/Non-White/Male (5.0%)"	"Col/White/Female (10.2%)"	"Col/White/Male (45.6%)"
+					mat	rownames	FI_newly_year_all	=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 					mat	colnames	FI_still_year_all	=	2003 2005 2007 2009 2011 2013 2015 2017
-					mat	rownames	FI_still_year_all	=	"HS/Non-White/Female (3.8%)"	"HS/Non-White/Male (3.0%)"	"HS/White/Female (5.6%)" 	"HS/White/Male (24.4%)"	///
-															"Col/Non-White/Female (2.5%)"	"Col/Non-White/Male (5.0%)"	"Col/White/Female (10.2%)"	"Col/White/Male (45.6%)"
-					mat	rownames	Pop_ratio			=	"HS/Non-White/Female (3.8%)"	"HS/Non-White/Male (3.0%)"	"HS/White/Female (5.6%)" 	"HS/White/Male (24.4%)"	///
-															"Col/Non-White/Female (2.5%)"	"Col/Non-White/Male (5.0%)"	"Col/White/Female (10.2%)"	"Col/White/Male (45.6%)"
+					mat	rownames	FI_still_year_all	=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
+					mat	rownames	Pop_ratio			=	"HS/Non-White/Female (4.1%)"	"HS/Non-White/Male (3.3%)"	"HS/White/Female (6.1%)" 	"HS/White/Male (25.0%)"	///
+															"Col/Non-White/Female (2.3%)"	"Col/Non-White/Male (4.8%)"	"Col/White/Female (9.5%)"	"Col/White/Male (45.0%)"
 															
 					putexcel	set "${FSD_outFig}/Fig_3", sheet(Fig_3) modify /*replace*/
 					putexcel	A5	=	matrix(FI_newly_year_all), names overwritefmt nformat(number_d1)	//	3a
@@ -1048,7 +1048,7 @@
 				mat	PFS_perm_FI_edu	=	PFS_perm_FI_edu_NoHS	\	PFS_perm_FI_edu_HS	\	PFS_perm_FI_edu_somecol	\	PFS_perm_FI_edu_col
 				
 
-				*	Combine results (Table 9 of 2020/11/16 draft)
+				*	Combine results 
 				mat	define	blankrow	=	J(1,5,.)
 				mat	PFS_perm_FI_combined_`measure'	=	PFS_perm_FI_all	\	blankrow	\	PFS_perm_FI_gender	\	blankrow	\	PFS_perm_FI_race	\	blankrow	\	///
 														PFS_perm_FI_region	\	blankrow	\	PFS_perm_FI_metro	\	blankrow	\	PFS_perm_FI_child	\	blankrow	\	PFS_perm_FI_edu
@@ -1112,17 +1112,17 @@
 				gen	edu_fig5	=	_n
 				
 				//	Currently we use the value for the proportion of each category from the pre-calculated value. It would be better if we can automatically update it as analyses are updated.
+				svmat	perm_stat_2000_decomp_HCR
+				rename	perm_stat_2000_decomp_HCR?	(pop_ratio	TFI	CFI	TFF_minus_CFI	ratio_CFI_TFI)
+				list	edu_fig5	pop_ratio	in	1/16	//	Shows the population ratio
+				
 				label	define	edu_fig5	1	"Less than High School (2%)"	2	"High School (2.4%)"	3	"Some College (1.4%)"	4	"College (0.6%)"	///
 											5	"Less than High School (0.8%)"	6	"High School (2.7%)"	7	"Some College (2.7%)"	8	"College (1.9%)"	///
 											9	"Less than High School (1.5%)"	10	"High School (5.6%)"	11	"Some College (4.6%)"	12	"College (4%)"		///
 											13	"Less than High School (4.7%)"	14	"High School (21.4%)"	15	"Some College (16.3%)"	16	"College (27.5%)",	replace
 				label	values	edu_fig5	edu_fig5
 				
-			
-				
-				svmat	perm_stat_2000_decomp_HCR
-				rename	perm_stat_2000_decomp_HCR?	(pop_ratio	TFI	CFI	TFF_minus_CFI	ratio_CFI_TFI)
-				
+							
 				*	Output
 				graph hbar TFI CFI, over(edu_fig5, sort(education) descending	label(labsize(vsmall)))	over(race_gender, descending	label(labsize(vsmall) angle(vertical)))	nofill	///	/*	"nofill" option is needed to drop missing categories
 									legend(lab (1 "Total Food Insecurity (TFI)") lab(2 "Chronic Food Insecurity (CFI)") size(vsmall) rows(1))	bar(1, fcolor(gs3*0.5)) bar(2, fcolor(gs12*0.6))	graphregion(color(white)) bgcolor(white)
@@ -1223,7 +1223,7 @@
 				
 				
 			
-		*	Quick check the sequence of FS under HFSM
+		*	Quick check the sequence of FS under FSSS
 		cap	drop	HFSM_FS_always
 		cap	drop	balanced_HFSM
 		bys	fam_ID_1999:	egen	HFSM_FS_always	=	min(fs_cat_fam_simp)	//	1 if never food insecure (always food secure under HFSM), 0 if sometimes insecure 
@@ -1266,7 +1266,7 @@
 		
 		*	Aggregate over households to generate population-level statistics
 		*	Input for Figure 2 (Change in Estimated Food Security Status by Group) 
-			* Graph can be found in "FGT_year" sheet in "Min_report" Excel file
+			
 		
 		foreach	group	in	all	male	female	white	black	other	NoHS	HS	somecol	col	NE	MidAt	South	MidWest	West metro nonmetro	nochild	presch	sch	both	{
 			cap	mat	drop	sampleno_`group'	HCR_`group'	FIG_`group'	SFIG_`group'
@@ -1441,7 +1441,7 @@
 		   *	Input for Figure 6  (Food Insecurity Prevalence and Severity by Group).
 		  
 		   *	Generate group-level aggregates.
-		   *	We need to do it twice - one for main graph and one for supplement graph. The latter use more detailed educational category.
+		   *	We need to do it twice - one for main graph and one for supplement graph. The latter use less detailed educational category.
 		   
 		   *	Total population size, which is needed to get the share of each sub-group population to total population later
 			qui	svy, subpop(if ${study_sample} & ${nonmissing_FGT}): mean PFS_FI_glm FIG_indiv	SFIG_indiv
@@ -1459,7 +1459,7 @@
 					foreach	race	in	0	1	{	//	People of colors, white
 						foreach	gender	in	1	0	{	//	Female, male
 							
-							*	FGT measures across all years (Figure 3 in Dec 2020 draft)
+							*	FGT measures across all years 
 							
 							qui svy, subpop(if ${study_sample} & ${nonmissing_FGT}	& HH_female==`gender' & HH_race_white==`race' & highdegree_HSorbelow==`edu'):	///
 								mean PFS_FI_glm FIG_indiv	SFIG_indiv
@@ -1553,6 +1553,10 @@
 				*	Generate category variable 
 				gen	fig7_cat	=	_n
 				
+				*	Generate category variable			
+				svmat	FGT_cat_combined_sup
+				rename	FGT_cat_combined_sup?	(pop_ratio	HCR	FIG	SFIG)
+				
 				*	Define the label based on the population ratio matrix computed above.
 				mat	list	FGT_cat_combined_sup	//	First column is the population ratio computed.
 				label	define	fig7_cat	1	"NoHS/NonWhite/Female (1.6%)"		2	"NoHS/NonWhite/Male (0.8%)"		3	"NoHS/White/Female (1.2%)"		4	"NoHS/White/Male (4%)"	///
@@ -1560,12 +1564,8 @@
 											9	"SomeCol/NonWhite/Female (1.4%)"	10	"SomeCol/NonWhite/Male (2.6%)"	11	"SomeCol/White/Female (5%)"		12	"SomeCol/White/Male (15.8%)"		///
 											13	"Col/NonWhite/Female (0.9%)"		14	"Col/NonWhite/Male (2.2%)"		15	"Col/White/Female (4.4%)"		16	"Col/White/Male (29.2%)",	replace
 				label	values	fig7_cat	fig7_cat
-				
-				
-				*	Generate category variable for Fig 8 and A5				
-				svmat	FGT_cat_combined_sup
-				rename	FGT_cat_combined_sup?	(pop_ratio	HCR	FIG	SFIG)
-				
+				list	fig7_cat	pop_ratio	//	Shows the population ratio above.
+									
 				*	Generate the difference in HCR and SFIG between the most insecure and the most secure group (in-text number)
 				local	HCR_most_insecure=HCR in 1
 				di "`HCR_most_insecure'"
@@ -1643,7 +1643,7 @@
 					putexcel	A23	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
 					putexcel	A50	=	matrix(Pop_ratio_all), names overwritefmt nformat(number_d1)		//	population ratio
 					putexcel	set "${FSD_outFig}/Fig_7_D5", sheet(Fig_D5) modify /*replace*/
-					putexcel	A5	=	matrix(SFIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
+					putexcel	A5	=	matrix(FIG_weight_cat_all), names overwritefmt nformat(number_d1)	//	Figure 7b
 					
 			
 		
