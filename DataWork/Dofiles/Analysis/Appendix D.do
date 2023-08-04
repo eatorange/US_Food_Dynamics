@@ -27,8 +27,13 @@
 		*	Sample information
 		svy: mean  sample_source_SRC_SEO	//	Share of SRC + SEO households in entire PSID sample (93%)
 		count if ${study_sample} & !mi(PFS_glm)	//	# of obs in the sample
-		unique	fam_ID_1999	if	${study_sample} & !mi(PFS_glm)	//	# of households in the sample
+		unique	fam_ID_1999	if	${study_sample} & !mi(PFS_glm)	//	# of households in the sample		
 				
+		lab	var	lag_food_exp_stamp_pc_1		"(Lagged) food exp per capita"
+		lab	var	lag_food_exp_stamp_pc_2		"(Lagged) food exp per capita$^2$"
+		lab	var	lag_food_exp_stamp_pc_th_3	"(Lagged) food exp per capita$^3$ (thousand)"
+		lab	var	lag_food_exp_stamp_pc_th_4	"(Lagged) food exp per capita$^4$ (thousand)"
+		lab	var	lag_food_exp_stamp_pc_th_5	"(Lagged) food exp per capita$^5$ (thousand)"
 		
 		eststo drop	Total SRC	SEO	Imm
 			
@@ -128,13 +133,13 @@
 			**	We can display them by modifying some options
 			
 			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${FSD_outTab}/Tab_D4.csv", replace ///
-					cells(b(nostar fmt(%8.3f)) se(fmt(3) par)) stats(N aic2 bic2, fmt(%8.0fc %8.3fc %8.3fc)) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
+					cells(b(nostar fmt(%8.3f)) se(fmt(3) par)) stats(N aic2, fmt(%8.0fc %8.3fc %8.3fc)) label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	///
 					keep(lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5)	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor. )	
 					
 			esttab	glm_step1_order1	glm_step1_order2	glm_step1_order3	glm_step1_order4	glm_step1_order5	using "${FSD_outTab}/Tab_D4.tex", ///
-					cells(b(nostar fmt(%8.3f)) se(fmt(3) par)) stats(N aic2 bic2, fmt(%8.0fc %8.3fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	///
+					cells(b(star fmt(%8.3f)) se(fmt(3) par)) stats(N aic2, fmt(%8.0fc %8.3fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	///
 					keep(lag_food_exp_stamp_pc_1	lag_food_exp_stamp_pc_2	lag_food_exp_stamp_pc_th_3	lag_food_exp_stamp_pc_th_4	lag_food_exp_stamp_pc_th_5)	///
 					title(Average Marginal Effects on Food Expenditure per capita) 	///
 					addnotes(Sample includes household responses from 2001 to 2015. Base household is as follows: Household head is white/single/male/unemployed/not disabled/without spouse or partner or cohabitor.)	///

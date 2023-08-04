@@ -98,7 +98,7 @@
 			
 			esttab			corr_glm_lin_noFE		corr_glm_nonlin_noFE			corr_glm_lin_FE			corr_glm_nonlin_FE	///
 				using "${FSD_outTab}/Tab_A1.tex", ///
-				cells(b(nostar fmt(%8.3f)) se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc	%8.3fc)) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	keep(PFS_glm c.PFS_glm#c.PFS_glm)	///	///
+				cells(b(star fmt(%8.3f)) se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc	%8.3fc)) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	keep(PFS_glm c.PFS_glm#c.PFS_glm)	///
 				title(Regression of the USDA scale on PFS(glm)) replace
 			
 		
@@ -143,7 +143,7 @@
 						
 				esttab	FSSS_noregionFE	PFS_noregionFE	FSSS_regionFE	PFS_regionFE	using "${FSD_outTab}/Tab_A2.tex", ///
 						/*cells(b(star fmt(3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	*/	///
-						cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)drop(*year_enum* state_group* _cons)	///
+						cells(b(star fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)drop(*year_enum* state_group* _cons)	///
 						title(Effect of Correlates on Food Security Status) replace
 		
 		
