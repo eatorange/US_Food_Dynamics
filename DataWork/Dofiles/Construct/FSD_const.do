@@ -944,7 +944,7 @@
 		label	var	fs_cat_fam 			"USDA food security category"
 		label	var	food_stamp_used_2yr	"Received food Stamp (2 years ago)"
 		label	var	food_stamp_used_1yr "Received food stamp (previous year)"
-		label	var	food_stamp_used_0yr "Received food stamp (current year)"
+		label	var	food_stamp_used_0yr "Food stamp/SNAP"
 		label	var	child_meal_assist	"Received child free meal at school"
 		label	var	WIC_received_last	"Received foods through WIC"
 		label	var	family_comp_change	"Change in family composition"
@@ -1049,7 +1049,7 @@
 		label	var	foodexp_recall_home		"Food expenditure (at home) recall period"
 		label	var	foodexp_recall_away		"Food expenditure (away) recall period"
 		label	var	foodexp_recall_deliv	"Food expenditure (delivered) recall period"
-		label	var	mental_problem	"Mental problem"
+		label	var	mental_problem	"Mental health issue"
 		label	var	week_of_year	"Week of the year"		
 		label	var	FPL_		"Federal Poverty Line"
 		label	var	income_to_poverty		"Income to Poverty Ratio"
@@ -1399,6 +1399,9 @@
 	label	var	no_longer_married	"No longer married"
 	label 	var	no_longer_own_house	"No longer owns house"
 	label	var	became_disabled		"Became disabled"
+	label	var	lag_food_exp_stamp_pc_1		"(Lagged) food exp per capita"
+	label	var	lag_food_exp_stamp_pc_2		"(Lagged) food exp per capita$^2$"
+	label	var	lag_food_exp_stamp_pc_th_3	"(Lagged) food exp per capita$^3$/1,000"
 
 	*	Keep only observations where the outcome variable is non-missing
 	*	This is necessary for "rforest" command, but it should be safe anyway since we will use only in_sample and out_of_sample.
@@ -1517,7 +1520,7 @@
 		
 		lab	var	mean1_foodexp_glm	"Predicted food exp (conditional mean)"
 		lab	var	e1_foodexp_glm		"Residual from conditional mean"
-		lab	var	e1_foodexp_sq_glm	"Squared residual from conditional mean"
+		lab	var	e1_foodexp_sq_glm	"Variance (food exp)"
 		
 			*	Checking prediction error
 			cap	drop	rmse_foodexp_step1_glm
@@ -1546,7 +1549,8 @@
 					title(Conditional Mean and Variance of Food Expenditure per capita) 	replace
 					
 			esttab	glm_step1	glm_step2	using "${FSD_outTab}/Tab_D5.tex", ///
-					cells(b(nostar fmt(%8.3f)) & se(fmt(3) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	///
+					cells(b(star fmt(%8.3f)) & se(fmt(3) par)) stats(N_sub, fmt(%8.0fc)) incelldelimiter() label legend nobaselevels /*nostar*/ star(* 0.10 ** 0.05 *** 0.01)	///
+					drop(_cons	*state_group*	*year_enum*)	///
 					title(Conditional Mean and Variance of Food Expenditure per capita)		replace		
 		
 		

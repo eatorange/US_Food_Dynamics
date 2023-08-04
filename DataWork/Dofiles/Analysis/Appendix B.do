@@ -137,7 +137,7 @@
 
 				esttab	FSSS_regionFE	PFS_regionFE	NME_regionFE	using "${FSD_outTab}/Tab_B2.tex", ///
 				/*cells(b(star fmt(3)) & se(fmt(2) par)) stats(N_sub r2) incelldelimiter() label legend nobaselevels star(* 0.10 ** 0.05 *** 0.01)	/*drop(_cons)*/	*/	///
-				cells(b(nostar fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	/*drop(_cons)*/	///
+				cells(b(star fmt(%8.3f)) & se(fmt(2) par)) stats(N_sub r2, fmt(%8.0fc %8.3fc)) incelldelimiter() label legend nobaselevels /*nostar star(* 0.10 ** 0.05 *** 0.01)*/	drop(_cons *year_enum* state_group*)	///
 				title(Effect of Correlates on Food Security Status) replace
 				
 			}	
