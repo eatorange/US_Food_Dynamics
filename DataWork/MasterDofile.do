@@ -114,10 +114,10 @@
    * run to 1. To not run a task, set the local to 0.
 	local cleaningDo	1	//	Import and clean data
 	local constructDo	1	//	Construct outcomes and other indicators
-	local analysisDo	0	//	Analyze
-	local appendixDo	0	//	Replicate appendix
-	local othersDo		0	//	Other do-files replicating numbers in the main text.
-		local	MLDo	0	//	Run ML and compare it with the GLM model. set as 0 by default	
+	local analysisDo	1	//	Analyze
+	local appendixDo	1	//	Replicate appendix
+	local othersDo		1	//	Other do-files replicating numbers in the main text.
+		local	MLDo	1	//	Run ML and compare it with the GLM model. set as 0 by default	
 
    if (`cleaningDo' == 1) { // Change the local above to run or not to run this file
        do "$FSD_doCln/FSD_clean.do" 
