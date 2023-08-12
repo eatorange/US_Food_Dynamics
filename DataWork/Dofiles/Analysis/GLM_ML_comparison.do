@@ -90,7 +90,6 @@
 	svy, subpop(if ${study_sample} & year!=10): glm 	`depvar'	${statevars}	${demovars}	${econvars}	${empvars}	${healthvars}	${familyvars}	${eduvars}	${foodvars}	${changevars}	${regionvars}	${timevars}, family(gamma)	link(log)
 	est	sto	glm_step1
 	
-
 	*	Predict fitted value and residual
 	gen		glm_step1_sample=1	if	e(sample)==1 & sample_source_SRC_SEO & year!=10	
 	replace	glm_step1_sample=1	if	year==10 & l.glm_step1_sample==1
@@ -105,6 +104,8 @@
 	gen rmspe_step1_glm = sqrt(e1_total_glm/step1_N_glm)	//
 
 	summ	rmspe_step1_glm	//	1.83
+	local	rmspe_glm:	di	%9.2f  r(mean)
+	di	"RMSPE of GLM is `rmspe_glm'"
 
 	/****************************************************************
 		SECTION 2: LASSO
@@ -149,18 +150,16 @@
 		
 		*	Display lambda result
 		di "lambda is `e(lambda)'"
-		assert	e(lambda)==11800	//	Confirm that this value is 11,800
+		*assert	e(lambda)==11800	//	Confirm that this value is 11,800
+		local	lambdaval=e(lambda)
 		
 		*	Save plot
 		graph	export	"${FSD_outFig}/cvlasso_result.png", replace
 		graph	close
 		
 
-		
 		*	Run lasso with the optimal lambda value	
-		
-		local	lambdaval=11800
-
+		*local	lambdaval=e(lambda)
 		lasso2	`depvar'	`statevars'		`demovars'	`econvars'	`healthvars'	`empvars'		`familyvars'	`eduvars'	`foodvars'	///
 								`changevars'	`regionvars'	`timevars'	`childvars'	if	${study_sample}==1 & year!=10,	///
 					ols lambda(`lambdaval') notpen(`regionvars'	`timevars')
@@ -188,7 +187,8 @@
 		gen rmspe_step1_lasso = sqrt(e1_total_lasso/step1_N_lasso)
 		
 		summ	rmspe_step1_lasso // 1.78
-
+		local	rmspe_lasso:	di	%9.2f  r(mean)
+		di	"RMSPE of LASSO is `rmspe_lasso'"	
 
 	/****************************************************************
 		SECTION 3: Random Forest
@@ -321,7 +321,8 @@
 			gen rmspe_step1_rf = sqrt(e1_total_rf/step1_N_rf)
 		
 			summ	rmspe_step1_rf	//	1.83
-			
+			local	rmspe_rf:	di	%9.2f  r(mean)
+			di	"RMSPE of Random Forest is `rmspe_rf'"
 			
 			
 	/****************************************************************
