@@ -50,7 +50,7 @@
 	
 	* Clear all stored values in memory from previous projects
 	clear			all
-	cap	log			close
+	*cap	log			close
 
 	* Set version number
 	version			16

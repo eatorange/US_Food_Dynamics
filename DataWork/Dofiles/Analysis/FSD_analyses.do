@@ -33,7 +33,7 @@
 	
 	* Clear all stored values in memory from previous projects
 	clear			all
-	cap	log			close
+	*cap	log			close
 
 	* Set version number
 	version			16
@@ -302,10 +302,10 @@
 				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)):	proportion	 HH_female	//	share of female-HH (22%)
 				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& 	l1_PFS_FI_glm==0	&	PFS_FI_glm==1):	proportion	 HH_female // share of female-HH among newly FI (40%)
 				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& 	l1_PFS_FI_glm==1	&	PFS_FI_glm==1):	proportion	 HH_female // share of female-HH among persistently FI (51%)
-				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& year2==2009	&	l1_PFS_FI_glm==0	&	PFS_FI_glm==1):	proportion	 HH_female	// share of female-HH among newly FI b/w 2007-2009 (38%)
-				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	& year2==2011	&	l1_PFS_FI_glm==1	&	PFS_FI_glm==1):	proportion	 HH_female	// share of female-HH among persistently FI b/w 2009-2011 (48%)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	&	year2==2009	&	l1_PFS_FI_glm==0	&	PFS_FI_glm==1):	proportion	 HH_female	// share of female-HH among newly FI b/w 2007-2009 (38%)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)	&	year2==2011	&	l1_PFS_FI_glm==1	&	PFS_FI_glm==1):	proportion	 HH_female	// share of female-HH among persistently FI b/w 2009-2011 (48%)
 				
-				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)): proportion	pop_group // Share of HS/White/Female (6.1%, 3rd row)
+				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm)): proportion	pop_group // Share of HS/White/male (25%, 4th row)
 				mat	Pop_ratio	=	e(b)'
 				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm) & year2==2009	&	l1_PFS_FS_glm==1	&	PFS_FI_glm==1): proportion	pop_group	//	Newly FI during GR (2007-2009) (HS/White/Female  |   .1800251)
 				svy, subpop(if	${study_sample} & !mi(PFS_FI_glm) & year2==2011	&	l1_PFS_FI_glm==1	&	PFS_FI_glm==1): proportion	pop_group	//	Still FI immediately after GR (2009-2011) (HS/White/Female  |   .1594805)
