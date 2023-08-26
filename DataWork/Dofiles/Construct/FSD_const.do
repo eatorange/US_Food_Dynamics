@@ -2,7 +2,7 @@
 	/*****************************************************************
 	PROJECT: 		Food Security Dynamics in the United States, 2001-2017
 					
-	TITLE:			PSID_const_ind
+	TITLE:			FSD_const.do
 				
 	AUTHOR: 		Seungmin Lee (sl3235@cornell.edu)
 

@@ -160,7 +160,7 @@
 			drop	in	1
 			
 			gen	spell_length	=	(2*_n)
-			br	in	1	//	Share of 2-year spell lengths per each year (in-text number)
+			list	in	1	//	Share of 2-year spell lengths per each year (in-text number)
 			
 			*	Figure 1 (Spell Length of Food Insecurity (2003-2015))
 			local	marker_2003	mcolor(gs0)	msymbol(circle)
