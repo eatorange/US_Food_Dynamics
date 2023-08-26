@@ -1,0 +1,35 @@
+* 00000001
+*! version 1.0.0
+* Do not erase or edit this file
+* It is used by Stata to track the ado and help
+* files you have installed.
+
+S http://www.stata-journal.com/software/sj22-3
+N st0685.pkg
+D  9 Aug 2023
+U 1
+d SJ22-3 st0685. Graphical lasso
+d Graphical lasso
+d by Aramayis Dallakyan, StataCorp, College
+d      Station, TX
+d Support:  adallakyan@stata.com
+d After installation, type help {cmd:graphiclasso},
+d   {cmd:graphiclassocv}, {cmd:graphiclassoplot},
+d   {cmd:datafromicov} and {cmd:compareicov}
+d DOI:  10.1177/1536867X221124538
+f c\comparegraphs.mata
+f c\compareicov.ado
+f c\compareicov.sthlp
+f c\cvglasso.mata
+f d\datafromicov.ado
+f d\datafromicov.sthlp
+f g\glasso.mata
+f g\graphiclasso.ado
+f g\graphiclassocv.ado
+f g\graphiclassocv.sthlp
+f g\graphiclassoplot.ado
+f g\graphiclassoplot.sthlp
+f g\graphiclasso.sthlp
+f l\lglasso.mlib
+f r\randomgraph.mata
+e

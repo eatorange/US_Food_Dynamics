@@ -2,7 +2,7 @@
 	/*****************************************************************
 	PROJECT: 		Food Security Dynamics in the United States, 2001-2017
 					
-	TITLE:			FSD_const.do
+	TITLE:			PSID_const_ind
 				
 	AUTHOR: 		Seungmin Lee (sl3235@cornell.edu)
 
@@ -47,7 +47,7 @@
 	
 	* Clear all stored values in memory from previous projects
 	clear			all
-	cap	log			close
+	*cap	log			close
 
 	* Set version number
 	version			16

@@ -1,3 +1,9 @@
+	*make the Dofiles folder the active directory by double-clicking on MasterDoFile.do to open Stata or 
+	*uncomment the cd command below and point the path to the DoFiles folder.
+	*cd "<path-of-DoFiles-folder>
+	cap	log	close
+	log using "../output/log.txt", text	replace
+	
    * ******************************************************************** *
    * ******************************************************************** *
    *                                                                      *
@@ -6,7 +12,6 @@
    *                                                                      *
    * ******************************************************************** *
    * ******************************************************************** *
-
        /*
        ** PURPOSE:     A master do-file that replicates the analyses and outputes (tables/figures) in the paper
 
@@ -24,7 +29,6 @@
        ** Last date modified:  Jan 29, 2023
        */
 
-
    * ******************************************************************** *
    *
    *       PART 0:  Standardize settings across users
@@ -37,7 +41,6 @@
 	set	maxvar	32767
 	set	matsize	11000
 
-
    * ******************************************************************** *
    *
    *       PART 1:  PREPARING FOLDER PATH GLOBALS
@@ -46,9 +49,8 @@
    * ******************************************************************** *
 
    *	Set the project folder below to your working directory.
-	global	projectfolder	"E:\GitHub\US_Food_Dynamics"		//	Github location
+	global	projectfolder	"../../"		//	Github location
 	*global	clouldfolder	"E:\Box\US Food Security Dynamics"	//
-
 
 * These lines are used to test that the name is not already used (do not edit manually)
 
@@ -86,7 +88,7 @@
    * standardization, different sets of control variables,
    * adofile paths etc.
 
-   do "$dataWorkFolder/global_setup.do" 
+   do "$dataWorkFolder/Dofiles/global_setup.do" 
 
 
 *iefolder*2*End_StandardGlobals*************************************************
@@ -140,7 +142,7 @@
 
    if (`othersDo' == 1) { // Change the local above to run or not to run this file
        do "$FSD_doAnl/Recall_seam_period.do" 
-	   if	`MLDo'==1	{
+       if	`MLDo'==1	{
 		do "$FSD_doAnl/GLM_ML_comparison.do" // ***** CAUTION: IT TAKES A LONG TIME TO RUN ***********
 	   }
    }
@@ -149,3 +151,4 @@
 *iefolder*3*End_RunDofiles******************************************************
 *iefolder will not work properly if the line above is edited
 
+log close
